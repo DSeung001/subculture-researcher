@@ -78,9 +78,7 @@ DRAFT_STATUS_LABELS = {
     "POSTED": "발행됨",
 }
 
-CHUNK_SIZE = 20
-DEFAULT_LIMIT = 500
-MAX_LIMIT = 500
+PAGE_SIZE = 30
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
@@ -99,17 +97,6 @@ def update_content(document_id: str, **fields):
     db().collection("contents").document(document_id).update(fields)
 
 
-def clamp(value: int, low: int, high: int) -> int:
-    return max(low, min(high, value))
-
-
-def parse_int(raw, default: int) -> int:
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
-        return default
-
-
 def safe_next(raw: str | None) -> str:
     if raw and raw.startswith("/") and not raw.startswith("//"):
         return raw
@@ -124,8 +111,7 @@ def current_filters():
         "source": request.args.get("source", "ALL"),
         "unposted": request.args.get("unposted", ""),
         "sort": request.args.get("sort", "RECOMMENDED"),
-        "limit": clamp(parse_int(request.args.get("limit"), DEFAULT_LIMIT), CHUNK_SIZE, MAX_LIMIT),
-        "visible": clamp(parse_int(request.args.get("visible"), CHUNK_SIZE), CHUNK_SIZE, 10_000),
+        "after": (request.args.get("after") or "").strip(),
     }
 
 
@@ -133,7 +119,24 @@ def build_url(filters: dict, **overrides) -> str:
     params = {**filters, **overrides}
     if not params.get("unposted"):
         params.pop("unposted", None)
+    if not params.get("after"):
+        params.pop("after", None)
     return url_for("index", **params)
+
+
+def fetch_contents_page(after_id: str):
+    query = (
+        db()
+        .collection("contents")
+        .order_by("collectedAt", direction=firestore.Query.DESCENDING)
+    )
+    if after_id:
+        cursor = db().collection("contents").document(after_id).get()
+        if cursor.exists:
+            query = query.start_after(cursor)
+    query = query.limit(PAGE_SIZE)
+    docs = list(query.stream())
+    return docs, len(docs) == PAGE_SIZE, (docs[-1].id if docs else "")
 
 
 @app.get("/")
@@ -141,13 +144,7 @@ def index():
     filters = current_filters()
     unposted_only = filters["unposted"] == "1"
 
-    query = (
-        db()
-        .collection("contents")
-        .order_by("collectedAt", direction=firestore.Query.DESCENDING)
-        .limit(filters["limit"])
-    )
-    docs = list(query.stream())
+    docs, has_more, cursor_id = fetch_contents_page(filters["after"])
 
     items = []
     all_sources = set()
@@ -179,12 +176,12 @@ def index():
         newest_first=(filters["sort"] == "NEWEST"),
         recommended=(filters["sort"] == "RECOMMENDED"),
     )
-    visible_count = min(filters["visible"], len(items))
-    page_items = items[:visible_count]
 
-    next_url = build_url(filters, visible=filters["visible"])
+    # Forms / filter chips reset the cursor; load-more keeps it.
+    list_filters = {**filters, "after": ""}
+    next_url = build_url(list_filters)
 
-    for item in page_items:
+    for item in items:
         category_value = item.get("category", "UNKNOWN")
         angle_value = item.get("contentAngle", "NEWS")
         status_value = item.get("status", "NEW")
@@ -239,11 +236,13 @@ def index():
         "today": sum(1 for item in items if is_new_today(item)),
     }
 
+    more_url = build_url(list_filters, after=cursor_id) if has_more and cursor_id else ""
+
     return render_template(
         "index.html",
-        items=page_items,
+        items=items,
         counts=counts,
-        filters=filters,
+        filters=list_filters,
         categories=CATEGORIES,
         statuses=STATUSES,
         angles=ANGLES,
@@ -254,10 +253,10 @@ def index():
         angle_labels=ANGLE_LABELS,
         tier_labels=TIER_LABELS,
         next_url=next_url,
-        has_more=visible_count < len(items),
-        more_url=build_url(filters, visible=filters["visible"] + CHUNK_SIZE),
-        remaining=min(CHUNK_SIZE, len(items) - visible_count),
-        filter_url=lambda **overrides: build_url(filters, visible=CHUNK_SIZE, **overrides),
+        has_more=bool(more_url),
+        more_url=more_url,
+        remaining=PAGE_SIZE if more_url else 0,
+        filter_url=lambda **overrides: build_url(list_filters, **overrides),
     )
 
 

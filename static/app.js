@@ -66,13 +66,16 @@ if (loadMoreEl) {
       const incomingItems = doc.querySelector(".items");
       if (!currentItems || !incomingItems) throw new Error("missing items");
 
-      [...incomingItems.children]
-        .slice(currentItems.children.length)
-        .forEach((node) => currentItems.appendChild(document.importNode(node, true)));
+      [...incomingItems.children].forEach((node) => {
+        currentItems.appendChild(document.importNode(node, true));
+      });
 
       const nextSentinel = doc.querySelector("#load-more");
       const nextUrl = nextSentinel?.dataset.moreUrl;
-      syncPageUrl(url);
+      // Keep the browser URL on the filter root so refresh starts from the first page.
+      const rootUrl = new URL(url, window.location.origin);
+      rootUrl.searchParams.delete("after");
+      syncPageUrl(rootUrl.pathname + rootUrl.search);
       if (nextUrl) {
         loadMoreEl.dataset.moreUrl = nextUrl;
       } else {
