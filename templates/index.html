@@ -130,6 +130,9 @@
       {% for item in items %}
       <article class="card">
         <div class="card-row">
+          <label class="card-select">
+            <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_id'] }}" form="draft-create-form" aria-label="임시글에 포함">
+          </label>
           <div class="card-main">
             <p class="card-title">
               {% if item['_is_new_today'] %}<span class="new-badge" title="오늘 수집">N</span>{% endif %}<span class="title-variant title-translated">{% if item['_title_date'] %}<span class="card-date">게시 {{ item['_title_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}{% if item['_lang_tag'] %}<span class="lang-tag">[{{ item['_lang_tag'] }}]</span>{% endif %}<strong>{{ item['_title_text'] }}</strong></span>{% if item['_original_title'] %}<span class="title-variant title-original" hidden>{% if item['_original_date'] %}<span class="card-date">게시 {{ item['_original_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}<strong>{{ item['_original_text'] }}</strong></span><button type="button" class="original-toggle" aria-pressed="false">원어 제목</button>{% endif %}{% if item.url %}<a class="original-toggle" href="{{ item.url }}" target="_blank" rel="noopener">자세히보기</a>{% endif %}
@@ -207,4 +210,10 @@
     </div>
   </main>
 </div>
+
+<form id="draft-create-form" method="post" action="{{ url_for('create_draft_item') }}" class="draft-bar" hidden>
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <span class="draft-bar-count">0개 선택</span>
+  <button type="submit" class="btn btn-primary">임시글 만들기</button>
+</form>
 {% endblock %}

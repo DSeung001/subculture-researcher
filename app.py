@@ -6,6 +6,14 @@ from flask import Flask, flash, redirect, render_template, request, url_for
 
 from firebase_client import get_db
 from content_store import add_manual_content
+from drafts_store import (
+    DraftError,
+    create_draft,
+    delete_draft,
+    list_drafts,
+    publish_draft,
+    save_body,
+)
 from sources_config import load_sources
 from presentation import (
     date_caption,
@@ -63,6 +71,11 @@ LANGUAGE_TAGS = {
     "zh-cn": "CH",
     "zh-tw": "CH",
     "ko": "KO",
+}
+DRAFT_STATUSES = ["DRAFT", "POSTED"]
+DRAFT_STATUS_LABELS = {
+    "DRAFT": "초안",
+    "POSTED": "발행됨",
 }
 
 CHUNK_SIZE = 20
@@ -246,6 +259,84 @@ def index():
         remaining=min(CHUNK_SIZE, len(items) - visible_count),
         filter_url=lambda **overrides: build_url(filters, visible=CHUNK_SIZE, **overrides),
     )
+
+
+def drafts_list_url(status: str | None = None) -> str:
+    chosen = status or request.values.get("list_status") or "DRAFT"
+    if chosen not in {"ALL", "DRAFT", "POSTED"}:
+        chosen = "DRAFT"
+    if chosen == "DRAFT":
+        return url_for("drafts_page")
+    return url_for("drafts_page", status=chosen)
+
+
+@app.get("/drafts")
+def drafts_page():
+    status = request.args.get("status", "DRAFT")
+    if status not in {"ALL", "DRAFT", "POSTED"}:
+        status = "DRAFT"
+    drafts = list_drafts(db(), status=status)
+    for draft in drafts:
+        created_at = draft.get("createdAt")
+        posted_at = draft.get("postedAt")
+        draft["_created"] = format_date_kst(created_at) if isinstance(created_at, datetime) else ""
+        draft["_posted"] = format_date_kst(posted_at) if isinstance(posted_at, datetime) else ""
+        angle = draft.get("angle") or "NEWS"
+        draft["_angle_label"] = ANGLE_LABELS.get(angle, angle)
+        draft["_status_label"] = DRAFT_STATUS_LABELS.get(draft.get("status"), draft.get("status"))
+    return render_template(
+        "drafts.html",
+        drafts=drafts,
+        status=status,
+        draft_statuses=DRAFT_STATUSES,
+        draft_status_labels=DRAFT_STATUS_LABELS,
+        list_status=status,
+    )
+
+
+@app.post("/drafts")
+def create_draft_item():
+    next_url = safe_next(request.form.get("next"))
+    try:
+        create_draft(db(), request.form.getlist("source_ids"))
+    except DraftError as exc:
+        flash(str(exc), "error")
+        return redirect(next_url)
+    flash("임시글을 만들었습니다.", "success")
+    return redirect(url_for("drafts_page"))
+
+
+@app.post("/drafts/<draft_id>/body")
+def save_draft_body(draft_id):
+    try:
+        save_body(db(), draft_id, request.form.get("body", ""))
+    except DraftError as exc:
+        flash(str(exc), "error")
+    else:
+        flash("본문을 저장했습니다.", "success")
+    return redirect(drafts_list_url())
+
+
+@app.post("/drafts/<draft_id>/publish")
+def publish_draft_item(draft_id):
+    try:
+        publish_draft(db(), draft_id)
+    except DraftError as exc:
+        flash(str(exc), "error")
+        return redirect(drafts_list_url())
+    flash("발행함으로 표시했습니다.", "success")
+    return redirect(url_for("drafts_page", status="POSTED"))
+
+
+@app.post("/drafts/<draft_id>/delete")
+def delete_draft_item(draft_id):
+    try:
+        delete_draft(db(), draft_id)
+    except DraftError as exc:
+        flash(str(exc), "error")
+    else:
+        flash("임시글을 삭제했습니다.", "success")
+    return redirect(drafts_list_url())
 
 
 @app.get("/sources")

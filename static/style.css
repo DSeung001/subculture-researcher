@@ -139,6 +139,8 @@ textarea:focus, input:focus, select:focus {
   gap: 6px;
 }
 
+.page-chips { margin-bottom: 20px; }
+
 .chip {
   appearance: none;
   border: 1px solid var(--border);
@@ -525,6 +527,7 @@ h1 { margin: 0 0 4px; font-size: 26px; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .card-row { flex-direction: column; }
   .card-actions { margin-top: 8px; }
+  .draft-bar { left: 16px; }
 }
 
 dialog.modal {
@@ -595,3 +598,98 @@ dialog.modal::backdrop {
 
 .status-enabled { background: #f0fdf4; color: var(--ok); }
 .status-disabled { background: #f4f5f7; color: var(--muted); }
+
+.card-select {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 6px;
+  flex-shrink: 0;
+}
+
+.card-select input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.draft-bar {
+  position: fixed;
+  left: 316px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.16);
+}
+
+.draft-bar[hidden] { display: none; }
+
+.draft-bar-count {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.draft-bar .btn {
+  width: auto;
+  min-width: 140px;
+}
+
+body.has-draft-bar main {
+  padding-bottom: 96px;
+}
+
+.draft-sources {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.draft-sources a { color: var(--info); }
+
+.used-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: var(--info);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.draft-actions .btn,
+.draft-actions form {
+  width: auto;
+  flex: 1;
+}
+
+.draft-body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}

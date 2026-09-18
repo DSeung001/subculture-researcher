@@ -27,6 +27,7 @@ own machine only. There is no separate backend API beyond this review app.
 3. Review items in the Flask app.
 4. Mark each item as `NEW`, `KEEP`, `HOLD`, or `IGNORE`.
 5. Manually save X URLs when useful.
+6. Bundle one or more inbox items into a draft and review it on the drafts tab.
 
 ## Firestore collection
 
@@ -84,7 +85,26 @@ Expected fields:
 User-community/forum sources (VOC) are out of scope by policy — only new
 product, anime, and figure info resources are collected.
 
-`note` is a short editorial memo for the combined X account. `postedAt` is set when the item has been published manually.
+`note` is a short editorial memo for the combined X account. `postedAt` is set when the item has been published manually, or when a draft that uses it is marked posted (only if `postedAt` was empty).
+
+## Firestore drafts
+
+`drafts/{autoId}`
+
+- `sourceIds` — one or more `contents` document IDs
+- `angle` — same allowed values as `contentAngle`
+- `body` — assembled title/summary/URL/note text (no article body, no LLM)
+- `status` — `DRAFT` or `POSTED`
+- `postedAt`
+- `createdAt`
+- `updatedAt`
+
+Duplicate rules:
+
+- Reject a new draft when another draft already has the same `sourceIds` set and the same `angle`.
+- `NEWS` drafts also reject any selected source that already has `postedAt`.
+- Other angles may reuse posted sources. The drafts UI labels those sources as already used.
+- Publishing a draft sets `contents.postedAt` only when that field is empty.
 
 ## Important constraints
 

@@ -96,3 +96,18 @@ if (loadMoreEl) {
     { rootMargin: "400px 0px" },
   ).observe(loadMoreEl);
 }
+
+const draftForm = document.getElementById("draft-create-form");
+if (draftForm) {
+  const countEl = draftForm.querySelector(".draft-bar-count");
+  const syncDraftBar = () => {
+    const selected = document.querySelectorAll(".draft-source:checked").length;
+    if (countEl) countEl.textContent = `${selected}개 선택`;
+    draftForm.hidden = selected === 0;
+    document.body.classList.toggle("has-draft-bar", selected > 0);
+  };
+  document.addEventListener("change", (event) => {
+    if (event.target.matches(".draft-source")) syncDraftBar();
+  });
+  syncDraftBar();
+}
