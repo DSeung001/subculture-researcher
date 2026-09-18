@@ -1,4 +1,17 @@
 sources:
+  # 국내 피규어 예약 상품. 공개 목록과 상세 페이지에서 가격/예약마감/입고예정 메타데이터를 수집한다.
+  - name: 피규어팜 예약상품
+    type: figurefarm
+    url: https://m.figurefarm.net/shop/big_section.php?cno1=1554
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    max_items: 30
+    figure_only: true
+    enabled: true
+    respect_robots: true
+
   # 애니메이션 작품 자체의 인기/트렌드 신호. 기사 DB 복제가 아니라 소재 발견용으로 소량만 수집한다.
   - name: AniList 트렌딩 애니
     type: anilist
@@ -8,6 +21,7 @@ sources:
     content_angle: NEWS
     source_tier: MEDIA
     max_items: 30
+    cache_hours: 24
     enabled: true
 
   # 일본 기업 보도자료의 만화/애니 카테고리.
@@ -162,8 +176,12 @@ sources:
     max_items: 40
     enabled: true
 
+  # 라프텔 스토어는 공식 공개 API가 확인되지 않았고 자동화 접근 정책이 명확하지 않아
+  # 자동 크롤링하지 않는다. 스토어 상품 URL을 리뷰 앱에서 category=FIGURE로 수동 등록하면
+  # PRODUCT/Laftel 상품으로 분류되어 동일한 예약상품 UI에서 볼 수 있다.
+  #
   # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.
-  # 라프텔, animate 서울홍대점, 일러스타 페스, 코믹월드
+  # animate 서울홍대점, 일러스타 페스, 코믹월드
   # 발견한 게시물은 리뷰 앱의 "수동 콘텐츠 추가"로 저장한다.
 
   # Kotobukiya 뉴스(https://www.kotobukiya.co.jp/en/news/)도 같은 방식으로 수동 추가한다.

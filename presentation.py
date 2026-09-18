@@ -163,3 +163,33 @@ def metric_caption(item: dict) -> str:
         suffix = f" · 확인 {checked}" if checked else " · 확인 시각 없음"
         parts.append(f"{label} {value:,}{suffix}")
     return " | ".join(parts)
+
+
+def product_caption(item: dict) -> str:
+    if item.get("entityType") != "PRODUCT":
+        return ""
+    parts = []
+    if item.get("shop"):
+        parts.append(str(item["shop"]))
+    status = item.get("saleStatus")
+    status_labels = {
+        "PREORDER": "예약중",
+        "IN_STOCK": "판매중",
+        "SOLD_OUT": "품절",
+        "UNKNOWN": "상태 미확인",
+    }
+    if status:
+        parts.append(status_labels.get(status, str(status)))
+    price = item.get("price")
+    if isinstance(price, int):
+        currency = item.get("currency") or "KRW"
+        parts.append(f"{price:,}원" if currency == "KRW" else f"{price:,} {currency}")
+    if item.get("preorderEndAt"):
+        parts.append(f"예약마감 {item['preorderEndAt']}")
+    if item.get("releaseWindowText"):
+        parts.append(f"입고 {item['releaseWindowText']}")
+    if item.get("manufacturer"):
+        parts.append(str(item["manufacturer"]))
+    if item.get("sizeText"):
+        parts.append(str(item["sizeText"]))
+    return " · ".join(parts)
