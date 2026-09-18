@@ -113,13 +113,6 @@
       {% endif %}
     {% endwith %}
 
-    <div class="stats">
-      <div class="stat"><span class="stat-value">{{ counts.loaded }}</span><span class="stat-label">불러온 항목</span></div>
-      <div class="stat"><span class="stat-value">{{ counts.filtered }}</span><span class="stat-label">필터 결과</span></div>
-      <div class="stat"><span class="stat-value">{{ counts.new }}</span><span class="stat-label">새 항목</span></div>
-      <div class="stat"><span class="stat-value">{{ counts.today }}</span><span class="stat-label">오늘 추가</span></div>
-    </div>
-
     <div class="items">
       {% for item in items %}
       <article class="card">

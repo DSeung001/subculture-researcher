@@ -254,19 +254,11 @@ def index():
         item["_signal_score"] = content_score(item)
         item["_signal_labels"] = signal_labels(item)
 
-    counts = {
-        "loaded": len(docs),
-        "filtered": len(items),
-        "new": sum(1 for item in items if item.get("status") == "NEW"),
-        "today": sum(1 for item in items if is_new_today(item)),
-    }
-
     more_url = build_url(list_filters, after=cursor_id) if has_more and cursor_id else ""
 
     return render_template(
         "index.html",
         items=items,
-        counts=counts,
         filters=list_filters,
         categories=CATEGORIES,
         statuses=STATUSES,
@@ -389,17 +381,12 @@ def sources_page():
         status = "ALL"
 
     all_sources = load_sources()
-    counts = {"ALL": len(all_sources), "ENABLED": 0, "DISABLED": 0, "MANUAL": 0}
-    for source in all_sources:
-        counts[_source_status(source)] += 1
-
     sources = all_sources if status == "ALL" else [s for s in all_sources if _source_status(s) == status]
 
     return render_template(
         "sources.html",
         sources=sources,
         status=status,
-        counts=counts,
         category_labels=CATEGORY_LABELS,
         region_labels=REGION_LABELS,
         tier_labels=TIER_LABELS,

@@ -265,27 +265,6 @@ h1 { margin: 0 0 4px; font-size: 26px; }
 .flash-success { background: #f0fdf4; color: var(--ok); }
 .flash-info { background: #eff6ff; color: var(--info); }
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.stat {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: var(--shadow);
-}
-
-.stat-value { font-size: 22px; font-weight: 600; }
-.stat-label { font-size: 12px; color: var(--muted); }
-
 .items { display: flex; flex-direction: column; gap: 10px; }
 
 .card {
@@ -481,6 +460,14 @@ h1 { margin: 0 0 4px; font-size: 26px; }
   font-weight: 600;
 }
 
+.btn-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: var(--error);
+  font-weight: 600;
+}
+.btn-danger:hover { border-color: var(--error); }
+
 .btn.full { width: 100%; }
 
 .load-more {
@@ -524,7 +511,6 @@ h1 { margin: 0 0 4px; font-size: 26px; }
     border-bottom: 1px solid var(--border);
   }
   main { padding: 20px; }
-  .stats { grid-template-columns: repeat(2, 1fr); }
   .card-row { flex-direction: column; }
   .card-actions { margin-top: 8px; }
   .draft-bar { left: 16px; }
@@ -734,14 +720,21 @@ body.has-draft-bar main {
 
 .draft-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .draft-actions .btn,
 .draft-actions form {
   width: auto;
-  flex: 1;
+  flex: 0 0 auto;
+}
+
+.draft-actions .btn {
+  min-width: 88px;
+  padding: 8px 14px;
 }
 
 .draft-body {

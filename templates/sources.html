@@ -4,13 +4,6 @@
   <h1>수집 목록</h1>
   <p class="subtitle">sources.yaml에 등록된 자동/수동 수집 소스 목록입니다 (읽기 전용).</p>
 
-  <div class="stats">
-    <div class="stat"><span class="stat-value">{{ counts.ALL }}</span><span class="stat-label">전체</span></div>
-    <div class="stat"><span class="stat-value">{{ counts.ENABLED }}</span><span class="stat-label">활성</span></div>
-    <div class="stat"><span class="stat-value">{{ counts.DISABLED }}</span><span class="stat-label">비활성</span></div>
-    <div class="stat"><span class="stat-value">{{ counts.MANUAL }}</span><span class="stat-label">수동</span></div>
-  </div>
-
   <div class="chip-row page-chips">
     <a href="{{ url_for('sources_page', status='ALL') }}" class="chip {% if status == 'ALL' %}active{% endif %}">전체</a>
     <a href="{{ url_for('sources_page', status='ENABLED') }}" class="chip {% if status == 'ENABLED' %}active{% endif %}">활성</a>
