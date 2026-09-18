@@ -1,0 +1,8 @@
+sources:
+  # Add RSS feeds here after confirming the source permits automated access.
+  # Example:
+  # - name: example-anime-news
+  #   type: rss
+  #   url: https://example.com/feed.xml
+  #   category: ANIME
+  #   enabled: true
