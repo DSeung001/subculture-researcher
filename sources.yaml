@@ -1,6 +1,5 @@
 sources:
-
-  # 애니메이션 작품 자체의 인기/트렌드 신호. 기사 저장소가 아니라 소재 발견용으로 소량만 수집한다.
+  # 애니메이션 작품 자체의 인기/트렌드 신호. 기사 DB 복제가 아니라 소재 발견용으로 소량만 수집한다.
   - name: AniList 트렌딩 애니
     type: anilist
     url: https://graphql.anilist.co
@@ -11,7 +10,7 @@ sources:
     max_items: 30
     enabled: true
 
-  # 일본 기업 보도자료의 만화/애니 카테고리. 공식 발표/콜라보/신작/굿즈 후보를 넓게 발견한다.
+  # 일본 기업 보도자료의 만화/애니 카테고리.
   - name: PR TIMES 만화·애니
     type: html
     url: https://prtimes.jp/main/html/searchbiscate/busi_cate_id/007/lv2/20
@@ -21,122 +20,12 @@ sources:
     content_angle: NEWS
     source_tier: OFFICIAL
     allow_patterns:
-      - '^https://prtimes\.jp/main/html/rd/p/[0-9]+\.[0-9]+\.html  # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
-  - name: HOBBY Watch 피규어
-    type: html
-    url: https://hobby.watch.impress.co.jp/category/figure/
-    region: JP
-    category: FIGURE
-    content_angle: NEWS
-    source_tier: MEDIA
-    allow_patterns:
-      - '^https://hobby\.watch\.impress\.co\.jp/docs/news/'
-      - '^https://hobby\.watch\.impress\.co\.jp/docs/review/'
+      - '^https://prtimes\.jp/main/html/rd/p/[0-9]+\.[0-9]+\.html$'
     max_items: 40
     enabled: true
     respect_robots: true
 
-  # 제조사 공식 뉴스. 신제품/예약/출시 공지를 원천 데이터로 사용한다.
-  - name: Good Smile Company 뉴스
-    type: html
-    url: https://www.goodsmile.com/en/news
-    region: JP
-    category: FIGURE
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    allow_patterns:
-      - '^https://www\.goodsmile\.com/en/news/'
-    max_items: 40
-    enabled: true
-    respect_robots: true
-
-  # 일본 굿즈/피규어 미디어 허브. 본문 카드(.c-item)만 모아 사이드 랭킹을 제외한다.
-  - name: Animate Times 굿즈
-    type: html
-    url: https://www.animatetimes.com/goods/
-    link_selector: '.c-item a[href*="/news/details.php"]'
-    region: JP
-    category: GOODS
-    content_angle: NEWS
-    source_tier: MEDIA
-    allow_patterns:
-      - '^https://www\.animatetimes\.com/news/details\.php\?id=\d+'
-    max_items: 40
-    enabled: true
-    respect_robots: true
-
-  # 국내 애니/굿즈 뉴스. 애니메이션 유입용 콘텐츠 후보를 수집한다.
-  - name: 애니플러스 뉴스
-    type: html
-    url: https://news.aniplustv.com/news
-    render_js: true
-    render_timeout_seconds: 30
-    link_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
-    wait_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
-    title_selector: h3
-    published_selector: p
-    published_format: '%Y/%m/%d'
-    next_page_selector: 'button[aria-label="다음 페이지"]'
-    max_pages: 2
-    detail_wait_selector: 'div:has(> div > button[aria-label="좋아요"]) > span'
-    detail_metrics:
-      likeCount: 'div:has(> div > button[aria-label="좋아요"]) > span'
-    # 공개 화면에 조회수가 없어 viewCount 선택자는 지정하지 않는다.
-    region: KR
-    category: ANIME
-    content_angle: NEWS
-    source_tier: MEDIA
-    allow_patterns:
-      - '^https://news\.aniplustv\.com/news/[0-9]+$'
-    max_items: 40
-    enabled: true
-    respect_robots: true
-
-  # 국내 공식 페어/이벤트. 목록이 JS 네비게이션이라 현재 HTML 수집기로는 링크를 못 뽑는다.
-  - name: 애니메이트 코리아 페어·이벤트
-    type: html
-    url: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
-    region: KR
-    category: GOODS
-    content_angle: NEWS
-    source_tier: MEDIA
-    allow_patterns:
-      - '^https://www\.animate-onlineshop\.co\.kr/board/view\.php\?bdId=event'
-    max_items: 40
-    enabled: false
-    respect_robots: true
-
-  # 공식 사이트 공지사항 게시판. 목록이 React 클라이언트 라우팅이라 HTML 링크 추출이 불가능해
-  # 페이지가 실제로 호출하는 공개 JSON API(getBoardList)를 직접 불러온다. robots.txt 없음, CORS 공개.
-  - name: AGF Korea 공지사항
-    type: json_api
-    url: https://api.agfkorea.com:3070/front/api/getBoardList?board_id=1&lang=KOR&gotoPage=1
-    items_path: listData
-    id_field: idx
-    title_field: title
-    date_field: writeday
-    date_format: '%Y-%m-%d %H:%M:%S.%f'
-    detail_url_template: 'https://www.agfkorea.com/post/1/{id}'
-    region: KR
-    category: GOODS
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    max_items: 40
-    enabled: true
-
-  # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.
-  # 라프텔, animate 서울홍대점, 일러스타 페스, 코믹월드
-  # 발견한 게시물은 리뷰 앱의 "수동 콘텐츠 추가"로 저장한다.
-
-  # Kotobukiya 뉴스(https://www.kotobukiya.co.jp/en/news/)도 같은 방식으로 수동 추가한다.
-  # 전체 도메인이 Cloudflare 인터랙티브 챌린지로 막혀 있어(정적 요청·Playwright 모두 차단,
-  # RSS/sitemap 경로도 동일) 자동 수집이 불가능하다.
-
-    max_items: 40
-    enabled: true
-    respect_robots: true
-
-  # 일본 애니 공식 YouTube 채널. API 키 없이 채널 Atom feed로 최근 PV/티저/공지 영상을 수집한다.
+  # 일본 애니 공식 YouTube 채널. 채널 페이지에서 ID를 해석한 뒤 공식 Atom feed만 읽는다.
   - name: KADOKAWA Anime YouTube
     type: youtube_feed
     url: https://www.youtube.com/@KADOKAWAanime
@@ -169,6 +58,7 @@ sources:
     source_tier: OFFICIAL
     max_items: 15
     enabled: true
+
   # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
   - name: HOBBY Watch 피규어
     type: html
