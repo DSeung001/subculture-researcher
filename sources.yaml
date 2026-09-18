@@ -147,19 +147,25 @@ sources:
     enabled: true
     respect_robots: true
 
-  # 국내 공식 페어/이벤트(서브컬처 페스티벌 성격). 목록이 JS 네비게이션이라 현재 HTML 수집기로는 링크를 못 뽑는다.
+  # 로그인/JS 이동이 필요한 국내 페어·이벤트. 로컬 Playwright 프로필로만 수집한다.
   - name: 애니메이트 코리아 페어·이벤트
-    type: html
+    type: local_browser
     url: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
     region: KR
     category: FESTIVAL
     content_angle: NEWS
     source_tier: MEDIA
+    local_only: true
+    interactive_ready: true
+    browser_profile: animate-korea
+    link_selector: 'a, [onclick], [data-href], [data-url]'
     allow_patterns:
-      - '^https://www\.animate-onlineshop\.co\.kr/board/view\.php\?bdId=event'
-    max_items: 40
-    enabled: false
-    respect_robots: true
+      - '^https://www\.animate-onlineshop\.co\.kr/board/'
+    max_items: 30
+    scroll_steps: 2
+    scroll_delay_seconds: 2
+    item_delay_seconds: 0.5
+    enabled: true
 
   # AGF(Anime Game Festival) Korea 공식 공지사항 = 국내 대표 서브컬처 페스티벌 소식.
   # 목록이 React 클라이언트 라우팅이라 HTML 링크 추출이 불가능해
@@ -180,13 +186,142 @@ sources:
     max_items: 40
     enabled: true
 
-  # 라프텔 스토어는 공식 공개 API가 확인되지 않았고 자동화 접근 정책이 명확하지 않아
-  # 자동 크롤링하지 않는다. 스토어 상품 URL을 리뷰 앱에서 category=FIGURE로 수동 등록하면
-  # PRODUCT/Laftel 상품으로 분류되어 동일한 예약상품 UI에서 볼 수 있다.
-  #
-  # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.
-  # 라프텔, animate 서울홍대점, 일러스타 페스, 코믹월드
-  # 발견한 게시물은 리뷰 앱의 "수동 콘텐츠 추가"로 저장한다(카테고리: FESTIVAL).
+  # 아래 소스는 GitHub Actions에서 실행하지 않는다.
+  # 로컬에서 --local-browser 옵션을 줄 때만 headed Playwright + 소스별 영속 프로필로 수집한다.
+  # 로그인/MFA/Cloudflare 인증은 사용자가 열린 브라우저에서 직접 완료한 뒤 Enter를 누른다.
+
+  - name: 라프텔 인기·신작
+    type: local_browser
+    url: https://laftel.net/
+    region: KR
+    category: ANIME
+    content_angle: NEWS
+    source_tier: MEDIA
+    local_only: true
+    interactive_ready: true
+    browser_profile: laftel
+    interactive_message: '라프텔 로그인 후 인기 애니/이번주/분기/요일별 신작 등 원하는 목록 화면으로 이동하고 Enter를 누르세요.'
+    link_selector: 'a[href]'
+    allow_patterns:
+      - '^https://laftel\.net/'
+    deny_patterns:
+      - '/login'
+      - '/setting'
+      - '/profile'
+      - '/payment'
+    max_items: 30
+    scroll_steps: 4
+    scroll_delay_seconds: 3
+    item_delay_seconds: 0.8
+    enabled: true
+
+  - name: 라프텔 스토어
+    type: local_browser
+    url: https://laftel.net/
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    local_only: true
+    interactive_ready: true
+    browser_profile: laftel
+    interactive_message: '라프텔 로그인 후 스토어의 피규어/예약상품 목록 화면으로 이동하고 Enter를 누르세요.'
+    link_selector: 'a[href], [data-href], [data-url], [onclick]'
+    allow_patterns:
+      - '^https://laftel\.net/'
+    required_text_patterns:
+      - '피규어'
+      - '넨도로이드'
+      - '예약'
+      - '원'
+    product_mode: true
+    shop: Laftel
+    max_items: 30
+    scroll_steps: 6
+    scroll_delay_seconds: 3
+    item_delay_seconds: 1
+    enabled: true
+
+  - name: animate 서울홍대점
+    type: local_browser
+    url: https://x.com/animate_hongdae
+    region: KR
+    category: GOODS
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    local_only: true
+    interactive_ready: true
+    browser_profile: x-animate-hongdae
+    interactive_message: 'X 로그인/인증을 직접 완료하고 animate 서울홍대점 타임라인이 보이면 Enter를 누르세요.'
+    link_selector: 'a[href*="/status/"]'
+    allow_patterns:
+      - '^https://x\.com/animate_hongdae/status/'
+    max_items: 25
+    scroll_steps: 6
+    scroll_delay_seconds: 3
+    item_delay_seconds: 0.8
+    enabled: true
+
+  - name: 일러스타 페스
+    type: local_browser
+    url: https://illustar.imweb.me/
+    region: KR
+    category: FESTIVAL
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    local_only: true
+    interactive_ready: true
+    browser_profile: illustar
+    interactive_message: '공지사항/티켓/행사 정보 중 수집할 화면으로 이동한 뒤 Enter를 누르세요.'
+    link_selector: 'a[href], [data-href], [onclick]'
+    allow_patterns:
+      - '^https://illustar\.imweb\.me/'
+      - '^https://illustar\.net/'
+    max_items: 30
+    scroll_steps: 3
+    scroll_delay_seconds: 2
+    item_delay_seconds: 0.5
+    enabled: true
+
+  - name: 코믹월드
+    type: local_browser
+    url: https://comicw.co.kr/
+    region: KR
+    category: FESTIVAL
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    local_only: true
+    interactive_ready: true
+    browser_profile: comicworld
+    interactive_message: '코믹월드 공지/행사/티켓 화면으로 이동한 뒤 Enter를 누르세요.'
+    link_selector: 'a[href], [data-href], [onclick]'
+    allow_patterns:
+      - '^https://comicw\.co\.kr/'
+    max_items: 30
+    scroll_steps: 3
+    scroll_delay_seconds: 2
+    item_delay_seconds: 0.5
+    enabled: true
+
+  - name: Kotobukiya 뉴스
+    type: local_browser
+    url: https://www.kotobukiya.co.jp/en/news/
+    region: JP
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    local_only: true
+    interactive_ready: true
+    browser_profile: kotobukiya
+    interactive_message: 'Cloudflare 확인이 나오면 직접 완료하고 뉴스/상품 목록이 보이면 Enter를 누르세요.'
+    link_selector: 'a[href]'
+    allow_patterns:
+      - '^https://www\.kotobukiya\.co\.jp/'
+    max_items: 30
+    scroll_steps: 3
+    scroll_delay_seconds: 3
+    item_delay_seconds: 0.7
+    enabled: true
 
   # 다른 대형 페스티벌은 확인 결과 자동 수집기로 붙이기 어려웠다:
   # - Wonder Festival(wonfes.jp) 공지: robots.txt는 허용하지만 모든 공지가 /info/ 한 페이지 안의
@@ -197,6 +332,3 @@ sources:
   #   (전용 뉴스/블로그 피드가 없음) 정기 수집 대상이 되지 못한다.
   # 특정 페스티벌 공식 사이트 URL을 알려주면 구조를 확인해 소스로 추가한다.
 
-  # Kotobukiya 뉴스(https://www.kotobukiya.co.jp/en/news/)도 같은 방식으로 수동 추가한다.
-  # 전체 도메인이 Cloudflare 인터랙티브 챌린지로 막혀 있어(정적 요청·Playwright 모두 차단,
-  # RSS/sitemap 경로도 동일) 자동 수집이 불가능하다.
