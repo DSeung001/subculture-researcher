@@ -6,6 +6,7 @@ from flask import Flask, flash, redirect, render_template, request, url_for
 
 from firebase_client import get_db
 from content_store import add_manual_content
+from sources_config import load_sources
 from presentation import (
     date_caption,
     format_date_kst,
@@ -49,6 +50,18 @@ TIER_LABELS = {
     "OFFICIAL": "공식",
     "MEDIA": "미디어",
 }
+REGION_LABELS = {
+    "JP": "일본",
+    "KR": "국내",
+}
+LANGUAGE_TAGS = {
+    "en": "EN",
+    "ja": "JA",
+    "zh": "CH",
+    "zh-cn": "CH",
+    "zh-tw": "CH",
+    "ko": "KO",
+}
 
 CHUNK_SIZE = 20
 
@@ -91,6 +104,7 @@ def current_filters():
         "category": request.args.get("category", "ALL"),
         "status": request.args.get("status", "ACTIVE"),
         "tier": request.args.get("tier", "ALL"),
+        "source": request.args.get("source", "ALL"),
         "unposted": request.args.get("unposted", ""),
         "sort": request.args.get("sort", "NEWEST"),
         "limit": clamp(parse_int(request.args.get("limit"), 200), 20, 200),
@@ -119,9 +133,12 @@ def index():
     docs = list(query.stream())
 
     items = []
+    all_sources = set()
     for snapshot in docs:
         item = snapshot.to_dict()
         item["_id"] = snapshot.id
+        if item.get("source"):
+            all_sources.add(item["source"])
 
         if filters["category"] != "ALL" and item.get("category") != filters["category"]:
             continue
@@ -131,10 +148,14 @@ def index():
             continue
         if filters["tier"] != "ALL" and item.get("sourceTier") != filters["tier"]:
             continue
+        if filters["source"] != "ALL" and item.get("source") != filters["source"]:
+            continue
         if unposted_only and item.get("postedAt"):
             continue
 
         items.append(item)
+
+    source_options = sorted(all_sources)
 
     items = sort_items(items, newest_first=(filters["sort"] == "NEWEST"))
     visible_count = min(filters["visible"], len(items))
@@ -160,6 +181,12 @@ def index():
         item["_original_title"] = original_title if title_ko and title_ko != original_title else ""
         item["_original_date"] = original_date
         item["_original_text"] = original_text
+        source_language = (item.get("sourceLanguage") or "").strip().lower()
+        item["_lang_tag"] = (
+            LANGUAGE_TAGS.get(source_language, source_language.upper())
+            if item["_original_title"] and source_language and source_language != "unknown"
+            else ""
+        )
         item["_is_new_today"] = is_new_today(item)
         posted_label = (
             f"발행 {format_date_kst(posted_at)}"
@@ -198,6 +225,7 @@ def index():
         statuses=STATUSES,
         angles=ANGLES,
         source_tiers=SOURCE_TIERS,
+        source_options=source_options,
         category_labels=CATEGORY_LABELS,
         status_labels=STATUS_LABELS,
         angle_labels=ANGLE_LABELS,
@@ -207,6 +235,17 @@ def index():
         more_url=build_url(filters, visible=filters["visible"] + CHUNK_SIZE),
         remaining=min(CHUNK_SIZE, len(items) - visible_count),
         filter_url=lambda **overrides: build_url(filters, visible=CHUNK_SIZE, **overrides),
+    )
+
+
+@app.get("/sources")
+def sources_page():
+    return render_template(
+        "sources.html",
+        sources=load_sources(),
+        category_labels=CATEGORY_LABELS,
+        region_labels=REGION_LABELS,
+        tier_labels=TIER_LABELS,
     )
 
 
@@ -253,4 +292,4 @@ def manual_add():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5001, debug=True)

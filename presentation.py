@@ -74,7 +74,7 @@ def date_caption(item: dict) -> str:
 def summary_preview(item: dict, length: int = 120) -> str:
     summary = (item.get("summary") or "").strip()
     if not summary:
-        return "요약 없음"
+        return ""
     if len(summary) <= length:
         return summary
     return summary[:length].rstrip() + "…"

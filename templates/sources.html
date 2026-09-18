@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="sources-page">
+  <h1>수집 목록</h1>
+  <p class="subtitle">sources.yaml에 등록된 자동 수집 소스 목록입니다 (읽기 전용).</p>
+
+  <table class="sources-table">
+    <thead>
+      <tr>
+        <th>이름</th>
+        <th>URL</th>
+        <th>카테고리</th>
+        <th>지역</th>
+        <th>소스 티어</th>
+        <th>상태</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sources %}
+      <tr class="{% if not s.get('enabled', True) %}disabled-row{% endif %}">
+        <td>{{ s.name }}</td>
+        <td><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a></td>
+        <td>{{ category_labels.get(s.category, s.category) }}</td>
+        <td>{{ region_labels.get(s.region, s.region) }}</td>
+        <td>{{ tier_labels.get(s.source_tier, s.source_tier) }}</td>
+        <td>
+          {% if not s.get('enabled', True) %}
+          <span class="status-badge status-disabled">비활성</span>
+          {% else %}
+          <span class="status-badge status-enabled">활성</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</main>
+{% endblock %}
