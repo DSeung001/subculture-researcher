@@ -53,6 +53,8 @@ PROMPT_TEMPLATE = (
     "- 과장된 광고 문구 없이 담백하게, 이모지는 최대 1개까지만 써줘.\n"
     "- 본문은 120자 이내로 써줘 (해시태그 제외).\n"
     "- 마지막 줄에 본문 내용과 직접 관련된 해시태그를 2~4개 붙여줘 (띄어쓰기 없이, 예: #피규어 #굿스마일컴퍼니).\n"
+    "- 번호로 준 소재를 모두 본문에 반영해줘 (하나라도 빼지 마).\n"
+    "- 제공된 소재에 있는 사실만 쓰고, 없는 일정·가격·설정은 지어내지 마.\n"
     "- 본문과 해시태그만 출력하고 링크는 쓰지 마 (링크는 따로 붙일 거야).\n\n"
     "소재:\n{material}"
 )
@@ -195,12 +197,33 @@ def select_top_items(items: list[dict], size: int) -> list[dict]:
     return picked if picked else items[:size]
 
 
-def write_draft_body(items: list[dict], angle: str) -> str:
-    """Ask Gemini Flash for a short Korean X-post draft (body + hashtags only).
+def _append_source_block(body: str, items: list[dict]) -> str:
+    """Append real source titles/URLs after the model text (never model-generated)."""
+    lines = [body.rstrip(), "", "출처"]
+    appended = False
+    for item in items:
+        url = (item.get("url") or "").strip()
+        if not url:
+            continue
+        title = (item.get("titleKo") or item.get("title") or "").strip()
+        if title:
+            lines.append(f"- {title}")
+            lines.append(f"  {url}")
+        else:
+            lines.append(f"- {url}")
+        appended = True
+    if not appended:
+        return f"{body.rstrip()}\n"
+    return "\n".join(lines) + "\n"
 
-    Source links aren't embedded in the body text — they're already shown
-    separately as REF entries alongside the draft (see drafts.html), so
-    repeating them inside the post text would be redundant.
+
+def write_draft_body(items: list[dict], angle: str) -> str:
+    """Ask Gemini Flash for a short Korean X-post draft, then attach real source URLs.
+
+    The model writes body + hashtags only (no links). After the call, this
+    function appends a 출처 block built from each item's actual `url` /
+    `titleKo` fields so the draft body always carries the bundled sources
+    without hallucinated links.
     """
     key = api_key()
     if not key:
@@ -213,4 +236,4 @@ def write_draft_body(items: list[dict], angle: str) -> str:
         angle=angle, category_hint=category_hint, material=_material_block(items)
     )
     text = _call_gemini(prompt, key)
-    return f"{text}\n"
+    return _append_source_block(text, items)

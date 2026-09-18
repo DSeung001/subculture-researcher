@@ -136,9 +136,14 @@ def list_drafts(db, status: str = "DRAFT", limit: int = 1000) -> list[dict]:
 
     sources = {}
     if source_ids:
+        # get_all does not preserve input order — key by path, never zip.
         refs = [_content_ref(db, source_id) for source_id in source_ids]
-        for source_id, snapshot in zip(source_ids, db.get_all(refs)):
-            if not snapshot.exists:
+        path_to_id = {ref.path: source_id for source_id, ref in zip(source_ids, refs)}
+        for snapshot in db.get_all(refs):
+            if not snapshot.exists or snapshot.reference is None:
+                continue
+            source_id = path_to_id.get(snapshot.reference.path)
+            if not source_id:
                 continue
             item = snapshot.to_dict() or {}
             item["_id"] = source_id
