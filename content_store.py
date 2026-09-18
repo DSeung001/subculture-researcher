@@ -15,7 +15,7 @@ TRACKING_PARAMS = {
     "utm_id", "utm_source_platform", "utm_creative_format", "utm_marketing_tactic",
     "fbclid", "gclid", "dclid", "msclkid",
 }
-METRICS = ("viewCount", "likeCount")
+METRICS = ("viewCount", "likeCount")\nSIGNAL_FIELDS = (\n    "trending", "popularity", "favourites", "averageScore",\n    "nextAiringAt", "episode", "signalCheckedAt",\n)
 
 
 def normalize_url(url: str, base_url: str = "") -> str:
@@ -113,7 +113,7 @@ class ContentStore:
         return {
             "inserted": int(created),
             "existing": int(not created),
-            "updated": int(not created and bool(metrics)),
+            "updated": int(not created and bool(metrics or signals)),
         }
 
 
