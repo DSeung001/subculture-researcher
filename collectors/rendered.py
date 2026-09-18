@@ -2,6 +2,7 @@
 
 from bs4 import BeautifulSoup
 
+from collectors.common import extract_product_fields
 from collectors.html_links import extract_links, extract_metrics
 from collectors.http import USER_AGENT
 
@@ -48,7 +49,11 @@ def rendered_items(source: dict, policy):
 
             context.route("**/*", route_request)
             listing = context.new_page()
-            detail = context.new_page() if source.get("detail_metrics") else None
+            detail = (
+                context.new_page()
+                if source.get("detail_metrics") or source.get("product_mode")
+                else None
+            )
 
             def navigate(page, url, ready_selector):
                 policy.check(url)
@@ -74,12 +79,26 @@ def rendered_items(source: dict, policy):
                         continue
                     seen.add(item["url"])
                     missing = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
-                    if missing:
+                    product_mode = source.get("product_mode", False)
+                    if missing or product_mode:
                         try:
                             navigate(detail, item["url"], source.get("detail_wait_selector", "h1"))
-                            values, errors = extract_metrics(BeautifulSoup(detail.content(), "html.parser"), missing, required=True)
-                            item.update(values)
-                            item["_errors"].extend(errors)
+                            detail_soup = BeautifulSoup(detail.content(), "html.parser")
+                            if missing:
+                                values, errors = extract_metrics(detail_soup, missing, required=True)
+                                item.update(values)
+                                item["_errors"].extend(errors)
+                            if product_mode:
+                                image_node = detail_soup.select_one('meta[property="og:image"]')
+                                image_url = image_node.get("content") if image_node else None
+                                # A rendered browser's own innerText already excludes
+                                # CSS-hidden stock-state toggles; no need for the
+                                # class/style heuristic the static-HTML path uses.
+                                # product_text_selector still helps exclude nav/footer
+                                # boilerplate that is visible but unrelated to the item.
+                                text_selector = source.get("product_text_selector")
+                                full_text = detail.locator(text_selector or "body").inner_text()
+                                item.update(extract_product_fields(source, full_text, image_url))
                         except Exception as exc:
                             item["_errors"].append(f"상세 페이지 실패: {exc}")
                     yield item

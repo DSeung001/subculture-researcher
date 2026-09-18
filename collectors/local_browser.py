@@ -7,18 +7,14 @@ not attempt to bypass them.
 
 import re
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urljoin
 
-from collectors.common import save_records
+from collectors.common import extract_product_fields, save_records
 from content_store import normalize_url
 
 
-PRICE_RE = re.compile(r"(?<!\d)(\d{1,3}(?:,\d{3})+)\s*원")
 ABSOLUTE_URL_RE = re.compile(r"https?://[^\s'\"<>]+")
-PREORDER_WORDS = ("예약", "PRE-ORDER", "PREORDER", "予約")
-SOLD_OUT_WORDS = ("품절", "SOLD OUT", "판매 종료", "마감")
 
 
 def _matches_any(patterns: list[str], text: str) -> bool:
@@ -80,23 +76,6 @@ def _title(locator, context: str) -> str:
 
 
 def _product_fields(source: dict, text: str, locator=None) -> dict:
-    values = [int(value.replace(",", "")) for value in PRICE_RE.findall(text)]
-    price = next((value for value in values if value >= 1000), None)
-    upper = text.upper()
-    if any(word.upper() in upper for word in SOLD_OUT_WORDS):
-        status = "SOLD_OUT"
-    elif any(word.upper() in upper for word in PREORDER_WORDS):
-        status = "PREORDER"
-    else:
-        status = "IN_STOCK"
-
-    deadline = None
-    if any(word in text for word in ("예약", "마감", "종료")):
-        match = KOREAN_DATE_RE.search(text)
-        if match:
-            year, month, day = map(int, match.groups())
-            deadline = f"{year:04d}-{month:02d}-{day:02d}"
-
     image_url = None
     if locator is not None:
         try:
@@ -110,16 +89,7 @@ def _product_fields(source: dict, text: str, locator=None) -> dict:
         except Exception:
             image_url = None
 
-    return {
-        "entityType": "PRODUCT",
-        "shop": source.get("shop") or source["name"],
-        "saleStatus": status,
-        "price": price,
-        "currency": "KRW" if price is not None else None,
-        "preorderEndAt": deadline,
-        "imageUrl": image_url,
-        "productCheckedAt": datetime.now(timezone.utc),
-    }
+    return extract_product_fields(source, text, image_url)
 
 
 def local_browser_items(source: dict):

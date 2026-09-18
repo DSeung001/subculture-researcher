@@ -38,6 +38,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
 
   # 일본 애니 공식 YouTube 채널. channel_id로 공식 Atom feed만 읽는다.
   - name: KADOKAWA Anime YouTube
@@ -90,6 +91,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
 
   # 제조사 공식 뉴스. 신제품/예약/출시 공지를 원천 데이터로 사용한다.
   - name: Good Smile Company 뉴스
@@ -104,6 +106,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
 
   # 일본 굿즈/피규어 미디어 허브. 본문 카드(.c-item)만 모아 사이드 랭킹을 제외한다.
   - name: Animate Times 굿즈
@@ -119,6 +122,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
 
   # 국내 애니/굿즈 뉴스. 애니메이션 유입용 콘텐츠 후보를 수집한다.
   - name: 애니플러스 뉴스
@@ -146,6 +150,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
 
   # 로그인/JS 이동이 필요한 국내 페어·이벤트. 로컬 Playwright 프로필로만 수집한다.
   - name: 애니메이트 코리아 페어·이벤트
@@ -338,6 +343,9 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
+    product_text_selector: .detailArea
+    shop: 따빼몰
 
   # 국내 리셀러의 명조(워더링 웨이브) 공식 라이선스 굿즈.
   - name: 따빼몰 명조 굿즈
@@ -354,6 +362,9 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
+    product_text_selector: .detailArea
+    shop: 따빼몰
 
   # 국내 정품 피규어샵의 예약상품 목록. 장르 제한 없이 미국/일본/중국 라이선스 피규어가 섞여 있다.
   - name: 피규어프레소 예약상품
@@ -369,6 +380,8 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
+    shop: 피규어프레소
 
   # 미국 공식 피규어 브랜드 뉴스. Sideshow는 Queue-it 대기실(사실상 항상 리다이렉트)로
   # 막혀 있어 자동 수집이 불가능해 McFarlane Toys 공식 뉴스로 대체했다.
@@ -384,6 +397,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
+    product_mode: true
 
   # 다른 대형 페스티벌은 확인 결과 자동 수집기로 붙이기 어려웠다:
   # - Wonder Festival(wonfes.jp) 공지: robots.txt는 허용하지만 모든 공지가 /info/ 한 페이지 안의

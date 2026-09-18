@@ -5,7 +5,7 @@ from decimal import Decimal
 from bs4 import BeautifulSoup
 
 from content_store import METRICS, normalize_url
-from collectors.common import save_records
+from collectors.common import extract_product_fields, save_records
 from collectors.http import RobotsPolicy, get_html
 
 
@@ -62,6 +62,29 @@ def extract_metrics(root, selectors: dict, *, required=False) -> tuple[dict, lis
         except ValueError as exc:
             errors.append(str(exc))
     return values, errors
+
+
+HIDDEN_CLASS_HINTS = ("displaynone", "d-none", "hidden", "hide", "invisible")
+
+
+def visible_text(soup: BeautifulSoup) -> str:
+    """Drop CSS-hidden nodes before extracting text.
+
+    Product templates often render every stock-state button/badge
+    (재고 있음/품절/예약) and toggle visibility with a class or inline
+    style; a static (non-JS) fetch can't tell which one is actually shown,
+    so scanning raw get_text() picks up disabled states as if they were
+    live. Stripping obviously-hidden nodes first avoids that.
+    """
+    for node in soup.find_all(True):
+        attrs = getattr(node, "attrs", None)
+        if not attrs:
+            continue  # already decomposed as part of an ancestor's subtree
+        classes = " ".join(attrs.get("class", [])).lower()
+        style = (attrs.get("style") or "").lower().replace(" ", "")
+        if any(hint in classes for hint in HIDDEN_CLASS_HINTS) or "display:none" in style:
+            node.decompose()
+    return soup.get_text("\n", strip=True)
 
 
 def extract_links(html: str, base_url: str, source: dict):
@@ -126,12 +149,25 @@ def html_items(source: dict):
             continue
         seen.add(item["url"])
         detail_selectors = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
-        if detail_selectors:
+        product_mode = source.get("product_mode", False)
+        if detail_selectors or product_mode:
             try:
                 detail_html, _ = get_html(item["url"], policy, source.get("timeout_seconds", 15))
-                values, errors = extract_metrics(BeautifulSoup(detail_html, "html.parser"), detail_selectors, required=True)
-                item.update(values)
-                item["_errors"].extend(errors)
+                detail_soup = BeautifulSoup(detail_html, "html.parser")
+                if detail_selectors:
+                    values, errors = extract_metrics(detail_soup, detail_selectors, required=True)
+                    item.update(values)
+                    item["_errors"].extend(errors)
+                if product_mode:
+                    image_node = detail_soup.select_one('meta[property="og:image"]')
+                    image_url = image_node.get("content") if image_node else None
+                    # Full-page text picks up nav/footer boilerplate (site-wide
+                    # "예약"/"마감" links, unrelated prices) as false product
+                    # signals; product_text_selector scopes to the product panel.
+                    text_selector = source.get("product_text_selector")
+                    text_root = detail_soup.select_one(text_selector) if text_selector else detail_soup
+                    full_text = visible_text(text_root) if text_root else ""
+                    item.update(extract_product_fields(source, full_text, image_url))
             except Exception as exc:
                 item["_errors"].append(f"상세 페이지 실패: {exc}")
         yield item
