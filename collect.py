@@ -10,7 +10,7 @@ from sources_config import load_sources
 from translate import enrich_translation, needs_translation
 
 
-COLLECTORS = {"rss": collect_rss, "html": collect_html_links, "json_api": collect_json_api}
+COLLECTORS = {\n    "rss": collect_rss,\n    "html": collect_html_links,\n    "json_api": collect_json_api,\n    "anilist": collect_anilist,\n    "youtube_feed": collect_youtube_feed,\n}
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
 TABLE_HEADERS = ("소스", "처리", "신규", "기존", "갱신", "실패", "실패 사유")
 
