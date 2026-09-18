@@ -97,7 +97,30 @@ GEMINI_API_KEY=여기에_발급받은_키
 키가 없으면 이 단계는 건너뛰고 나머지 수집은 평소대로 진행됩니다. 드래프트 탭의
 "AI로 임시글 만들기" 버튼으로 수동 실행도 가능합니다.
 
-### 5. GitHub Actions 수집
+### 5. 로컬 브라우저 수집
+
+로그인/세션/JS 화면이 필요한 소스는 GitHub Actions에서 실행하지 않고 로컬 브라우저에서만 수집합니다.
+
+```bash
+python collect.py --local-browser --source "라프텔 인기·신작"
+python collect.py --local-browser --source "라프텔 스토어"
+python collect.py --local-browser --source "animate 서울홍대점"
+python collect.py --local-browser --source "일러스타 페스"
+python collect.py --local-browser --source "코믹월드"
+python collect.py --local-browser --source "Kotobukiya 뉴스"
+```
+
+브라우저가 열리면 로그인/MFA/Cloudflare 확인이나 원하는 목록 화면 이동은 직접 완료하고, 터미널에서 Enter를 누릅니다. 이후 현재 화면을 천천히 스크롤하면서 링크와 메타데이터를 수집합니다.
+
+소스별 세션은 `.local/playwright/<profile>`에 저장됩니다. 이 폴더는 gitignore 대상이며 쿠키/로그인 상태를 GitHub에 올리지 않습니다. 첫 실행 전에 Chromium이 없다면:
+
+```bash
+python -m playwright install chromium
+```
+
+`local_only: true` 소스는 일반 `python collect.py` 및 GitHub Actions 실행에서 자동으로 건너뜁니다.
+
+### 6. GitHub Actions 수집
 
 수요일·토요일 08:00 KST(UTC 화·금 23:00)에 `collect.py`가 자동 실행됩니다. Actions 탭에서 `Collect sources` 워크플로를 수동으로도 돌릴 수 있습니다. GitHub 스케줄은 몇십 분 밀릴 수 있습니다.
 
@@ -113,7 +136,7 @@ GEMINI_API_KEY=여기에_발급받은_키
 
 워크플로가 `main`에 올라간 뒤 Actions 탭에서 한 번 수동 실행해 Firestore에 쓰이는지 확인하세요. 첫 예약 실행은 다음 수/토입니다.
 
-### 6. 리뷰 앱 실행
+### 7. 리뷰 앱 실행
 
 ```bash
 python app.py
