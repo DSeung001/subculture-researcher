@@ -9,6 +9,10 @@ from ai_drafts import create_trending_draft
 from ai_writer import AiWriterError
 from firebase_client import get_db
 from content_store import add_manual_content
+from content_model import (
+    ANGLES, CATEGORIES, SOURCE_TIERS, STATUSES,
+    category_collection, content_id, content_ref,
+)
 from drafts_store import (
     DraftError,
     create_draft,
@@ -33,11 +37,6 @@ from presentation import (
     summary_preview,
 )
 
-
-CATEGORIES = ["ANIME", "CHARACTER", "FIGURE", "GOODS", "COLLECTION", "FESTIVAL", "UNKNOWN"]
-STATUSES = ["NEW", "KEEP", "HOLD", "IGNORE"]
-ANGLES = ["NEWS", "COMPARE", "SIZE", "PRICE", "QUESTION", "GUIDE", "COLLECTION"]
-SOURCE_TIERS = ["OFFICIAL", "MEDIA"]
 
 CATEGORY_LABELS = {
     "ANIME": "애니",
@@ -103,7 +102,7 @@ def db():
 
 
 def update_content(category: str, document_id: str, **fields):
-    db().collection("categories").document(category or "UNKNOWN").collection("contents").document(document_id).update(fields)
+    category_collection(db(), category).document(document_id).update(fields)
 
 
 def safe_next(raw: str | None) -> str:
@@ -136,20 +135,22 @@ def build_url(filters: dict, **overrides) -> str:
 def contents_query(category: str):
     # A chosen category reads its own collection; "ALL" merges every category via collection_group.
     if category and category != "ALL":
-        return db().collection("categories").document(category).collection("contents")
+        return category_collection(db(), category)
     return db().collection_group("contents")
 
 
 def cursor_token(snapshot) -> str:
-    category = (snapshot.to_dict() or {}).get("category") or "UNKNOWN"
-    return f"{category}:{snapshot.id}"
+    return content_id(snapshot)
 
 
 def resolve_cursor(token: str):
-    category, _, doc_id = (token or "").partition(":")
-    if not category or not doc_id:
+    if not token:
         return None
-    snapshot = db().collection("categories").document(category).collection("contents").document(doc_id).get()
+    try:
+        ref = content_ref(db(), token)
+    except ValueError:
+        return None
+    snapshot = ref.get()
     return snapshot if snapshot.exists else None
 
 
@@ -175,8 +176,8 @@ def index():
     for snapshot in docs:
         item = snapshot.to_dict()
         item["_id"] = snapshot.id
-        item["_category"] = item.get("category") or "UNKNOWN"
-        item["_ref"] = f"{item['_category']}:{item['_id']}"
+        item["_ref"] = content_id(snapshot)
+        item["_category"] = item["_ref"].partition(":")[0]
         if item.get("source"):
             all_sources.add(item["source"])
 

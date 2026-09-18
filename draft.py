@@ -6,11 +6,9 @@ from dotenv import load_dotenv
 
 from ai_drafts import run_trending_draft
 from firebase_client import get_db
+from content_model import CATEGORIES
 
 load_dotenv()
-
-CATEGORIES = ("ANIME", "CHARACTER", "FIGURE", "GOODS", "COLLECTION", "FESTIVAL", "UNKNOWN")
-
 
 def main(argv=None):
     parser = argparse.ArgumentParser(

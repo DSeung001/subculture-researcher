@@ -2,7 +2,7 @@
 
 애니메이션·피규어·굿즈·페스티벌 신제품/뉴스를 모아 Firestore에 저장하고, 브라우저 리뷰 앱에서 채택·보류·무시로 분류하는 개인용 도구입니다.
 
-상세 정책: [source.md](./source.md) · 데이터 구조: [agent.md](./agent.md)
+상세 정책: [source.md](./source.md) · 데이터 구조: [agent.md](./agent.md) · 작업 규칙: [AGENTS.md](./AGENTS.md)
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 하고 싶은 일 | 명령 |
 |---|---|
-| 리뷰 앱 열기 | `python app.py` → http://127.0.0.1:5000 |
+| 리뷰 앱 열기 | `python app.py` → http://127.0.0.1:5001 |
 | 자동 수집 | `python collect.py` |
 | 수동(브라우저) 수집 | `python collect.py --local-browser --source "소스이름"` |
 | AI 임시글만 만들기 | `python draft.py` |
@@ -89,7 +89,8 @@ Windows (활성화 안 했을 때):
 .\.venv\Scripts\python.exe app.py
 ```
 
-브라우저에서 http://127.0.0.1:5000  
+브라우저에서 http://127.0.0.1:5001
+
 로컬 전용(인증 없음). 외부에 공개하지 마세요.
 
 앱에서 URL을 직접 붙여 넣어 수동 추가도 가능합니다.
@@ -215,6 +216,16 @@ python collect.py --local-browser --source "애니메이트 코리아 페어·�
 Actions 탭의 `Collect sources`로 수동 실행도 가능합니다.
 
 ---
+
+## 개발 검증
+
+의존성 설치 후 외부 API·실제 Firestore 연결 없이 회귀 테스트를 실행합니다.
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Windows에서는 `.\.venv\Scripts\python.exe -m unittest discover -s tests -v`를 사용합니다.
 
 ## Windows에서 `python`이 안 될 때
 

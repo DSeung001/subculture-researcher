@@ -1,197 +1,99 @@
-# Agent Context
+# Architecture and data contracts
 
-## Project purpose
+Working rules: [AGENTS.md](AGENTS.md). Setup: [README.md](README.md).
+Source policy: [source.md](source.md).
 
-Subculture Researcher is a small personal research inbox for discovering content ideas before publishing them on X and later connecting successful topics to FiguRoom.
+## Flow and ownership
 
-The system should remain intentionally simple.
+`sources.yaml → collectors → ContentStore → Firestore → Flask/Jinja review UI`
 
-## Architecture
+The Firebase Admin SDK runs server-side. `python app.py` serves the
+unauthenticated review UI locally on `127.0.0.1:5001`.
 
-```
-Sources
-  -> Python collectors
-  -> Firestore
-  -> Flask review UI (server-rendered Jinja2 templates)
-```
+| Module | Responsibility |
+|---|---|
+| `sources_config.py` | Shared source configuration loading |
+| `content_model.py` | Allowed categories/statuses/angles/tiers and stable references |
+| `collectors/common.py` | Metadata defaults, product extraction, save/error accounting |
+| `content_store.py` | Canonical URLs, legacy deduplication, create/update rules |
+| `translate.py` | Optional MyMemory title/summary translation with quota guards |
+| `presentation.py` | Display helpers, dates, ranking and product captions |
+| `drafts_store.py` | Draft validation, bulk source reads, persistence and publishing |
+| `ai_drafts.py` | Shared candidate selection and draft orchestration |
+| `ai_writer.py` | Gemini selection/writing prompts, throttling and retries |
+| `app.py`, `collect.py`, `draft.py` | UI and CLI entry points |
 
-The review UI (`app.py`) is a local-only Flask app run with `python app.py`, using
-the Firebase Admin SDK on the server side (same service-account credentials as
-`collect.py`). It is not authenticated or deployed publicly — run it on your
-own machine only. There is no separate backend API beyond this review app.
+## Content storage
 
-## Core workflow
+Path: `categories/{STORAGE_CATEGORY}/contents/{sha256(canonical_url)}`.
+Legacy documents keep their IDs. A category field edit does not move the document.
+Use `content_id(snapshot)` for source IDs/cursors and `content_ref(db, source_id)`
+for lookups; the ID format is `STORAGE_CATEGORY:document_id`.
 
-1. Collect metadata from configured sources.
-2. Store one Firestore document per canonical URL.
-3. Review items in the Flask app.
-4. Mark each item as `NEW`, `KEEP`, `HOLD`, or `IGNORE`.
-5. Manually save X URLs when useful.
-6. Bundle one or more inbox items into a draft and review it on the drafts tab.
+Core fields: `url`, `title`, `summary`, `source`, `sourceType`, `sourceUrl`,
+`region`, `category`, `contentAngle`, `sourceTier`, `note`, `status`,
+`publishedAt`, `postedAt`, `collectedAt`, `createdAt`.
 
-## Firestore collections
+Optional fields:
 
-Content is split into one Firestore collection per category, each nested under a
-`categories` shard document:
+- Translation: `titleKo`, `summaryKo`, `sourceLanguage`, `translatedAt`.
+  Korean-majority text needs no translation; display falls back to originals.
+- Engagement: `viewCount`, `likeCount`, each with its `CheckedAt` timestamp.
+- AniList signals: `SIGNAL_FIELDS` in `content_store.py`.
+- Products: `PRODUCT_FIELDS` in `content_store.py` (shop, sale status, price,
+  currency, preorder deadline, release window, manufacturer, size, image).
 
-`categories/{CATEGORY}/contents/{sha256(url)}`
+`ContentStore` loads an index of existing URLs once per run, shares it across
+collectors, and preserves editorial fields on recollection. Only metrics/signals/
+product metadata are refreshed on existing documents. Manual submissions refresh
+the index. Dry runs never connect to Firestore or translate content.
 
-A document keeps living in the category collection it was first saved under, even if
-its `category` field is edited later — moving it would change its document path.
-The review UI reads a single category with `categories/{CATEGORY}/contents`, and reads
-across every category at once with a Firestore `collection_group("contents")` query
-(same `collectedAt` ordering and pagination either way). The `collection_group` query
-needs a one-time Firestore composite index for `collectedAt`; the first time it runs,
-the Firestore client error includes a direct link to create it.
+The inbox reads a category's storage shard or the `contents` collection group,
+ordered by `collectedAt`, then filters/sorts each page locally. A collection-group
+ordering index may be needed; Firestore supplies a creation link on failure.
 
-Expected fields:
+## Drafts
 
-- `url`
-- `title`
-- `titleKo`
-- `summary`
-- `summaryKo`
-- `sourceLanguage`
-- `translatedAt`
-- `source`
-- `sourceType`
-- `sourceUrl`
-- `region`
-- `category`
-- `contentAngle`
-- `sourceTier`
-- `note`
-- `status`
-- `publishedAt`
-- `postedAt`
-- `collectedAt`
-- `createdAt`
+Path: `drafts/{autoId}`. Fields: `sourceIds`, `angle`, `body`, `status`,
+`postedAt`, `createdAt`, `updatedAt`. Status is `DRAFT` or `POSTED`.
 
-`titleKo` and `summaryKo` are Korean translations of foreign titles/summaries from the free MyMemory API. Hangul-majority text is stored as-is. Article bodies are never stored.
+- Accept 1–20 distinct source IDs and preserve selection order.
+- Reject the same source-ID set and angle, regardless of order or draft status.
+  Duplicate lookup projects only source IDs from drafts matching the angle.
+- `NEWS` cannot use already-posted sources; other angles can reuse them.
+- `create_draft` loads sources in one bulk read and validates before invoking an
+  optional `body_factory(items, angle)`. Manual bodies and generated bodies share
+  this path. Missing sources or generation failures do not save a draft.
+- Draft lists share the same bulk loader and display placeholders for missing
+  sources. Publishing fills source `postedAt` only when empty.
 
-## Allowed categories
+## AI draft flow
 
-- `ANIME`
-- `CHARACTER`
-- `FIGURE`
-- `GOODS`
-- `COLLECTION`
-- `FESTIVAL` — anime/figure/goods conventions and fan festivals (AGF, Comiket, Wonder Festival, etc.)
-- `UNKNOWN`
+`collect.py` (unless `--dry-run`/`--no-ai-draft`), `draft.py`, and `POST /drafts/ai`
+all use `create_trending_draft`. CLI messages are shared by `run_trending_draft`.
 
-## Allowed content angles
+1. Read a bounded candidate set (`CANDIDATE_LIMIT`), exclude ignored/posted items,
+   optionally filter category, then rank by `presentation.content_score`.
+   Ranking boosts domestic items, official sources, AniList/engagement signals,
+   and product preorders/limited runs.
+2. Gemini selects from the score-ranked pool using original titles and structured
+   product captions. Missing keys or failed/unparseable selection fall back to
+   score order.
+3. Validate chosen sources and duplicate rules, then generate the Korean body
+   from freshly loaded sources. Duplicate drafts skip the body-writing call.
+4. Append real source titles/URLs locally. The model must not invent facts/links;
+   category hints and product captions guide its writing.
 
-- `NEWS`
-- `COMPARE`
-- `SIZE`
-- `PRICE`
-- `QUESTION`
-- `GUIDE`
-- `COLLECTION`
+`GEMINI_API_KEY` comes from local `.env` or an Actions secret. Missing/invalid keys
+raise `AiWriterError`; callers report the failure without failing collection.
+Request spacing, bounded retries and quota guards live in `ai_writer.py`.
 
-## Allowed source tiers
+## Current limits
 
-- `OFFICIAL` — manufacturer / official announcements
-- `MEDIA` — news hubs and retailer media
+- Candidate ranking covers the bounded query result, not the whole database.
+- Inbox category filters read storage shards; editing category does not migrate
+  a document between shards.
+- Duplicate draft detection and draft/source publishing are not transactions.
+  Parallel writes can race; no cross-process uniqueness guarantee is claimed.
 
-User-community/forum sources (VOC) are out of scope by policy — only new
-product, anime, and figure info resources are collected.
-
-`note` is a short editorial memo for the combined X account. `postedAt` is set when the item has been published manually, or when a draft that uses it is marked posted (only if `postedAt` was empty).
-
-## Firestore drafts
-
-`drafts/{autoId}`
-
-- `sourceIds` — one or more `"CATEGORY:sha256(url)"` strings, each identifying a document
-  in `categories/{CATEGORY}/contents`
-- `angle` — same allowed values as `contentAngle`
-- `body` — either the mechanically assembled title/summary/URL/note text, or an
-  AI-written draft (see below); never the article body itself
-- `status` — `DRAFT` or `POSTED`
-- `postedAt`
-- `createdAt`
-- `updatedAt`
-
-Duplicate rules:
-
-- Reject a new draft when another draft already has the same `sourceIds` set and the same `angle`.
-- `NEWS` drafts also reject any selected source that already has `postedAt`.
-- Other angles may reuse posted sources. The drafts UI labels those sources as already used.
-- Publishing a draft sets `contents.postedAt` only when that field is empty.
-
-## AI draft writing
-
-`ai_drafts.py` takes the top-scoring (`presentation.content_score`, which now
-also boosts `region == "KR"` items, and for any `entityType == "PRODUCT"` item
-(figures today; any future product-type source too) boosts
-`saleStatus == "PREORDER"` and titles matching `LIMITED_KEYWORDS`
-(한정판/한정수량/限定, etc.) — preorders and limited runs are time-sensitive and
-sell out, so they're worth surfacing over an always-available in-stock item)
-unposted, non-`IGNORE` items across every category, and runs two Gemini Flash
-(via the plain REST API — no SDK dependency) calls in `ai_writer.py`:
-
-1. **Selection** (`select_top_items`) — from a pool of the
-   `SELECTION_POOL_SIZE` highest-scoring candidates, the model picks the
-   `DRAFT_SIZE` most likely to perform well on X, preferring `[국내]`
-   (Korean-site) items, preordering/limited products, and, for anime, items
-   with higher AniList trending/popularity/favourites/averageScore. Candidate
-   titles are shown in their original (non-translated) form here. If there's
-   no API key or the call fails/is unparseable, it silently falls back to the
-   score-sorted order, so selection issues never block draft creation.
-2. **Writing** (`write_draft_body`) — writes the Korean body for the selected
-   items, formatted for X: a hooking first line, short line-broken sentences,
-   at most one emoji, and 2-4 relevant hashtags on the last line. The prompt's
-   emphasis line (`CATEGORY_HINTS`) varies by the draft's dominant category
-   (ANIME/CHARACTER/FIGURE/GOODS/COLLECTION/FESTIVAL) — e.g. a FIGURE draft is
-   nudged toward price/size/release info, a FESTIVAL draft toward date/venue.
-
-Both prompts' material blocks include `presentation.product_caption(item)` for
-any product item (shop/saleStatus/price/preorderEndAt/sizeText/etc.) so a
-higher content_score from a preorder or limited run is backed by real
-structured data in the prompt, not just whatever happens to be in the scraped
-summary text — the score doesn't just rank candidates, it's the same signal
-the model sees when picking and writing.
-
-The model is told not to invent links or facts, and to cover every numbered
-material in the body. After writing, `write_draft_body` appends a `출처`
-block assembled locally from each item's real `url` / `titleKo` (never
-model-generated). The same sources also appear as REF entries alongside the
-draft in `templates/drafts.html`, so the post text stays copy-paste-ready for
-X with grounded links and without hallucinated URLs.
-
-This runs automatically at the end of every real (non-`--dry-run`,
-non-`--no-ai-draft`) `collect.py` run, on demand via `python draft.py`
-(optionally `--category`), and from the drafts page ("AI로 글 만들기" →
-`POST /drafts/ai`). The two CLI entry points share `run_trending_draft`
-(same one-line status messages); the Flask button calls
-`create_trending_draft` directly for flash messages. All three paths use
-the same selection/writing logic and `create_draft` duplicate checks, so a
-repeat run over unchanged top items is a no-op rather than a duplicate draft.
-
-`GEMINI_API_KEY` is read from the environment: a local `.env` file (loaded via
-`python-dotenv`, gitignored) in development, the `GEMINI_API_KEY` repository
-secret in the `collect.yml` GitHub Actions workflow. Missing or invalid keys
-raise `AiWriterError`, which CLI callers catch via `run_trending_draft` and
-the Flask handler catches for flash messages — neither fails the surrounding
-collection run or request.
-
-## Important constraints
-
-- Do not add X scraping.
-- Do not commit Firebase service account credentials.
-- Keep collectors source-specific only when configuration is insufficient.
-- Respect robots.txt for HTML collection.
-- Store metadata and links, not full copyrighted articles.
-- Prefer small incremental changes over infrastructure expansion.
-- Do not add vector databases, additional schedulers, authentication, or a
-  backend server beyond the existing Flask review app unless there is a
-  demonstrated need. LLM usage is intentionally scoped to candidate selection
-  and draft body writing within the AI draft flow (see "AI draft writing"
-  above) — don't expand it into other features (auto-translation,
-  auto-classification, editing existing content) without discussing it first.
-- Preserve URL-based deduplication.
-
-## Near-term product goal
-
-The tool should make it possible to choose 2-4 strong X post candidates within a few minutes each day and later analyze which topic/content-angle combinations produce useful audience growth for FiguRoom.
+Offline regression tests: `python -m unittest discover -s tests -v`.

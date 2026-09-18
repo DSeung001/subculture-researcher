@@ -8,13 +8,13 @@ not attempt to bypass them.
 import re
 import time
 from pathlib import Path
-from urllib.parse import urljoin
 
 from collectors.common import extract_product_fields, save_records
 from content_store import normalize_url
 
 
 ABSOLUTE_URL_RE = re.compile(r"https?://[^\s'\"<>]+")
+QUOTED_PATH_RE = re.compile(r"['\"](/[^'\"\s<>]*)['\"]")
 
 
 def _matches_any(patterns: list[str], text: str) -> bool:

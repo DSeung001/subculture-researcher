@@ -30,6 +30,8 @@ def is_new_today(item: dict, *, now: datetime | None = None) -> bool:
 def parse_published_at(value) -> datetime | None:
     if not value:
         return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
     for parser in (parsedate_to_datetime, datetime.fromisoformat):
         try:
             parsed = parser(value)
@@ -45,7 +47,7 @@ def effective_date(item: dict) -> datetime:
         return published
     collected_at = item.get("collectedAt")
     if isinstance(collected_at, datetime):
-        return collected_at
+        return collected_at if collected_at.tzinfo else collected_at.replace(tzinfo=timezone.utc)
     return datetime.min.replace(tzinfo=timezone.utc)
 
 

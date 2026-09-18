@@ -8,6 +8,7 @@ from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
 
 from translate import enrich_translation
+from content_model import category_collection
 
 
 TRACKING_PARAMS = {
@@ -43,11 +44,6 @@ def normalize_url(url: str, base_url: str = "") -> str:
 
 def doc_id(url: str) -> str:
     return hashlib.sha256(normalize_url(url).encode("utf-8")).hexdigest()
-
-
-def category_collection(db, category: str):
-    """Each category lives in its own Firestore collection: categories/{CATEGORY}/contents."""
-    return db.collection("categories").document(category or "UNKNOWN").collection("contents")
 
 
 class ContentStore:

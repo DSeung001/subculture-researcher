@@ -1,8 +1,9 @@
 """Bundle the top-scoring unposted content into one AI-written draft."""
 
 from ai_writer import AiWriterError, select_top_items, write_draft_body
-from drafts_store import DraftError, create_draft, infer_angle
+from drafts_store import MAX_SOURCES, DraftError, create_draft, infer_angle
 from presentation import content_score
+from content_model import content_id
 
 
 CANDIDATE_LIMIT = 300
@@ -19,7 +20,7 @@ def _load_candidates(db, category: str | None = None) -> list[dict]:
         item_category = data.get("category") or "UNKNOWN"
         if category is not None and item_category != category:
             continue
-        data["_id"] = f"{item_category}:{snapshot.id}"
+        data["_id"] = content_id(snapshot)
         items.append(data)
     return items
 
@@ -35,17 +36,18 @@ def create_trending_draft(db, size: int = DRAFT_SIZE, category: str | None = Non
     write about. DraftError (e.g. a duplicate of an existing draft) and
     AiWriterError (e.g. missing GEMINI_API_KEY) propagate to the caller.
     """
+    if not isinstance(size, int) or isinstance(size, bool) or not 1 <= size <= MAX_SOURCES:
+        raise DraftError(f"초안 재료 수는 1~{MAX_SOURCES}개여야 합니다.")
     items = _load_candidates(db, category=category)
     if not items:
         return None
 
     items.sort(key=content_score, reverse=True)
-    pool = items[:SELECTION_POOL_SIZE]
+    pool = items[:max(SELECTION_POOL_SIZE, size)]
     top = select_top_items(pool, size)
     angle = infer_angle(top)
-    body = write_draft_body(top, angle)
     source_ids = [item["_id"] for item in top]
-    return create_draft(db, source_ids, angle=angle, body=body)
+    return create_draft(db, source_ids, angle=angle, body_factory=write_draft_body)
 
 
 def run_trending_draft(db, category: str | None = None) -> str:

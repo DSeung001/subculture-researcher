@@ -1,11 +1,14 @@
 """Temporary posts that bundle one or more contents documents."""
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 from firebase_admin import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
+
+from content_model import ANGLES as ALLOWED_ANGLES, content_ref
 
 
-ALLOWED_ANGLES = ("NEWS", "COMPARE", "SIZE", "PRICE", "QUESTION", "GUIDE", "COLLECTION")
 MAX_SOURCES = 20
 
 
@@ -56,35 +59,55 @@ def _unique_ids(source_ids) -> list[str]:
 
 def _content_ref(db, source_id: str):
     """source_id is "CATEGORY:doc_id" — the category picks which contents collection to look in."""
-    category, _, doc_id = source_id.partition(":")
-    if not category or not doc_id:
-        raise DraftError("잘못된 항목 ID입니다.")
-    return db.collection("categories").document(category).collection("contents").document(doc_id)
+    try:
+        return content_ref(db, source_id)
+    except ValueError as exc:
+        raise DraftError(str(exc)) from exc
+
+
+def _contents_by_id(db, source_ids: list[str]) -> dict[str, dict]:
+    if not source_ids:
+        return {}
+    refs = [_content_ref(db, source_id) for source_id in source_ids]
+    path_to_id = {ref.path: source_id for source_id, ref in zip(source_ids, refs)}
+    items = {}
+    # Firestore get_all may return snapshots in a different order.
+    for snapshot in db.get_all(refs):
+        if not snapshot.exists or snapshot.reference is None:
+            continue
+        source_id = path_to_id.get(snapshot.reference.path)
+        if source_id is None:
+            continue
+        item = snapshot.to_dict() or {}
+        item["_id"] = source_id
+        items[source_id] = item
+    return items
 
 
 def _load_contents(db, source_ids: list[str]) -> list[dict]:
-    items = []
-    for source_id in source_ids:
-        snapshot = _content_ref(db, source_id).get()
-        if not snapshot.exists:
-            raise DraftError("선택한 항목 중 없는 자료가 있습니다.")
-        item = snapshot.to_dict() or {}
-        item["_id"] = source_id
-        items.append(item)
-    return items
+    items = _contents_by_id(db, source_ids)
+    if any(source_id not in items for source_id in source_ids):
+        raise DraftError("선택한 항목 중 없는 자료가 있습니다.")
+    return [items[source_id] for source_id in source_ids]
 
 
 def _existing_duplicate(db, source_ids: list[str], angle: str) -> bool:
     wanted = set(source_ids)
-    for snapshot in db.collection("drafts").select(["sourceIds", "angle"]).stream():
+    query = db.collection("drafts").where(filter=FieldFilter("angle", "==", angle))
+    for snapshot in query.select(["sourceIds"]).stream():
         data = snapshot.to_dict() or {}
-        if data.get("angle") == angle and set(data.get("sourceIds") or []) == wanted:
+        if set(data.get("sourceIds") or []) == wanted:
             return True
     return False
 
 
-def create_draft(db, source_ids, angle: str | None = None, body: str | None = None) -> str:
-    """body overrides the mechanically assembled text (e.g. an AI-written draft)."""
+def create_draft(
+    db, source_ids, angle: str | None = None, body: str | None = None, *,
+    body_factory: Callable[[list[dict], str], str] | None = None,
+) -> str:
+    """Validate once before generating an optional expensive body from fresh sources."""
+    if body is not None and body_factory is not None:
+        raise ValueError("body와 body_factory는 함께 지정할 수 없습니다.")
     ids = _unique_ids(source_ids)
     if not ids:
         raise DraftError("항목을 선택해주세요.")
@@ -98,6 +121,9 @@ def create_draft(db, source_ids, angle: str | None = None, body: str | None = No
         raise DraftError("이미 발행에 쓰인 재료는 뉴스 임시글로 만들 수 없습니다.")
     if _existing_duplicate(db, ids, chosen_angle):
         raise DraftError("같은 재료와 각도의 임시글이 이미 있습니다.")
+
+    if body_factory is not None:
+        body = body_factory(items, chosen_angle)
 
     now = datetime.now(timezone.utc)
     ref = db.collection("drafts").document()
@@ -134,20 +160,7 @@ def list_drafts(db, status: str = "DRAFT", limit: int = 1000) -> list[dict]:
                 seen.add(source_id)
                 source_ids.append(source_id)
 
-    sources = {}
-    if source_ids:
-        # get_all does not preserve input order — key by path, never zip.
-        refs = [_content_ref(db, source_id) for source_id in source_ids]
-        path_to_id = {ref.path: source_id for source_id, ref in zip(source_ids, refs)}
-        for snapshot in db.get_all(refs):
-            if not snapshot.exists or snapshot.reference is None:
-                continue
-            source_id = path_to_id.get(snapshot.reference.path)
-            if not source_id:
-                continue
-            item = snapshot.to_dict() or {}
-            item["_id"] = source_id
-            sources[source_id] = item
+    sources = _contents_by_id(db, source_ids)
 
     for draft in drafts:
         bundled = []
