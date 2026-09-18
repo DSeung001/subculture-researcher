@@ -1,62 +1,76 @@
 # Subculture Researcher
 
-Private MVP for collecting and reviewing anime / figure / goods / collection content.
+애니메이션, 피규어, 굿즈, 컬렉션 관련 정보를 자동/수동으로 수집하고 Firestore에 저장한 뒤 Streamlit에서 검토하는 개인용 리서치 도구입니다.
 
-## Architecture
+이 프로젝트의 목적은 **FiguRoom의 SNS 콘텐츠를 만들기 전에 어떤 주제와 포맷이 반복적으로 가치가 있는지 빠르게 확인하는 것**입니다.
+
+## 컨셉
 
 ```
-Python collector
-      ↓
-   Firestore
-      ↑
-  Streamlit
+공식 사이트 / 커뮤니티 / 수동 URL
+              ↓
+        Python Collector
+              ↓
+           Firestore
+              ↑
+          Streamlit
+              ↓
+      채택 / 보류 / 무시
 ```
 
-The first version intentionally avoids a separate backend server.
+별도 API 서버를 두지 않습니다.
 
-## MVP features
+- Collector는 로컬 Python 프로세스로 실행합니다.
+- 수집 데이터는 Firebase Firestore에 저장합니다.
+- Streamlit은 Firestore 데이터를 조회하고 분류합니다.
+- 같은 URL은 SHA-256 document ID를 사용해 중복 저장하지 않습니다.
+- X는 직접 스크래핑하지 않고 필요한 게시물을 수동으로 저장합니다.
 
-- RSS collection into Firestore
-- URL-based deduplication using SHA-256 document IDs
-- Manual URL capture from the Streamlit sidebar
-- Categories:
-  - `ANIME`
-  - `CHARACTER`
-  - `FIGURE`
-  - `GOODS`
-  - `COLLECTION`
-- Content angles such as `NEWS`, `SIZE`, `PRICE`, and `QUESTION`
-- Research workflow:
-  - `NEW`
-  - `KEEP`
-  - `HOLD`
-  - `IGNORE`
+## 목적
 
-## 1. Firebase setup
+초기에는 아래 질문에 답하는 데 집중합니다.
 
-1. Create a Firebase project.
-2. Enable **Cloud Firestore**.
-3. In Firebase Console, create/download a service account key.
-4. Keep the JSON file outside Git or name it `firebase-key.json` in this project.
-5. Point Application Default Credentials to it.
+1. 국내외 서브컬처에서 어떤 이야기가 반복적으로 등장하는가?
+2. 애니, 캐릭터, 피규어, 장식장 중 어떤 주제가 콘텐츠 후보로 많이 나오는가?
+3. 어떤 항목을 실제 X 콘텐츠로 채택하게 되는가?
+4. 이후 게시 성과와 연결했을 때 어떤 주제 × 포맷 조합이 좋은가?
 
-macOS / Linux:
+현재는 콘텐츠 수집과 검토까지만 구현합니다.
+
+## 현재 수집 대상
+
+자동 수집 대상으로 설정된 소스는 `sources.yaml`에서 관리합니다.
+
+- HOBBY Watch 피규어
+- Good Smile Company 뉴스
+- 애니플러스 뉴스
+- DC 피규어 마이너 갤러리
+- 루리웹 피규어 정보
+
+X 중심 채널은 자동 스크래핑하지 않습니다.
+
+- 라프텔
+- animate 서울홍대점
+- AGF Korea
+- 일러스타 페스
+- 코믹월드
+
+자세한 수집 정책은 [source.md](./source.md)를 참고하세요.
+
+## 실행 방법
+
+### 1. 저장소 받기
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="$PWD/firebase-key.json"
+git clone https://github.com/DSeung001/subculture-researcher.git
+cd subculture-researcher
 ```
 
-PowerShell:
+### 2. Python 환경 만들기
 
-```powershell
-$env:GOOGLE_APPLICATION_CREDENTIALS="$PWD\firebase-key.json"
-```
+Python 3.11 이상을 권장합니다.
 
-The key is ignored by `.gitignore`. Never commit it.
-
-## 2. Install
-
-Python 3.11+ is recommended.
+macOS / Linux:
 
 ```bash
 python -m venv .venv
@@ -72,38 +86,50 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## 3. Add sources
+### 3. Firebase 설정
 
-Edit `sources.yaml`.
+Firebase 프로젝트에서 Cloud Firestore를 활성화합니다.
 
-```yaml
-sources:
-  - name: example
-    type: rss
-    url: https://example.com/feed.xml
-    category: ANIME
-    enabled: true
+Firebase Console에서 Service Account JSON 키를 발급하고 프로젝트 루트에 `firebase-key.json`으로 저장할 수 있습니다.
+
+이 파일은 `.gitignore`에 포함되어 있으며 절대 GitHub에 커밋하면 안 됩니다.
+
+macOS / Linux:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="$PWD/firebase-key.json"
 ```
 
-Only add sources after confirming their terms and automated-access policy.
+Windows PowerShell:
 
-## 4. Collect
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="$PWD\firebase-key.json"
+```
+
+### 4. 데이터 수집
 
 ```bash
 python collect.py
 ```
 
-Each URL becomes a deterministic Firestore document ID, so rerunning the collector does not create duplicate documents for the same URL.
+실행 시 `sources.yaml`의 활성화된 소스를 순서대로 확인합니다.
 
-## 5. Run dashboard
+HTML 소스는 `robots.txt` 확인에 실패하거나 자동 수집이 허용되지 않으면 건너뜁니다.
+
+### 5. 대시보드 실행
 
 ```bash
 streamlit run app.py
 ```
 
-Use the sidebar to manually save URLs or filter collected content.
+브라우저에서 다음 작업을 할 수 있습니다.
 
-## Firestore shape
+- 최신 수집 항목 확인
+- 카테고리 필터
+- 채택 / 보류 / 무시
+- X 등에서 찾은 URL 수동 추가
+
+## Firestore 구조
 
 ```
 contents/{sha256(url)}
@@ -112,6 +138,8 @@ contents/{sha256(url)}
   summary
   source
   sourceType
+  sourceUrl
+  region
   category
   contentAngle
   status
@@ -120,15 +148,42 @@ contents/{sha256(url)}
   createdAt
 ```
 
-## Intentionally not in V0
+주요 값:
 
-- X scraping
-- Auto-posting
-- LLM summarization
-- Recommendation models
-- Vector DB
-- Authentication
-- Separate API/backend server
-- Scheduled cloud jobs
+```
+category
+  ANIME
+  CHARACTER
+  FIGURE
+  GOODS
+  COLLECTION
+  UNKNOWN
 
-The next milestone should be adding 3-5 real sources and using the inbox for several days before adding automation.
+contentAngle
+  NEWS
+  COMPARE
+  SIZE
+  PRICE
+  QUESTION
+  GUIDE
+  COLLECTION
+
+status
+  NEW
+  KEEP
+  HOLD
+  IGNORE
+```
+
+## MVP에서 하지 않는 것
+
+- X 자동 스크래핑
+- 자동 게시
+- LLM 자동 요약
+- 벡터 DB
+- 추천 모델
+- 별도 백엔드 API
+- 사용자 로그인
+- 클라우드 스케줄러
+
+먼저 실제로 며칠 사용하면서 어떤 소스와 필드가 필요한지 확인한 뒤 확장합니다.
