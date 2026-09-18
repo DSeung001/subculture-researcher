@@ -12,6 +12,7 @@ from presentation import (
     format_date_kst,
     is_new_today,
     metric_caption,
+    product_caption,
     content_score,
     signal_labels,
     sort_items,
@@ -214,6 +215,7 @@ def index():
         )
         item["_summary"] = summary_preview(item)
         item["_metric_caption"] = metric_caption(item)
+        item["_product_caption"] = product_caption(item)
         item["_signal_score"] = content_score(item)
         item["_signal_labels"] = signal_labels(item)
 
