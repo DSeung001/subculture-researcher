@@ -75,43 +75,64 @@
 - 상태: 목록이 `javascript:gd_btn_view(...)` 이라 HTML 링크 수집 불가 → `enabled: false`
 - 대안: 필요한 게시물 URL을 리뷰 앱에서 수동 추가로 저장
 
-## 수동 수집
+## 로컬 브라우저 수집
 
-아래 채널은 X 중심으로 운영되거나 자동 접근 정책을 별도로 확인해야 하므로 MVP에서는 자동 스크래핑하지 않습니다.
-사용자 커뮤니티/포럼(예: DC 갤러리, 루리웹, 인벤 등) 글도 "신규 상품 · 애니메이션 정보 · 피규어 정보"만
-남기는 정책에 따라 자동 수집 대상에 포함하지 않습니다.
+아래 소스는 GitHub Actions에서 자동 실행하지 않고, `python collect.py --local-browser`로만 실행합니다.
+Playwright의 소스별 영속 프로필을 사용하므로 로그인 쿠키/세션을 로컬에 유지할 수 있습니다.
+로그인, MFA, Cloudflare 확인은 사용자가 열린 브라우저에서 직접 완료합니다.
 
-### 라프텔 / 라프텔 스토어
+### 라프텔 인기·신작
 
-- 용도: 애니메이션 소재 및 피규어/굿즈 상품 관찰
-- 자동 수집: 비활성. 공식 공개 Store API가 확인되기 전에는 자동 크롤링하지 않음
-- 상품 저장 방법: 라프텔 상품 URL을 리뷰 앱에서 `FIGURE` 카테고리로 수동 등록
-- 저장 결과: `entityType=PRODUCT`, `shop=Laftel`, `saleStatus=UNKNOWN`
-- 추후 공식 API 또는 제휴 데이터 경로가 확보되면 가격/예약마감/재고를 자동 갱신
+- URL: https://laftel.net/
+- 카테고리: `ANIME`
+- 프로필: `laftel`
+- 방식: 로그인 후 인기 애니/이번주/분기/요일별 신작 화면으로 직접 이동 → Enter → 현재 화면 링크 수집
+
+### 라프텔 스토어
+
+- URL: https://laftel.net/
+- 카테고리: `FIGURE`
+- 프로필: `laftel` (애니 탐색과 세션 공유)
+- 방식: 스토어 피규어/예약상품 화면으로 직접 이동 → Enter → 상품 링크와 주변 텍스트 수집
+- 상품 필드: `entityType=PRODUCT`, `shop=Laftel`, `saleStatus`, `price`, `preorderEndAt`, `imageUrl`
+- 예약일은 화면에 YYYY년 M월 D일 형식이 있을 때 추출
 
 ### animate 서울홍대점
 
-- 용도: 굿즈/상품 반복 포맷 벤치마킹
-- 관찰 포인트: 입고소식, 추천상품, 이벤트, 페어
-- 저장 방법: 필요한 게시물 URL을 수동 저장
+- URL: https://x.com/animate_hongdae
+- 카테고리: `GOODS`
+- 프로필: `x-animate-hongdae`
+- 방식: X 로그인/인증을 직접 완료한 뒤 공식 계정의 게시물 링크를 천천히 수집
 
-### AGF Korea
+### 애니메이트 코리아 페어·이벤트
 
-- 용도: 행사, 일정, 출연자, 티켓, 참가사 정보
-- 관찰 포인트: FOMO, 일정형 콘텐츠, 정보 카드
-- 저장 방법: 필요한 게시물 URL을 수동 저장
+- URL: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
+- 카테고리: `FESTIVAL`
+- 프로필: `animate-korea`
+- 방식: JS 네비게이션 화면을 로컬 브라우저로 연 뒤 이벤트/페어 링크 수집
 
 ### 일러스타 페스
 
-- 용도: 커뮤니티 톤과 UGC 방식 벤치마킹
-- 관찰 포인트: 참가자 리포스트, 밈, 크리에이터 콘텐츠
-- 저장 방법: 필요한 게시물 URL을 수동 저장
+- URL: https://illustar.imweb.me/
+- 카테고리: `FESTIVAL`
+- 프로필: `illustar`
+- 방식: 공지/티켓/행사 화면으로 이동 후 현재 페이지의 공식 링크 수집
 
 ### 코믹월드
 
-- 용도: CTA, 마감, 희소성 포맷 벤치마킹
-- 관찰 포인트: 행사 공지, 이벤트, 참여 유도
-- 저장 방법: 필요한 게시물 URL을 수동 저장
+- URL: https://comicw.co.kr/
+- 카테고리: `FESTIVAL`
+- 프로필: `comicworld`
+- 방식: 공지/행사/티켓 화면으로 이동 후 현재 페이지 링크 수집
+
+### Kotobukiya 뉴스
+
+- URL: https://www.kotobukiya.co.jp/en/news/
+- 카테고리: `FIGURE`
+- 프로필: `kotobukiya`
+- 방식: Cloudflare 확인이 필요한 경우 사용자가 직접 완료한 후 공식 뉴스/상품 링크 수집
+
+AGF Korea는 현재 공개 JSON API가 있어 `FESTIVAL` 자동 수집을 유지하며, 로컬 브라우저 대상으로 중복 등록하지 않습니다.
 
 ## 수집 원칙
 
