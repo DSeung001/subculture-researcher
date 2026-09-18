@@ -83,7 +83,8 @@ def _existing_duplicate(db, source_ids: list[str], angle: str) -> bool:
     return False
 
 
-def create_draft(db, source_ids, angle: str | None = None) -> str:
+def create_draft(db, source_ids, angle: str | None = None, body: str | None = None) -> str:
+    """body overrides the mechanically assembled text (e.g. an AI-written draft)."""
     ids = _unique_ids(source_ids)
     if not ids:
         raise DraftError("항목을 선택해주세요.")
@@ -103,7 +104,7 @@ def create_draft(db, source_ids, angle: str | None = None) -> str:
     ref.set({
         "sourceIds": ids,
         "angle": chosen_angle,
-        "body": build_body(items, chosen_angle),
+        "body": body if body is not None else build_body(items, chosen_angle),
         "status": "DRAFT",
         "postedAt": None,
         "createdAt": now,

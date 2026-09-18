@@ -85,6 +85,18 @@ python collect.py --backfill-translations
 
 `--dry-run`은 Firestore에 쓰지 않으므로 번역 API도 호출하지 않습니다.
 
+수집이 끝나면(=`--dry-run`이 아닐 때) 가장 반응이 좋을 만한 미발행 항목들을 모아
+Gemini Flash로 임시글 초안을 하나 자동으로 만듭니다. [Google AI Studio](https://aistudio.google.com/apikey)에서
+무료 API 키를 발급받아 프로젝트 루트의 `.env`에 추가하세요 (`.env`는 `.gitignore`에 포함되어
+있어 커밋되지 않습니다):
+
+```bash
+GEMINI_API_KEY=여기에_발급받은_키
+```
+
+키가 없으면 이 단계는 건너뛰고 나머지 수집은 평소대로 진행됩니다. 드래프트 탭의
+"AI로 임시글 만들기" 버튼으로 수동 실행도 가능합니다.
+
 ### 5. GitHub Actions 수집
 
 수요일·토요일 08:00 KST(UTC 화·금 23:00)에 `collect.py`가 자동 실행됩니다. Actions 탭에서 `Collect sources` 워크플로를 수동으로도 돌릴 수 있습니다. GitHub 스케줄은 몇십 분 밀릴 수 있습니다.
@@ -96,6 +108,8 @@ python collect.py --backfill-translations
 3. Name: `FIREBASE_KEY`
 4. Secret: JSON 전체(`{`부터 `}`까지). 파일 경로가 아니라 파일 내용입니다.
 5. (선택) 같은 화면에서 `MYMEMORY_EMAIL`도 추가한다.
+6. (선택) AI 임시글 초안을 원하면 같은 화면에서 `GEMINI_API_KEY`도 추가한다. 없으면 이 단계만
+   건너뛰고 수집은 정상적으로 진행된다.
 
 워크플로가 `main`에 올라간 뒤 Actions 탭에서 한 번 수동 실행해 Firestore에 쓰이는지 확인하세요. 첫 예약 실행은 다음 수/토입니다.
 

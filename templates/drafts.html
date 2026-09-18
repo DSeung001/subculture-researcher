@@ -21,6 +21,10 @@
     <a href="{{ url_for('drafts_page', status='ALL') }}" class="chip {% if status == 'ALL' %}active{% endif %}">전체</a>
   </div>
 
+  <form method="post" action="{{ url_for('create_ai_draft_item') }}">
+    <button type="submit" class="btn btn-primary">AI로 임시글 만들기</button>
+  </form>
+
   <div class="items">
     {% for draft in drafts %}
     <article class="card">

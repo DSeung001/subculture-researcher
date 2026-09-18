@@ -1,15 +1,22 @@
 import argparse
 import json
 
+from dotenv import load_dotenv
+
+from ai_drafts import create_trending_draft
+from ai_writer import AiWriterError
 from collectors.anilist import collect_anilist
 from collectors.html_links import collect_html_links
 from collectors.json_api import collect_json_api
 from collectors.rss import collect_rss
 from collectors.youtube_feed import collect_youtube_feed
 from content_store import ContentStore
+from drafts_store import DraftError
 from firebase_client import get_db
 from sources_config import load_sources
 from translate import enrich_translation, needs_translation
+
+load_dotenv()
 
 
 COLLECTORS = {
@@ -145,6 +152,16 @@ def main(argv=None):
     print("수집 종료: " + " ".join(f"{key}={value}" for key, value in total.items()))
     print()
     print(render_table(table_rows))
+
+    if db is not None:
+        try:
+            draft_id = create_trending_draft(db)
+        except DraftError as exc:
+            print(f"[AI 초안] 건너뜀: {exc}")
+        except AiWriterError as exc:
+            print(f"[AI 초안] 실패: {exc}")
+        else:
+            print(f"[AI 초안] 임시글 생성: {draft_id}" if draft_id else "[AI 초안] 후보 항목 없음, 건너뜀")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,12 @@
 import os
 from datetime import datetime, timezone
 
+from dotenv import load_dotenv
 from firebase_admin import firestore
 from flask import Flask, flash, redirect, render_template, request, url_for
 
+from ai_drafts import create_trending_draft
+from ai_writer import AiWriterError
 from firebase_client import get_db
 from content_store import add_manual_content
 from drafts_store import (
@@ -15,6 +18,8 @@ from drafts_store import (
     save_body,
 )
 from sources_config import load_sources
+
+load_dotenv()
 from presentation import (
     date_caption,
     format_date_kst,
@@ -320,6 +325,17 @@ def create_draft_item():
         flash(str(exc), "error")
         return redirect(next_url)
     flash("임시글을 만들었습니다.", "success")
+    return redirect(url_for("drafts_page"))
+
+
+@app.post("/drafts/ai")
+def create_ai_draft_item():
+    try:
+        draft_id = create_trending_draft(db())
+    except (DraftError, AiWriterError) as exc:
+        flash(str(exc), "error")
+    else:
+        flash("임시글을 만들었습니다." if draft_id else "AI로 쓸 만한 새 재료가 없습니다.", "success" if draft_id else "info")
     return redirect(url_for("drafts_page"))
 
 

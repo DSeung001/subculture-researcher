@@ -35,4 +35,5 @@ jobs:
       - name: Collect
         env:
           MYMEMORY_EMAIL: ${{ secrets.MYMEMORY_EMAIL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python collect.py
