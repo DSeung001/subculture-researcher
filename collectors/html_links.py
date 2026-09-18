@@ -51,19 +51,32 @@ def _normalize_url(base_url: str, href: str) -> str:
     )
 
 
-def _robots_allows(url: str) -> bool:
+def _robots_status(url: str, timeout_seconds: int = 15) -> tuple[bool, str]:
     parsed = urlparse(url)
     robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
 
-    parser = RobotFileParser()
-    parser.set_url(robots_url)
-
     try:
-        parser.read()
-        return parser.can_fetch(USER_AGENT, url)
-    except Exception:
-        # 보수적으로 동작한다. robots.txt 확인에 실패하면 자동 수집하지 않는다.
-        return False
+        # RobotFileParser.read()는 stdlib urllib를 써서 macOS에서
+        # SSL 인증서 검증에 실패할 수 있다. 페이지 수집과 같은
+        # requests+certifi 경로로 robots.txt를 읽는다.
+        response = requests.get(
+            robots_url,
+            headers={"User-Agent": USER_AGENT},
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        return False, f"robots.txt를 확인할 수 없음: {exc}"
+
+    if response.status_code == 404:
+        return True, ""
+    if response.status_code >= 400:
+        return False, f"robots.txt 응답 오류: HTTP {response.status_code}"
+
+    parser = RobotFileParser()
+    parser.parse(response.text.splitlines())
+    if parser.can_fetch(USER_AGENT, url):
+        return True, ""
+    return False, "robots.txt에서 자동 수집을 허용하지 않음"
 
 
 def _matches(url: str, patterns: list[str]) -> bool:
@@ -75,13 +88,18 @@ def _matches(url: str, patterns: list[str]) -> bool:
 def collect_html_links(db, source: dict) -> dict[str, int]:
     source_url = source["url"]
 
-    if source.get("respect_robots", True) and not _robots_allows(source_url):
-        return {
-            "processed": 0,
-            "inserted": 0,
-            "skipped": 1,
-            "reason": "robots.txt에서 자동 수집을 허용하지 않거나 확인할 수 없음",
-        }
+    if source.get("respect_robots", True):
+        allowed, reason = _robots_status(
+            source_url,
+            timeout_seconds=source.get("timeout_seconds", 15),
+        )
+        if not allowed:
+            return {
+                "processed": 0,
+                "inserted": 0,
+                "skipped": 1,
+                "reason": reason,
+            }
 
     response = requests.get(
         source_url,
