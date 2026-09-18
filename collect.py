@@ -9,6 +9,7 @@ from collectors.anilist import collect_anilist
 from collectors.figurefarm import collect_figurefarm
 from collectors.html_links import collect_html_links
 from collectors.json_api import collect_json_api
+from collectors.local_browser import collect_local_browser
 from collectors.rss import collect_rss
 from collectors.youtube_feed import collect_youtube_feed
 from content_store import ContentStore
@@ -24,6 +25,7 @@ COLLECTORS = {
     "rss": collect_rss,
     "html": collect_html_links,
     "json_api": collect_json_api,
+    "local_browser": collect_local_browser,
     "anilist": collect_anilist,
     "figurefarm": collect_figurefarm,
     "youtube_feed": collect_youtube_feed,
@@ -92,6 +94,11 @@ def main(argv=None):
         help="titleKo가 없는 외국어 기존 문서만 MyMemory로 번역해 보완",
     )
     parser.add_argument("--source", action="append", help="수집할 소스 이름 (여러 번 지정 가능)")
+    parser.add_argument(
+        "--local-browser",
+        action="store_true",
+        help="local_only Playwright 소스를 로컬 브라우저/세션으로 수집",
+    )
     args = parser.parse_args(argv)
 
     if args.check_duplicates:
@@ -121,6 +128,11 @@ def main(argv=None):
         if not source.get("enabled", True):
             print(f"[건너뜀] 비활성화: {name}")
             table_rows.append((name, 0, 0, 0, 0, 0, "비활성화"))
+            continue
+        if source.get("local_only", False) and not args.local_browser:
+            reason = "로컬 브라우저 전용 (--local-browser 필요)"
+            print(f"[건너뜀] {name}: {reason}")
+            table_rows.append((name, 0, 0, 0, 0, 0, reason))
             continue
         collector = COLLECTORS.get(source.get("type"))
         if not collector:
