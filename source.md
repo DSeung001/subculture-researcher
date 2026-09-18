@@ -4,6 +4,17 @@
 
 ## 자동 수집
 
+### 피규어팜 예약상품
+
+- URL: https://m.figurefarm.net/shop/big_section.php?cno1=1554
+- 지역: 한국
+- 티어: `MEDIA`
+- 목적: 피규어 예약상품, 가격, 예약마감일, 입고예정, 제조사 수집
+- 방식: 공개 목록 → 상세 페이지 메타데이터 수집
+- 기본 카테고리: `FIGURE`
+- 기본 포맷: `PRICE`
+- 저장 필드: `entityType=PRODUCT`, `shop=FigureFarm`, `saleStatus`, `price`, `preorderEndAt`, `releaseWindowText`, `manufacturer`
+
 ### HOBBY Watch 피규어
 
 - URL: https://hobby.watch.impress.co.jp/category/figure/
@@ -70,11 +81,13 @@
 사용자 커뮤니티/포럼(예: DC 갤러리, 루리웹, 인벤 등) 글도 "신규 상품 · 애니메이션 정보 · 피규어 정보"만
 남기는 정책에 따라 자동 수집 대상에 포함하지 않습니다.
 
-### 라프텔
+### 라프텔 / 라프텔 스토어
 
-- 용도: 애니메이션 Top-of-Funnel 소재
-- 관찰 포인트: 신작, 공개작, 캐릭터, 장면, 시즌 화제
-- 저장 방법: 필요한 X 게시물 URL을 리뷰 앱에서 수동 저장
+- 용도: 애니메이션 소재 및 피규어/굿즈 상품 관찰
+- 자동 수집: 비활성. 공식 공개 Store API가 확인되기 전에는 자동 크롤링하지 않음
+- 상품 저장 방법: 라프텔 상품 URL을 리뷰 앱에서 `FIGURE` 카테고리로 수동 등록
+- 저장 결과: `entityType=PRODUCT`, `shop=Laftel`, `saleStatus=UNKNOWN`
+- 추후 공식 API 또는 제휴 데이터 경로가 확보되면 가격/예약마감/재고를 자동 갱신
 
 ### animate 서울홍대점
 
