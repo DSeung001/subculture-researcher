@@ -25,11 +25,12 @@ sources:
     enabled: true
     respect_robots: true
 
-  # 일본 애니 공식 YouTube 채널. 채널 페이지에서 ID를 해석한 뒤 공식 Atom feed만 읽는다.
+  # 일본 애니 공식 YouTube 채널. channel_id로 공식 Atom feed만 읽는다.
   - name: KADOKAWA Anime YouTube
     type: youtube_feed
     url: https://www.youtube.com/@KADOKAWAanime
     channel_url: https://www.youtube.com/@KADOKAWAanime
+    channel_id: UCY5fcqgSrQItPAX_Z5Frmwg
     region: JP
     category: ANIME
     content_angle: NEWS
@@ -41,6 +42,7 @@ sources:
     type: youtube_feed
     url: https://www.youtube.com/@aniplex
     channel_url: https://www.youtube.com/@aniplex
+    channel_id: UC14QT5j2nQI8lKBCGtrrBQA
     region: JP
     category: ANIME
     content_angle: NEWS
@@ -52,6 +54,7 @@ sources:
     type: youtube_feed
     url: https://www.youtube.com/@TOHOanimation
     channel_url: https://www.youtube.com/@TOHOanimation
+    channel_id: UC14Yc2Qv92DMuyNRlHvpo2Q
     region: JP
     category: ANIME
     content_angle: NEWS

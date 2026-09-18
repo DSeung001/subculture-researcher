@@ -70,7 +70,7 @@
         <div class="limit-row">
           <span class="field-label">불러올 개수</span>
           <select name="limit" class="auto-submit">
-            {% for n in range(20, 201, 10) %}<option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+            {% for n in range(20, 501, 10) %}<option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
           </select>
         </div>
       </form>

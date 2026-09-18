@@ -66,6 +66,8 @@ LANGUAGE_TAGS = {
 }
 
 CHUNK_SIZE = 20
+DEFAULT_LIMIT = 500
+MAX_LIMIT = 500
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
@@ -109,7 +111,7 @@ def current_filters():
         "source": request.args.get("source", "ALL"),
         "unposted": request.args.get("unposted", ""),
         "sort": request.args.get("sort", "RECOMMENDED"),
-        "limit": clamp(parse_int(request.args.get("limit"), 200), 20, 200),
+        "limit": clamp(parse_int(request.args.get("limit"), DEFAULT_LIMIT), CHUNK_SIZE, MAX_LIMIT),
         "visible": clamp(parse_int(request.args.get("visible"), CHUNK_SIZE), CHUNK_SIZE, 10_000),
     }
 

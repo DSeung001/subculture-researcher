@@ -8,22 +8,37 @@ from collectors.http import USER_AGENT
 from content_store import normalize_url
 
 
-CHANNEL_ID_RE = re.compile(r'"channelId":"(UC[^"]+)"')
+CHANNEL_ID_RE = re.compile(r'UC[0-9A-Za-z_-]{22}')
+CHANNEL_URL_RE = re.compile(r'(?:youtube\.com|youtu\.be)/channel/(UC[0-9A-Za-z_-]{22})')
+HTML_CHANNEL_ID_RE = re.compile(
+    r'(?:"(?:channelId|externalId|browseId)"\s*:\s*"|/channel/)(UC[0-9A-Za-z_-]{22})'
+)
+
+
+def _channel_id_from_text(text: str, pattern: re.Pattern) -> str | None:
+    match = pattern.search(text or "")
+    if not match:
+        return None
+    return match.group(1) if match.lastindex else match.group(0)
 
 
 def _resolve_channel_id(source: dict) -> str:
     configured = (source.get("channel_id") or "").strip()
-    if configured:
+    if CHANNEL_ID_RE.fullmatch(configured):
         return configured
 
-    channel_url = source.get("channel_url") or source.get("url")
+    channel_url = source.get("channel_url") or source.get("url") or ""
+    from_url = _channel_id_from_text(channel_url, CHANNEL_URL_RE)
+    if from_url:
+        return from_url
+
     response = requests.get(
         channel_url,
         headers={"User-Agent": USER_AGENT},
         timeout=source.get("timeout_seconds", 15),
     )
     response.raise_for_status()
-    match = CHANNEL_ID_RE.search(response.text)
+    match = HTML_CHANNEL_ID_RE.search(response.text)
     if not match:
         raise ValueError(f"YouTube channel ID를 찾을 수 없음: {channel_url}")
     return match.group(1)
