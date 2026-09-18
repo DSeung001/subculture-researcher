@@ -46,20 +46,14 @@ pip install -r requirements.txt
 
 Firebase 프로젝트에서 Cloud Firestore를 활성화합니다.
 
-Firebase Console에서 Service Account JSON 키를 발급하고 프로젝트 루트에 `firebase-key.json`으로 저장할 수 있습니다.
+Firebase Console에서 Service Account JSON 키를 발급하고 프로젝트 루트에 `firebase-key.json`으로 저장합니다. `collect.py`와 리뷰 앱이 이 파일을 자동으로 사용하므로 환경 변수를 매번 설정할 필요는 없습니다.
 
 이 파일은 `.gitignore`에 포함되어 있으며 절대 GitHub에 커밋하면 안 됩니다.
 
-macOS / Linux:
+다른 키 파일을 쓰려면:
 
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="$PWD/firebase-key.json"
-```
-
-Windows PowerShell:
-
-```powershell
-$env:GOOGLE_APPLICATION_CREDENTIALS="$PWD\firebase-key.json"
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/other-key.json"
 ```
 
 ### 4. 데이터 수집
