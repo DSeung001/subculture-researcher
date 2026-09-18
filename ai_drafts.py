@@ -1,11 +1,12 @@
 """Bundle the top-scoring unposted content into one AI-written draft."""
 
-from ai_writer import write_draft_body
+from ai_writer import select_top_items, write_draft_body
 from drafts_store import create_draft, infer_angle
 from presentation import content_score
 
 
 CANDIDATE_LIMIT = 300
+SELECTION_POOL_SIZE = 15
 DRAFT_SIZE = 3
 
 
@@ -33,7 +34,8 @@ def create_trending_draft(db, size: int = DRAFT_SIZE) -> str | None:
         return None
 
     items.sort(key=content_score, reverse=True)
-    top = items[:size]
+    pool = items[:SELECTION_POOL_SIZE]
+    top = select_top_items(pool, size)
     angle = infer_angle(top)
     body = write_draft_body(top, angle)
     source_ids = [item["_id"] for item in top]

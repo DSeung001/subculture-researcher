@@ -8,6 +8,7 @@ KST = ZoneInfo("Asia/Seoul")
 _LEADING_DATE = re.compile(
     r"^(?P<date>\d{4}[./-]\d{1,2}[./-]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?)\s+(?P<title>.+)$"
 )
+LIMITED_KEYWORDS = ("한정판", "한정수량", "한정 수량", "한정발매", "한정 발매", "限定")
 
 
 def split_leading_date(text: str) -> tuple[str, str]:
@@ -58,6 +59,17 @@ def content_score(item: dict, *, now: datetime | None = None) -> float:
     score = recency
     if item.get("sourceTier") == "OFFICIAL":
         score += 8.0
+    if item.get("region") == "KR":
+        score += 6.0
+
+    if item.get("entityType") == "PRODUCT":
+        # Preorders and limited runs are time-sensitive and sell out, so
+        # they're worth surfacing over an always-available in-stock item.
+        if item.get("saleStatus") == "PREORDER":
+            score += 5.0
+        title_text = f"{item.get('title') or ''} {item.get('titleKo') or ''}"
+        if any(keyword in title_text for keyword in LIMITED_KEYWORDS):
+            score += 5.0
 
     for field, weight in (("viewCount", 3.0), ("likeCount", 4.0)):
         value = item.get(field)
