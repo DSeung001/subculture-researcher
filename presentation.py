@@ -1,3 +1,4 @@
+import math
 import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -96,9 +97,15 @@ def signal_labels(item: dict) -> list[str]:
     return labels
 
 
-def sort_items(items: list[dict], *, newest_first: bool = True, recommended: bool = False) -> list[dict]:
+def sort_items(
+    items: list[dict], *, newest_first: bool = True, recommended: bool = False
+) -> list[dict]:
     if recommended:
-        return sorted(items, key=lambda item: (content_score(item), effective_date(item)), reverse=True)
+        return sorted(
+            items,
+            key=lambda item: (content_score(item), effective_date(item)),
+            reverse=True,
+        )
     return sorted(items, key=effective_date, reverse=newest_first)
 
 
@@ -141,7 +148,10 @@ def metric_caption(item: dict) -> str:
     ):
         value = item.get(field)
         if value is not None:
-            parts.append(f"{label} {value:,}" if isinstance(value, int) else f"{label} {value}")
+            parts.append(
+                f"{label} {value:,}" if isinstance(value, int)
+                else f"{label} {value}"
+            )
     for field, label in (("viewCount", "조회수"), ("likeCount", "좋아요")):
         value = item.get(field)
         if value is None:
