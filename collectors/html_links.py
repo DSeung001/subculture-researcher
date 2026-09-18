@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from bs4 import BeautifulSoup
@@ -7,6 +7,30 @@ from bs4 import BeautifulSoup
 from content_store import METRICS, normalize_url
 from collectors.common import save_records
 from collectors.http import RobotsPolicy, get_html
+
+
+RELATIVE_KOREAN_PATTERN = re.compile(r"^(\d+)\s*(초|분|시간|일|주|개월|년)\s*전$")
+RELATIVE_KOREAN_UNITS = {
+    "초": lambda n: timedelta(seconds=n), "분": lambda n: timedelta(minutes=n),
+    "시간": lambda n: timedelta(hours=n), "일": lambda n: timedelta(days=n),
+    "주": lambda n: timedelta(weeks=n), "개월": lambda n: timedelta(days=30 * n),
+    "년": lambda n: timedelta(days=365 * n),
+}
+
+
+def parse_relative_korean_date(text: str) -> str | None:
+    """'3시간 전' 같은 상대 표기를 오늘 기준 날짜로 환산한다. 해석 불가 시 None."""
+    text = text.strip()
+    if text in ("방금", "방금 전"):
+        return datetime.now(timezone.utc).date().isoformat()
+    if text == "어제":
+        return (datetime.now(timezone.utc) - timedelta(days=1)).date().isoformat()
+    match = RELATIVE_KOREAN_PATTERN.match(text)
+    if not match:
+        return None
+    amount, unit = match.groups()
+    delta = RELATIVE_KOREAN_UNITS[unit](int(amount))
+    return (datetime.now(timezone.utc) - delta).date().isoformat()
 
 
 def parse_count(text: str) -> int:
@@ -73,7 +97,11 @@ def extract_links(html: str, base_url: str, source: dict):
                         if source.get("published_format") else date
                     )
                 except ValueError:
-                    item["_errors"].append(f"게시일 형식 오류: {date}")
+                    relative = parse_relative_korean_date(date)
+                    if relative:
+                        item["publishedAt"] = relative
+                    else:
+                        item["_errors"].append(f"게시일 형식 오류: {date}")
         values, errors = extract_metrics(anchor, source.get("list_metrics", {}))
         item.update(values)
         item["_errors"].extend(errors)

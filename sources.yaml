@@ -28,21 +28,6 @@ sources:
     enabled: true
     respect_robots: true
 
-  # 제조사 공식 뉴스. Cloudflare가 단순 HTTP를 막아 당분간 비활성. 패턴은 준비해 둔다.
-  - name: Kotobukiya 뉴스
-    type: html
-    url: https://www.kotobukiya.co.jp/en/news/
-    region: JP
-    category: FIGURE
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    allow_patterns:
-      - '^https://www\.kotobukiya\.co\.jp/en/news/detail/\d+/'
-      - '^https://www\.kotobukiya\.co\.jp/news/detail/\d+/'
-    max_items: 40
-    enabled: false
-    respect_robots: true
-
   # 일본 굿즈/피규어 미디어 허브. 본문 카드(.c-item)만 모아 사이드 랭킹을 제외한다.
   - name: Animate Times 굿즈
     type: html
@@ -99,6 +84,28 @@ sources:
     enabled: false
     respect_robots: true
 
+  # 공식 사이트 공지사항 게시판. 목록이 React 클라이언트 라우팅이라 HTML 링크 추출이 불가능해
+  # 페이지가 실제로 호출하는 공개 JSON API(getBoardList)를 직접 불러온다. robots.txt 없음, CORS 공개.
+  - name: AGF Korea 공지사항
+    type: json_api
+    url: https://api.agfkorea.com:3070/front/api/getBoardList?board_id=1&lang=KOR&gotoPage=1
+    items_path: listData
+    id_field: idx
+    title_field: title
+    date_field: writeday
+    date_format: '%Y-%m-%d %H:%M:%S.%f'
+    detail_url_template: 'https://www.agfkorea.com/post/1/{id}'
+    region: KR
+    category: GOODS
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    max_items: 40
+    enabled: true
+
   # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.
-  # 라프텔, animate 서울홍대점, AGF Korea, 일러스타 페스, 코믹월드
+  # 라프텔, animate 서울홍대점, 일러스타 페스, 코믹월드
   # 발견한 게시물은 리뷰 앱의 "수동 콘텐츠 추가"로 저장한다.
+
+  # Kotobukiya 뉴스(https://www.kotobukiya.co.jp/en/news/)도 같은 방식으로 수동 추가한다.
+  # 전체 도메인이 Cloudflare 인터랙티브 챌린지로 막혀 있어(정적 요청·Playwright 모두 차단,
+  # RSS/sitemap 경로도 동일) 자동 수집이 불가능하다.

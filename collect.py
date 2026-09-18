@@ -2,6 +2,7 @@ import argparse
 import json
 
 from collectors.html_links import collect_html_links
+from collectors.json_api import collect_json_api
 from collectors.rss import collect_rss
 from content_store import ContentStore
 from firebase_client import get_db
@@ -9,7 +10,7 @@ from sources_config import load_sources
 from translate import enrich_translation, needs_translation
 
 
-COLLECTORS = {"rss": collect_rss, "html": collect_html_links}
+COLLECTORS = {"rss": collect_rss, "html": collect_html_links, "json_api": collect_json_api}
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
 TABLE_HEADERS = ("소스", "처리", "신규", "기존", "갱신", "실패", "실패 사유")
 
