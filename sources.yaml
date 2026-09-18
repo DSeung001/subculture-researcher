@@ -21,6 +21,7 @@ sources:
     content_angle: NEWS
     source_tier: MEDIA
     max_items: 30
+    cache_hours: 24
     enabled: true
 
   # 일본 기업 보도자료의 만화/애니 카테고리.
