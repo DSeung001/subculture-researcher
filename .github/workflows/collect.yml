@@ -1,0 +1,38 @@
+name: Collect sources
+
+on:
+  schedule:
+    # UTC Tue/Fri 23:00 = KST Wed/Sat 08:00
+    - cron: "0 23 * * 2,5"
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Write Firebase credentials
+        env:
+          FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
+        run: |
+          if [ -z "$FIREBASE_KEY" ]; then
+            echo "FIREBASE_KEY secret is not set" >&2
+            exit 1
+          fi
+          printf '%s\n' "$FIREBASE_KEY" > firebase-key.json
+
+      - name: Collect
+        env:
+          MYMEMORY_EMAIL: ${{ secrets.MYMEMORY_EMAIL }}
+        run: python collect.py

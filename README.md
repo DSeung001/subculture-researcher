@@ -80,7 +80,21 @@ python collect.py --backfill-translations
 
 `--dry-run`은 Firestore에 쓰지 않으므로 번역 API도 호출하지 않습니다.
 
-### 5. 리뷰 앱 실행
+### 5. GitHub Actions 수집
+
+수요일·토요일 08:00 KST(UTC 화·금 23:00)에 `collect.py`가 자동 실행됩니다. Actions 탭에서 `Collect sources` 워크플로를 수동으로도 돌릴 수 있습니다. GitHub 스케줄은 몇십 분 밀릴 수 있습니다.
+
+`firebase-key.json`은 커밋하지 마세요. 파일 내용만 저장소 시크릿으로 넣습니다.
+
+1. 로컬 `firebase-key.json`을 연다 (Firestore 쓰기 권한이 있는 기존 서비스 계정 JSON).
+2. GitHub 저장소 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+3. Name: `FIREBASE_KEY`
+4. Secret: JSON 전체(`{`부터 `}`까지). 파일 경로가 아니라 파일 내용입니다.
+5. (선택) 같은 화면에서 `MYMEMORY_EMAIL`도 추가한다.
+
+워크플로가 `main`에 올라간 뒤 Actions 탭에서 한 번 수동 실행해 Firestore에 쓰이는지 확인하세요. 첫 예약 실행은 다음 수/토입니다.
+
+### 6. 리뷰 앱 실행
 
 ```bash
 python app.py
