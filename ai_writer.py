@@ -6,6 +6,7 @@ python-dotenv) during development, a repository secret in GitHub Actions.
 
 import os
 import re
+import time
 from collections import Counter
 
 import requests
@@ -19,6 +20,22 @@ GEMINI_URL = (
 )
 TIMEOUT_SECONDS = 30
 SUMMARY_CHARS = 300
+
+# Free-tier quota guards. Requests are spaced at least MIN_INTERVAL_SECONDS
+# apart (~9/min, under the 10 RPM free limit). 429/5xx responses are retried
+# after the server-suggested delay (or exponential backoff); a delay longer
+# than MAX_RETRY_WAIT_SECONDS is not worth blocking a CLI run or web request
+# for, so it fails instead. A per-day quota 429 trips a breaker so the rest of
+# the process stops calling Gemini.
+MIN_INTERVAL_SECONDS = 6.5
+MAX_RETRIES = 3
+BACKOFF_BASE_SECONDS = 5.0
+MAX_RETRY_WAIT_SECONDS = 30.0
+RETRYABLE_STATUS = {429, 500, 503}
+RETRY_DELAY_RE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*s\s*$")
+
+_last_call_at: float | None = None
+_quota_exhausted = False
 REGION_LABELS = {"KR": "국내", "JP": "일본", "US": "미국", "CN": "중국", "GLOBAL": "해외"}
 
 # Stage 1: pick which candidates are worth writing about at all. Kept as a
@@ -137,19 +154,86 @@ def _selection_block(items: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _error_details(response) -> list[dict]:
+    try:
+        details = (response.json().get("error") or {}).get("details") or []
+    except (ValueError, AttributeError):
+        return []
+    return [detail for detail in details if isinstance(detail, dict)]
+
+
+def _retry_delay(response) -> float | None:
+    """Server-suggested wait: Retry-After header, else RetryInfo.retryDelay ("34s")."""
+    header = (response.headers.get("Retry-After") or "").strip()
+    if header.isdigit():
+        return float(header)
+    for detail in _error_details(response):
+        match = RETRY_DELAY_RE.match(str(detail.get("retryDelay") or ""))
+        if match:
+            return float(match.group(1))
+    return None
+
+
+def _is_daily_quota(response) -> bool:
+    for detail in _error_details(response):
+        for violation in detail.get("violations") or []:
+            if "perday" in str(violation.get("quotaId") or "").lower():
+                return True
+    return False
+
+
+def _throttle() -> None:
+    if _last_call_at is None:
+        return
+    wait = MIN_INTERVAL_SECONDS - (time.monotonic() - _last_call_at)
+    if wait > 0:
+        time.sleep(wait)
+
+
+def _post_gemini(prompt: str, key: str):
+    """POST with request spacing and retries; returns the final response."""
+    global _last_call_at, _quota_exhausted
+    if _quota_exhausted:
+        raise AiWriterError("Gemini 일일 한도를 모두 사용해 호출하지 않습니다.")
+
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        # Neither selection nor draft writing needs multi-step
+        # reasoning; skip it to save quota.
+        "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
+    }
+    for attempt in range(MAX_RETRIES + 1):
+        _throttle()
+        try:
+            response = requests.post(
+                GEMINI_URL, params={"key": key}, json=body, timeout=TIMEOUT_SECONDS
+            )
+        finally:
+            _last_call_at = time.monotonic()
+
+        if response.status_code not in RETRYABLE_STATUS or attempt == MAX_RETRIES:
+            return response
+        if response.status_code == 429 and _is_daily_quota(response):
+            _quota_exhausted = True
+            print("[Gemini] 일일 무료 한도를 모두 사용했습니다. 이후 호출은 건너뜁니다.")
+            raise AiWriterError("Gemini 일일 한도를 모두 사용했습니다.")
+
+        delay = _retry_delay(response)
+        if delay is None:
+            delay = BACKOFF_BASE_SECONDS * (2 ** attempt)
+        if delay > MAX_RETRY_WAIT_SECONDS:
+            return response
+        print(
+            f"[Gemini] {response.status_code} 응답, {delay:.0f}초 후 재시도 "
+            f"({attempt + 1}/{MAX_RETRIES})"
+        )
+        time.sleep(delay)
+    return response
+
+
 def _call_gemini(prompt: str, key: str) -> str:
     try:
-        response = requests.post(
-            GEMINI_URL,
-            params={"key": key},
-            json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                # Neither selection nor draft writing needs multi-step
-                # reasoning; skip it to save quota.
-                "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
-            },
-            timeout=TIMEOUT_SECONDS,
-        )
+        response = _post_gemini(prompt, key)
         response.raise_for_status()
         payload = response.json()
     except (requests.RequestException, ValueError) as exc:

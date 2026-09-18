@@ -99,7 +99,19 @@ def main(argv=None):
         action="store_true",
         help="local_only Playwright 소스를 로컬 브라우저/세션으로 수집",
     )
+    parser.add_argument(
+        "--all-local",
+        action="store_true",
+        help="local_only 소스를 전부 순서대로 수집 (--local-browser 포함, --source와 함께 쓸 수 없음)",
+    )
+    parser.add_argument(
+        "--no-ai-draft",
+        action="store_true",
+        help="수집 후 AI 초안 생성(Gemini 호출)을 건너뜀",
+    )
     args = parser.parse_args(argv)
+    if args.all_local and args.source:
+        parser.error("--all-local과 --source는 함께 쓸 수 없습니다")
 
     if args.check_duplicates:
         store = ContentStore(get_db())
@@ -116,6 +128,9 @@ def main(argv=None):
         if missing:
             parser.error(f"알 수 없는 소스: {', '.join(sorted(missing))}")
         sources = [source for source in sources if source.get("name") in args.source]
+    if args.all_local:
+        args.local_browser = True
+        sources = [source for source in sources if source.get("local_only", False)]
     db = None if args.dry_run else get_db()
     store = ContentStore(db)
     duplicates = store.duplicates()
@@ -123,8 +138,10 @@ def main(argv=None):
         print(f"[점검] 기존 중복 URL={len(duplicates)} 잘못된 URL={len(store.invalid_urls)}. --check-duplicates로 확인하세요. 기존 문서는 삭제하지 않습니다.")
     total = dict.fromkeys(COUNTS, 0)
     table_rows = []
-    for source in sources:
+    for position, source in enumerate(sources, start=1):
         name = source.get("name")
+        if args.all_local:
+            print(f"[{position}/{len(sources)}] {name}")
         if not source.get("enabled", True):
             print(f"[건너뜀] 비활성화: {name}")
             table_rows.append((name, 0, 0, 0, 0, 0, "비활성화"))
@@ -167,7 +184,7 @@ def main(argv=None):
     print()
     print(render_table(table_rows))
 
-    if db is not None:
+    if db is not None and not args.no_ai_draft:
         try:
             draft_id = create_trending_draft(db)
         except DraftError as exc:

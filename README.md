@@ -1,105 +1,178 @@
 # Subculture Researcher
 
-애니메이션·피규어·굿즈·페스티벌(컨벤션/행사) 관련 신제품/뉴스 정보를 자동/수동으로 수집해 Firestore에 카테고리별 컬렉션으로 저장하고, Flask 리뷰 앱에서 검토·분류하는 개인용 리서치 도구입니다.
+애니메이션·피규어·굿즈·페스티벌 신제품/뉴스를 모아 Firestore에 저장하고, 브라우저 리뷰 앱에서 채택·보류·무시로 분류하는 개인용 도구입니다.
 
-## 핵심 기능
+상세 정책: [source.md](./source.md) · 데이터 구조: [agent.md](./agent.md)
 
-- `sources.yaml`에 등록된 공식/미디어 소스를 자동 수집 (`python collect.py`)
-- 사용자 커뮤니티/포럼 글은 수집 대상에서 제외 (신규 상품 · 애니메이션 정보 · 피규어 정보만 유지)
-- 같은 URL은 SHA-256 document ID로 중복 저장 방지
-- 일본어·영어 등 외국어 제목은 MyMemory 무료 API로 한국어 번역(`titleKo`)을 함께 저장
-- Flask 리뷰 앱(`python app.py`)에서 카테고리/티어/발행여부로 필터링하고, 채택 / 보류 / 무시로 분류
-- X 등에서 발견한 게시물 URL을 리뷰 앱에서 수동으로 추가 저장
+---
 
-소스 목록과 수집 정책은 [source.md](./source.md), Firestore 필드 구조는 [agent.md](./agent.md)를 참고하세요.
+## 한 번에 보기
 
-## 실행 방법
+| 하고 싶은 일 | 명령 |
+|---|---|
+| 리뷰 앱 열기 | `python app.py` → http://127.0.0.1:5000 |
+| 자동 수집 | `python collect.py` |
+| 수동(브라우저) 수집 | `python collect.py --local-browser --source "소스이름"` |
 
-### 1. 저장소 받기
+Windows에서는 가상환경이 켜져 있지 않으면 `python` 대신 `.\.venv\Scripts\python.exe` 를 쓰면 됩니다.
+
+---
+
+## 1. 처음 한 번만 설정
 
 ```bash
 git clone https://github.com/DSeung001/subculture-researcher.git
 cd subculture-researcher
 ```
 
-### 2. Python 환경 만들기
+Python 3.11 이상 권장.
 
-Python 3.11 이상을 권장합니다.
+### Windows (PowerShell)
 
-macOS / Linux:
+```powershell
+# python 이 안 되면 Windows Store 스텁일 수 있음 → 실제 설치 경로로 실행
+# 예: & "$env:LOCALAPPDATA\Python\bin\python.exe" -m venv .venv
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m playwright install chromium
+```
+
+`Activate.ps1` 이 막히면:
+
+```powershell
+.\.venv\Scripts\activate.bat
+```
+
+활성화 없이 바로 쓰려면:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+```
+
+`source .venv/bin/activate` 는 macOS/Linux 전용입니다. Windows에서는 쓰지 마세요.
+
+### macOS / Linux
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+python -m playwright install chromium
 ```
 
-Windows PowerShell:
+### Firebase · API 키
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-### 3. Firebase 설정
-
-Firebase 프로젝트에서 Cloud Firestore를 활성화합니다.
-
-Firebase Console에서 Service Account JSON 키를 발급하고 프로젝트 루트에 `firebase-key.json`으로 저장합니다. `collect.py`와 리뷰 앱이 이 파일을 자동으로 사용하므로 환경 변수를 매번 설정할 필요는 없습니다.
-
-이 파일은 `.gitignore`에 포함되어 있으며 절대 GitHub에 커밋하면 안 됩니다.
-
-다른 키 파일을 쓰려면:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/other-key.json"
-```
-
-콘텐츠는 카테고리별로 나뉜 Firestore 컬렉션(`categories/{카테고리}/contents`)에 저장됩니다.
-리뷰 앱에서 "전체" 카테고리를 처음 볼 때 Firestore가 `collectedAt` 정렬을 위한 복합 색인
-생성을 요구할 수 있습니다. 터미널에 뜨는 오류 메시지의 링크를 클릭하면 Firebase 콘솔에서
-한 번만 색인을 만들면 됩니다(이후에는 필요 없음).
-
-### 4. 데이터 수집
-
-```bash
-python collect.py
-```
-
-`sources.yaml`의 활성화된 소스를 순서대로 수집합니다. HTML 소스는 `robots.txt` 확인에 실패하거나 자동 수집이 허용되지 않으면 건너뜁니다.
-
-신규 항목의 제목(및 있는 경우 요약)이 한글이 아니면 MyMemory 무료 번역 API로 한국어를 만들어 `titleKo` / `summaryKo`에 저장합니다. 원문 제목은 그대로 두고, 리뷰 앱에서 번역을 먼저 보여 줍니다. 본문은 저장하지 않습니다.
-
-선택적으로 이메일 주소를 넣으면 일일 한도가 5,000자에서 50,000자로 늘어납니다.
-
-```bash
-export MYMEMORY_EMAIL="you@example.com"
-```
-
-이미 저장된 외국어 항목에 번역이 없다면:
-
-```bash
-python collect.py --backfill-translations
-```
-
-`--dry-run`은 Firestore에 쓰지 않으므로 번역 API도 호출하지 않습니다.
-
-수집이 끝나면(=`--dry-run`이 아닐 때) 가장 반응이 좋을 만한 미발행 항목들을 모아
-Gemini Flash로 임시글 초안을 하나 자동으로 만듭니다. [Google AI Studio](https://aistudio.google.com/apikey)에서
-무료 API 키를 발급받아 프로젝트 루트의 `.env`에 추가하세요 (`.env`는 `.gitignore`에 포함되어
-있어 커밋되지 않습니다):
+1. Firebase Console에서 Firestore 활성화
+2. Service Account JSON을 프로젝트 루트에 `firebase-key.json` 으로 저장 (커밋 금지, `.gitignore` 됨)
+3. (선택) AI 임시글용 키를 `.env`에 추가:
 
 ```bash
 GEMINI_API_KEY=여기에_발급받은_키
 ```
 
-키가 없으면 이 단계는 건너뛰고 나머지 수집은 평소대로 진행됩니다. 드래프트 탭의
-"AI로 임시글 만들기" 버튼으로 수동 실행도 가능합니다.
+키가 없어도 수집·리뷰 앱은 동작합니다. AI 초안 단계만 건너뜁니다.
 
-### 5. 로컬 브라우저 수집
+---
 
-로그인/세션/JS 화면이 필요한 소스는 GitHub Actions에서 실행하지 않고 로컬 브라우저에서만 수집합니다.
+## 2. 리뷰 앱
+
+```bash
+python app.py
+```
+
+Windows (활성화 안 했을 때):
+
+```powershell
+.\.venv\Scripts\python.exe app.py
+```
+
+브라우저에서 http://127.0.0.1:5000  
+로컬 전용(인증 없음). 외부에 공개하지 마세요.
+
+앱에서 URL을 직접 붙여 넣어 수동 추가도 가능합니다.
+
+---
+
+## 3. 자동 수집
+
+RSS/HTML/API 등 `local_only`가 아닌 소스를 한꺼번에 수집합니다.  
+로그인·Playwright 전용 소스는 **건너뜁니다**.
+
+```bash
+python collect.py
+```
+
+Windows:
+
+```powershell
+.\.venv\Scripts\python.exe collect.py
+```
+
+자주 쓰는 옵션:
+
+```bash
+python collect.py --dry-run                 # Firestore에 쓰지 않음
+python collect.py --backfill-translations   # 기존 항목 번역 채우기
+```
+
+수집이 끝나면(dry-run 아닐 때) `GEMINI_API_KEY`가 있으면 임시글 초안을 하나 만듭니다.  
+앱 드래프트 탭의 "AI로 임시글 만들기"로도 가능합니다.
+
+Gemini 무료 한도를 넘지 않도록 요청은 6.5초 이상 간격을 두고 보냅니다.  
+429/5xx 응답은 서버가 알려준 대기 시간(없으면 5·10·20초)만큼 기다린 뒤 최대 3번 재시도하고,
+일일 한도를 다 쓰면 그 실행에서는 더 호출하지 않습니다.  
+AI 초안 없이 수집만 하려면 `--no-ai-draft`를 붙이세요.
+
+번역 API 한도를 늘리려면:
+
+```bash
+# macOS / Linux
+export MYMEMORY_EMAIL="you@example.com"
+
+# Windows PowerShell
+$env:MYMEMORY_EMAIL="you@example.com"
+```
+
+---
+
+## 4. 수동 수집 (Playwright / 로컬 브라우저)
+
+로그인·Cloudflare·JS 화면이 필요한 소스입니다.  
+일반 `python collect.py` 와 GitHub Actions에서는 돌지 않습니다. **로컬에서만** 실행하세요.
+
+첫 Chromium 설치(한 번):
+
+```bash
+python -m playwright install chromium
+```
+
+소스 하나 수집:
+
+```bash
+python collect.py --local-browser --source "라프텔 인기·신작"
+```
+
+Windows:
+
+```powershell
+.\.venv\Scripts\python.exe collect.py --local-browser --source "라프텔 인기·신작"
+```
+
+### 전체 소스 한 번에 수집
+
+`local_only` 소스를 전부 순서대로 수집합니다. `--local-browser`가 포함되어 있고 `--source`와는 함께 쓸 수 없습니다.
+
+```bash
+python collect.py --all-local
+```
+
+소스마다 `[3/7] 소스 이름`이 출력되고 Chromium 창이 차례로 열립니다.  
+각 소스에서 아래 진행 순서대로 로그인/화면 이동 후 터미널에서 **Enter**를 누르면 다음 소스로 넘어갑니다.  
+한 소스가 실패해도 나머지는 계속 진행하며, AI 초안은 전체가 끝난 뒤 한 번만 만듭니다.
+
+### 대상 소스
 
 ```bash
 python collect.py --local-browser --source "라프텔 인기·신작"
@@ -108,38 +181,48 @@ python collect.py --local-browser --source "animate 서울홍대점"
 python collect.py --local-browser --source "일러스타 페스"
 python collect.py --local-browser --source "코믹월드"
 python collect.py --local-browser --source "Kotobukiya 뉴스"
+python collect.py --local-browser --source "애니메이트 코리아 페어·이벤트"
 ```
 
-브라우저가 열리면 로그인/MFA/Cloudflare 확인이나 원하는 목록 화면 이동은 직접 완료하고, 터미널에서 Enter를 누릅니다. 이후 현재 화면을 천천히 스크롤하면서 링크와 메타데이터를 수집합니다.
+### 진행 순서
 
-소스별 세션은 `.local/playwright/<profile>`에 저장됩니다. 이 폴더는 gitignore 대상이며 쿠키/로그인 상태를 GitHub에 올리지 않습니다. 첫 실행 전에 Chromium이 없다면:
+1. 명령 실행 → Chromium 창이 열림
+2. 로그인 / MFA / Cloudflare / 원하는 목록 화면까지 **직접** 처리
+3. 터미널에서 **Enter**
+4. 현재 화면을 스크롤하며 링크·메타데이터 수집
 
-```bash
-python -m playwright install chromium
+세션은 `.local/playwright/<프로필>`에 저장됩니다 (gitignore). 다음부터는 로그인이 덜 필요할 수 있습니다.
+
+---
+
+## 5. GitHub Actions (자동 수집만)
+
+수·토 08:00 KST에 `collect.py`가 돕니다. Playwright 수동 소스는 포함되지 않습니다.
+
+`firebase-key.json`은 커밋하지 말고, 파일 **내용**을 시크릿으로 넣습니다.
+
+1. 저장소 → Settings → Secrets and variables → Actions
+2. `FIREBASE_KEY` = JSON 전체 (`{` ~ `}`)
+3. (선택) `MYMEMORY_EMAIL`, `GEMINI_API_KEY`
+
+Actions 탭의 `Collect sources`로 수동 실행도 가능합니다.
+
+---
+
+## Windows에서 `python`이 안 될 때
+
+에러: `python.exe` / `The system cannot find the path specified`
+
+→ Microsoft Store용 `python` 스텁입니다. 실제 Python이 PATH 앞쪽에 없습니다.
+
+해결:
+
+1. [python.org](https://www.python.org/downloads/)에서 설치 후 **"Add python.exe to PATH"** 체크, 또는
+2. 전체 경로로 venv 만들기:
+
+```powershell
+& "$env:LOCALAPPDATA\Python\bin\python.exe" -m venv .venv
+.\.venv\Scripts\Activate.ps1
 ```
 
-`local_only: true` 소스는 일반 `python collect.py` 및 GitHub Actions 실행에서 자동으로 건너뜁니다.
-
-### 6. GitHub Actions 수집
-
-수요일·토요일 08:00 KST(UTC 화·금 23:00)에 `collect.py`가 자동 실행됩니다. Actions 탭에서 `Collect sources` 워크플로를 수동으로도 돌릴 수 있습니다. GitHub 스케줄은 몇십 분 밀릴 수 있습니다.
-
-`firebase-key.json`은 커밋하지 마세요. 파일 내용만 저장소 시크릿으로 넣습니다.
-
-1. 로컬 `firebase-key.json`을 연다 (Firestore 쓰기 권한이 있는 기존 서비스 계정 JSON).
-2. GitHub 저장소 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-3. Name: `FIREBASE_KEY`
-4. Secret: JSON 전체(`{`부터 `}`까지). 파일 경로가 아니라 파일 내용입니다.
-5. (선택) 같은 화면에서 `MYMEMORY_EMAIL`도 추가한다.
-6. (선택) AI 임시글 초안을 원하면 같은 화면에서 `GEMINI_API_KEY`도 추가한다. 없으면 이 단계만
-   건너뛰고 수집은 정상적으로 진행된다.
-
-워크플로가 `main`에 올라간 뒤 Actions 탭에서 한 번 수동 실행해 Firestore에 쓰이는지 확인하세요. 첫 예약 실행은 다음 수/토입니다.
-
-### 7. 리뷰 앱 실행
-
-```bash
-python app.py
-```
-
-`http://127.0.0.1:5000`에서 로컬 전용으로 실행됩니다 (인증 없음, 외부에 공개하지 마세요).
+이후에는 `.\.venv\Scripts\python.exe` 로 앱·수집을 실행하면 됩니다.
