@@ -1,16 +1,13 @@
 import argparse
 import json
-from pathlib import Path
-
-import yaml
 
 from collectors.html_links import collect_html_links
 from collectors.rss import collect_rss
 from content_store import ContentStore
 from firebase_client import get_db
+from sources_config import community_source_names, load_sources
 
 
-CONFIG_PATH = Path(__file__).with_name("sources.yaml")
 COLLECTORS = {"rss": collect_rss, "html": collect_html_links}
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
 
@@ -20,17 +17,54 @@ def main(argv=None):
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="Firestore에 연결하지 않고 수집 결과 출력")
     mode.add_argument("--check-duplicates", action="store_true", help="기존 Firestore URL 중복을 읽기 전용으로 점검")
+    mode.add_argument(
+        "--purge-community", action="store_true",
+        help="sourceTier가 COMMUNITY인 기존 Firestore 문서를 조회(기본) 또는 삭제(--yes)",
+    )
     parser.add_argument("--source", action="append", help="수집할 소스 이름 (여러 번 지정 가능)")
+    parser.add_argument(
+        "--yes", action="store_true",
+        help="--purge-community와 함께 사용 시 실제로 삭제를 실행 (기본은 드라이런)",
+    )
     args = parser.parse_args(argv)
 
     if args.check_duplicates:
         store = ContentStore(get_db())
         print(json.dumps({"duplicates": store.duplicates(), "invalidUrlDocumentIds": store.invalid_urls}, ensure_ascii=False, indent=2))
         return
-    if not CONFIG_PATH.exists():
-        raise SystemExit("sources.yaml 파일이 없습니다.")
-    config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
-    sources = config.get("sources", [])
+
+    if args.purge_community:
+        db = get_db()
+        names = sorted(community_source_names())
+        by_id = {}
+        # sourceTier catches items written after that field existed; source
+        # name also catches legacy docs collected before it did (sourceTier
+        # missing entirely on those).
+        for snapshot in db.collection("contents").where("sourceTier", "==", "COMMUNITY").stream():
+            by_id[snapshot.id] = snapshot
+        if names:
+            for snapshot in db.collection("contents").where("source", "in", names).stream():
+                by_id[snapshot.id] = snapshot
+        docs = list(by_id.values())
+        print(f"[커뮤니티 문서] {len(docs)}건 발견 (대상 소스: {', '.join(names) or '없음'})")
+        for snapshot in docs:
+            data = snapshot.to_dict() or {}
+            print(f"  - {snapshot.id}: {data.get('source')} | {data.get('title')} | {data.get('url')}")
+        if not docs:
+            return
+        if not args.yes:
+            print("[드라이런] 실제 삭제하려면 --yes를 함께 지정하세요. 아직 아무것도 삭제하지 않았습니다.")
+            return
+        batch_size = 400
+        for start in range(0, len(docs), batch_size):
+            batch = db.batch()
+            for snapshot in docs[start:start + batch_size]:
+                batch.delete(snapshot.reference)
+            batch.commit()
+        print(f"[삭제 완료] {len(docs)}건 삭제했습니다.")
+        return
+
+    sources = load_sources()
     if args.source:
         missing = set(args.source) - {source.get("name") for source in sources}
         if missing:

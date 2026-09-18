@@ -40,8 +40,11 @@ Expected fields:
 - `region`
 - `category`
 - `contentAngle`
+- `sourceTier`
+- `note`
 - `status`
 - `publishedAt`
+- `postedAt`
 - `collectedAt`
 - `createdAt`
 
@@ -63,6 +66,17 @@ Expected fields:
 - `QUESTION`
 - `GUIDE`
 - `COLLECTION`
+
+## Allowed source tiers
+
+- `OFFICIAL` — manufacturer / official announcements
+- `MEDIA` — news hubs and retailer media
+- `COMMUNITY` — forums and VOC. Excluded by policy: sources are disabled in
+  `sources.yaml`, `ContentStore.save` refuses to write `COMMUNITY`-tier items,
+  and the Streamlit UI hard-filters them out. Only `OFFICIAL`/`MEDIA` resources
+  (new products, anime info, figure info) are collected and shown.
+
+`note` is a short editorial memo for the combined X account. `postedAt` is set when the item has been published manually.
 
 ## Important constraints
 

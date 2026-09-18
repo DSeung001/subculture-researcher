@@ -6,6 +6,7 @@ sources:
     region: JP
     category: FIGURE
     content_angle: NEWS
+    source_tier: MEDIA
     allow_patterns:
       - '^https://hobby\.watch\.impress\.co\.jp/docs/news/'
       - '^https://hobby\.watch\.impress\.co\.jp/docs/review/'
@@ -20,8 +21,39 @@ sources:
     region: JP
     category: FIGURE
     content_angle: NEWS
+    source_tier: OFFICIAL
     allow_patterns:
       - '^https://www\.goodsmile\.com/en/news/'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 제조사 공식 뉴스. Cloudflare가 단순 HTTP를 막아 당분간 비활성. 패턴은 준비해 둔다.
+  - name: Kotobukiya 뉴스
+    type: html
+    url: https://www.kotobukiya.co.jp/en/news/
+    region: JP
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    allow_patterns:
+      - '^https://www\.kotobukiya\.co\.jp/en/news/detail/\d+/'
+      - '^https://www\.kotobukiya\.co\.jp/news/detail/\d+/'
+    max_items: 40
+    enabled: false
+    respect_robots: true
+
+  # 일본 굿즈/피규어 미디어 허브. 본문 카드(.c-item)만 모아 사이드 랭킹을 제외한다.
+  - name: Animate Times 굿즈
+    type: html
+    url: https://www.animatetimes.com/goods/
+    link_selector: '.c-item a[href*="/news/details.php"]'
+    region: JP
+    category: GOODS
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://www\.animatetimes\.com/news/details\.php\?id=\d+'
     max_items: 40
     enabled: true
     respect_robots: true
@@ -46,49 +78,69 @@ sources:
     region: KR
     category: ANIME
     content_angle: NEWS
+    source_tier: MEDIA
     allow_patterns:
       - '^https://news\.aniplustv\.com/news/[0-9]+$'
     max_items: 40
     enabled: true
     respect_robots: true
 
-  # 국내 피규어 커뮤니티 VOC. 질문/후기/장식장 고민을 찾기 위한 소스.
+  # 국내 공식 페어/이벤트. 목록이 JS 네비게이션이라 현재 HTML 수집기로는 링크를 못 뽑는다.
+  - name: 애니메이트 코리아 페어·이벤트
+    type: html
+    url: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
+    region: KR
+    category: GOODS
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://www\.animate-onlineshop\.co\.kr/board/view\.php\?bdId=event'
+    max_items: 40
+    enabled: false
+    respect_robots: true
+
+  # 국내 피규어 커뮤니티 VOC. 질문/후기/장식장 고민을 찾기 위한 소스였으나
+  # 사용자 커뮤니티 배제 정책으로 비활성화. 신규 상품/애니/피규어 정보만 남긴다.
   - name: DC 피규어 마이너 갤러리
     type: html
     url: https://gall.dcinside.com/mgallery/board/lists/?id=figuregall
     region: KR
     category: COLLECTION
     content_angle: QUESTION
+    source_tier: COMMUNITY
     allow_patterns:
       - '^https://gall\.dcinside\.com/mgallery/board/view/\?id=figuregall'
     max_items: 50
-    enabled: true
+    enabled: false
     respect_robots: true
 
-  # 국내 피규어 정보/리뷰 커뮤니티.
+  # 국내 피규어 정보/리뷰 커뮤니티였으나 사용자 커뮤니티 배제 정책으로 비활성화.
   - name: 루리웹 피규어 정보
     type: html
     url: https://bbs.ruliweb.com/family/242/board/300017
     region: KR
     category: FIGURE
     content_angle: NEWS
+    source_tier: COMMUNITY
     allow_patterns:
       - '^https://bbs\.ruliweb\.com/family/242/board/300017/read/'
     max_items: 50
-    enabled: true
+    enabled: false
     respect_robots: true
 
-  # 국내 피규어 커뮤니티 VOC. 입양/개봉/소장 글을 수집한다.
+  # 국내 피규어 커뮤니티 VOC. 입양/개봉/소장 글을 수집하던 소스였으나
+  # 사용자 커뮤니티 배제 정책으로 비활성화.
   - name: 덕벤 프라모델/피규어
     type: html
     url: https://www.inven.co.kr/board/party/3714?category=피규어
     region: KR
     category: FIGURE
     content_angle: COLLECTION
+    source_tier: COMMUNITY
     allow_patterns:
       - '^https://www\.inven\.co\.kr/board/party/3714/\d+'
     max_items: 50
-    enabled: true
+    enabled: false
     respect_robots: true
 
   # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.

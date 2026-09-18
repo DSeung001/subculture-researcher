@@ -7,7 +7,8 @@ def metadata(source: dict, **fields) -> dict:
         "sourceUrl": source["url"], "region": source.get("region"),
         "category": source.get("category", "UNKNOWN"),
         "contentAngle": source.get("content_angle", "NEWS"),
-        "publishedAt": None, **fields,
+        "sourceTier": source.get("source_tier", "MEDIA"),
+        "note": "", "postedAt": None, "publishedAt": None, **fields,
     }
 
 

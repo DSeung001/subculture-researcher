@@ -41,12 +41,24 @@
 
 자동 수집 대상으로 설정된 소스는 `sources.yaml`에서 관리합니다.
 
-- HOBBY Watch 피규어
-- Good Smile Company 뉴스
-- 애니플러스 뉴스
-- DC 피규어 마이너 갤러리
-- 루리웹 피규어 정보
-- 덕벤 프라모델/피규어
+- HOBBY Watch 피규어 (`MEDIA`)
+- Good Smile Company 뉴스 (`OFFICIAL`)
+- Animate Times 굿즈 (`MEDIA`)
+- 애니플러스 뉴스 (`MEDIA`)
+
+설정은 있으나 당분간 비활성인 소스:
+
+- Kotobukiya 뉴스 (`OFFICIAL`, Cloudflare로 단순 HTTP 차단)
+- 애니메이트 코리아 페어·이벤트 (`MEDIA`, 목록이 JS 네비게이션)
+
+사용자 커뮤니티 배제 정책으로 비활성화한 소스 (신규 상품/애니메이션/피규어 정보만 유지):
+
+- DC 피규어 마이너 갤러리 (`COMMUNITY`)
+- 루리웹 피규어 정보 (`COMMUNITY`)
+- 덕벤 프라모델/피규어 (`COMMUNITY`)
+
+`ContentStore.save`는 `sourceTier: COMMUNITY` 항목을 Firestore에 아예 쓰지 않으며,
+Streamlit 화면도 해당 티어를 항상 숨깁니다.
 
 X 중심 채널은 자동 스크래핑하지 않습니다.
 
@@ -126,8 +138,9 @@ streamlit run app.py
 브라우저에서 다음 작업을 할 수 있습니다.
 
 - 최신 수집 항목 확인
-- 카테고리 필터
+- 카테고리 / 소스 티어 / 미발행 필터
 - 채택 / 보류 / 무시
+- 발행 메모(`note`) 저장과 발행함(`postedAt`) 표시
 - X 등에서 찾은 URL 수동 추가
 
 ## Firestore 구조
@@ -143,8 +156,11 @@ contents/{sha256(url)}
   region
   category
   contentAngle
+  sourceTier
+  note
   status
   publishedAt
+  postedAt
   collectedAt
   createdAt
 ```
@@ -169,12 +185,23 @@ contentAngle
   GUIDE
   COLLECTION
 
+sourceTier
+  OFFICIAL
+  MEDIA
+  COMMUNITY (배제됨: 저장/화면 모두에서 제외)
+
 status
   NEW
   KEEP
   HOLD
   IGNORE
 ```
+
+결합 계정 운영용 필드:
+
+- `sourceTier`: 공식 / 미디어 / 커뮤니티 비중을 맞출 때 필터
+- `note`: KEEP 후 트윗에 쓸 한 줄·채택 이유
+- `postedAt`: X에 발행한 시각 (미발행은 `null`)
 
 ## MVP에서 하지 않는 것
 

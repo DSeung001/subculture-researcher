@@ -8,6 +8,7 @@
 
 - URL: https://hobby.watch.impress.co.jp/category/figure/
 - 지역: 일본
+- 티어: `MEDIA`
 - 목적: 피규어 신제품, 예약, 발매, 리뷰 후보 수집
 - 방식: HTML 목록 링크 수집
 - 기본 카테고리: `FIGURE`
@@ -17,46 +18,78 @@
 
 - URL: https://www.goodsmile.com/en/news
 - 지역: 일본
+- 티어: `OFFICIAL`
 - 목적: 제조사 공식 신제품/예약/발매 공지 수집
 - 방식: HTML 목록 링크 수집
 - 기본 카테고리: `FIGURE`
+- 기본 포맷: `NEWS`
+
+### Animate Times 굿즈
+
+- URL: https://www.animatetimes.com/goods/
+- 지역: 일본
+- 티어: `MEDIA`
+- 목적: 굿즈·피규어·페어 등 일본 미디어 허브 후보 수집
+- 방식: HTML 목록 링크 수집 (`.c-item` 본문 카드만)
+- 기본 카테고리: `GOODS`
 - 기본 포맷: `NEWS`
 
 ### 애니플러스 뉴스
 
 - URL: https://news.aniplustv.com/
 - 지역: 한국
+- 티어: `MEDIA`
 - 목적: 국내 애니메이션/서브컬처 화제 후보 수집
 - 방식: HTML 목록 링크 수집
 - 기본 카테고리: `ANIME`
 - 기본 포맷: `NEWS`
 
+## 설정만 두고 비활성
+
+### Kotobukiya 뉴스
+
+- URL: https://www.kotobukiya.co.jp/en/news/
+- 지역: 일본
+- 티어: `OFFICIAL`
+- 목적: 제조사 공식 공지
+- 상태: Cloudflare가 단순 HTTP를 막아 `enabled: false`
+- 재활성 조건: 브라우저 렌더링 수집이 안정적으로 통과할 때
+
+### 애니메이트 코리아 페어·이벤트
+
+- URL: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
+- 지역: 한국
+- 티어: `MEDIA`
+- 목적: 국내 페어·이벤트·입고성 소식
+- 상태: 목록이 `javascript:gd_btn_view(...)` 이라 HTML 링크 수집 불가 → `enabled: false`
+- 대안: 필요한 게시물 URL을 Streamlit 수동 추가로 저장
+
+## 사용자 커뮤니티 배제
+
+아래 소스는 사용자 커뮤니티(포럼/갤러리) 글을 다뤄 "신규 상품 · 애니메이션 정보 · 피규어 정보"만 남기는
+정책에 따라 배제했습니다. `sources.yaml`에서 `enabled: false`로 전환했고, `ContentStore.save`가
+`sourceTier: COMMUNITY` 항목의 Firestore 쓰기를 거부하며, 기존에 저장돼 있던 문서도 삭제했습니다.
+
 ### DC 피규어 마이너 갤러리
 
 - URL: https://gall.dcinside.com/mgallery/board/lists/?id=figuregall
 - 지역: 한국
-- 목적: 실제 컬렉터의 질문, 장식장, 공간 부족, 구매 고민 등 VOC 탐색
-- 방식: HTML 목록 링크 수집
-- 기본 카테고리: `COLLECTION`
-- 기본 포맷: `QUESTION`
+- 티어: `COMMUNITY`
+- 배제 전 목적: 실제 컬렉터의 질문, 장식장, 공간 부족, 구매 고민 등 VOC 탐색
 
 ### 루리웹 피규어 정보
 
 - URL: https://bbs.ruliweb.com/family/242/board/300017
 - 지역: 한국
-- 목적: 피규어 신제품 정보, 리뷰, 구매 관련 화제 후보 수집
-- 방식: HTML 목록 링크 수집
-- 기본 카테고리: `FIGURE`
-- 기본 포맷: `NEWS`
+- 티어: `COMMUNITY`
+- 배제 전 목적: 피규어 신제품 정보, 리뷰, 구매 관련 화제 후보 수집
 
 ### 덕벤 프라모델/피규어
 
 - URL: https://www.inven.co.kr/board/party/3714?category=피규어
 - 지역: 한국
-- 목적: 피규어 입양, 개봉, 소장 등 컬렉션 VOC 탐색
-- 방식: HTML 목록 링크 수집
-- 기본 카테고리: `FIGURE`
-- 기본 포맷: `COLLECTION`
+- 티어: `COMMUNITY`
+- 배제 전 목적: 피규어 입양, 개봉, 소장 등 컬렉션 VOC 탐색
 
 ## 수동 수집
 
@@ -107,7 +140,8 @@
 
 - 공식 RSS 피드가 있는 소스
 - YouTube Data API 기반 피규어/애니 콘텐츠 수집
-- 제조사별 신제품 페이지
+- 제조사별 신제품 페이지 (FREEing, Alter 등)
+- Kotobukiya / 애니메이트 코리아 자동 수집 재활성
 - 쇼핑몰 예약 시작/마감 정보
 - 수집된 기사와 X 게시 성과 연결
 - 키워드/IP/제조사 자동 분류

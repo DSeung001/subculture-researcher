@@ -61,6 +61,9 @@ class ContentStore:
         ]
 
     def save(self, item: dict) -> dict[str, int]:
+        # 사용자 커뮤니티 소스는 Firebase에 저장하지 않는다 (신규 상품/애니/피규어 정보만 유지).
+        if item.get("sourceTier") == "COMMUNITY":
+            return {"inserted": 0, "existing": 0, "updated": 0, "skipped": 1}
         url = normalize_url(item["url"])
         canonical_id = doc_id(url)
         existing = self.by_url.get(url, [])
@@ -114,11 +117,16 @@ class ContentStore:
         }
 
 
-def add_manual_content(db, url: str, title: str, category: str, angle: str) -> bool:
+def add_manual_content(
+    db, url: str, title: str, category: str, angle: str, source_tier: str = "MEDIA",
+) -> bool:
+    if source_tier == "COMMUNITY":
+        raise ValueError("커뮤니티 소스는 저장할 수 없습니다.")
     # Refresh the legacy index on submission, not on every Streamlit rerender.
     result = ContentStore(db).save({
         "url": url, "title": title.strip() or "(제목 없음)", "summary": "",
         "source": "수동 입력", "sourceType": "manual", "category": category,
-        "contentAngle": angle, "publishedAt": None,
+        "contentAngle": angle, "sourceTier": source_tier,
+        "note": "", "postedAt": None, "publishedAt": None,
     })
     return bool(result["inserted"])
