@@ -160,17 +160,21 @@ model-generated). The same sources also appear as REF entries alongside the
 draft in `templates/drafts.html`, so the post text stays copy-paste-ready for
 X with grounded links and without hallucinated URLs.
 
-This runs automatically at the end of every real (non-`--dry-run`) `collect.py`
-run, and can also be triggered on demand from the drafts page
-("AI로 임시글 만들기" → `POST /drafts/ai`). Both paths go through the same
-`create_draft` duplicate checks, so a repeat run over unchanged top items is a
-no-op rather than a duplicate draft.
+This runs automatically at the end of every real (non-`--dry-run`,
+non-`--no-ai-draft`) `collect.py` run, on demand via `python draft.py`
+(optionally `--category`), and from the drafts page ("AI로 글 만들기" →
+`POST /drafts/ai`). The two CLI entry points share `run_trending_draft`
+(same one-line status messages); the Flask button calls
+`create_trending_draft` directly for flash messages. All three paths use
+the same selection/writing logic and `create_draft` duplicate checks, so a
+repeat run over unchanged top items is a no-op rather than a duplicate draft.
 
 `GEMINI_API_KEY` is read from the environment: a local `.env` file (loaded via
 `python-dotenv`, gitignored) in development, the `GEMINI_API_KEY` repository
 secret in the `collect.yml` GitHub Actions workflow. Missing or invalid keys
-raise `AiWriterError`, which both callers catch and log without failing the
-surrounding collection run or request.
+raise `AiWriterError`, which CLI callers catch via `run_trending_draft` and
+the Flask handler catches for flash messages — neither fails the surrounding
+collection run or request.
 
 ## Important constraints
 

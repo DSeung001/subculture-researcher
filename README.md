@@ -13,6 +13,7 @@
 | 리뷰 앱 열기 | `python app.py` → http://127.0.0.1:5000 |
 | 자동 수집 | `python collect.py` |
 | 수동(브라우저) 수집 | `python collect.py --local-browser --source "소스이름"` |
+| AI 임시글만 만들기 | `python draft.py` |
 
 Windows에서는 가상환경이 켜져 있지 않으면 `python` 대신 `.\.venv\Scripts\python.exe` 를 쓰면 됩니다.
 
@@ -118,12 +119,18 @@ python collect.py --backfill-translations   # 기존 항목 번역 채우기
 ```
 
 수집이 끝나면(dry-run 아닐 때) `GEMINI_API_KEY`가 있으면 임시글 초안을 하나 만듭니다.  
-앱 드래프트 탭의 "AI로 임시글 만들기"로도 가능합니다.
+수집 없이 같은 초안만 다시 만들려면 `python draft.py`를 쓰면 됩니다.  
+앱 드래프트 탭의 "AI로 글 만들기"로도 가능합니다. 세 경로 모두 같은 선정·작성 로직을 씁니다.
 
 Gemini 무료 한도를 넘지 않도록 요청은 6.5초 이상 간격을 두고 보냅니다.  
 429/5xx 응답은 서버가 알려준 대기 시간(없으면 5·10·20초)만큼 기다린 뒤 최대 3번 재시도하고,
 일일 한도를 다 쓰면 그 실행에서는 더 호출하지 않습니다.  
 AI 초안 없이 수집만 하려면 `--no-ai-draft`를 붙이세요.
+
+```bash
+python draft.py                  # 미게시 인박스로 초안 하나
+python draft.py --category FIGURE  # 해당 카테고리만
+```
 
 번역 API 한도를 늘리려면:
 

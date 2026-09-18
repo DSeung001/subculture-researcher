@@ -1,7 +1,7 @@
 """Bundle the top-scoring unposted content into one AI-written draft."""
 
-from ai_writer import select_top_items, write_draft_body
-from drafts_store import create_draft, infer_angle
+from ai_writer import AiWriterError, select_top_items, write_draft_body
+from drafts_store import DraftError, create_draft, infer_angle
 from presentation import content_score
 
 
@@ -46,3 +46,20 @@ def create_trending_draft(db, size: int = DRAFT_SIZE, category: str | None = Non
     body = write_draft_body(top, angle)
     source_ids = [item["_id"] for item in top]
     return create_draft(db, source_ids, angle=angle, body=body)
+
+
+def run_trending_draft(db, category: str | None = None) -> str:
+    """CLI wrapper around create_trending_draft with a one-line status message.
+
+    Used by both `collect.py` (after a real collect) and `draft.py` so the two
+    commands share the same selection, writing, and log wording.
+    """
+    try:
+        draft_id = create_trending_draft(db, category=category)
+    except DraftError as exc:
+        return f"[AI 초안] 건너뜀: {exc}"
+    except AiWriterError as exc:
+        return f"[AI 초안] 실패: {exc}"
+    if draft_id:
+        return f"[AI 초안] 임시글 생성: {draft_id}"
+    return "[AI 초안] 후보 항목 없음, 건너뜀"
