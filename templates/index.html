@@ -2,6 +2,71 @@
 {% block body %}
 <div class="layout">
   <aside class="sidebar">
+    <h2>필터 &amp; 정렬</h2>
+    <div class="stacked-form" id="filter-form">
+      <div class="field-group">
+        <span class="field-label">카테고리</span>
+        <div class="chip-row">
+          <a href="{{ filter_url(category='ALL') }}" class="chip {% if filters.category == 'ALL' %}active{% endif %}">전체</a>
+          {% for c in categories %}
+          <a href="{{ filter_url(category=c) }}" class="chip {% if filters.category == c %}active{% endif %}">{{ category_labels[c] }}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">상태</span>
+        <div class="chip-row">
+          <a href="{{ filter_url(status='ACTIVE') }}" class="chip {% if filters.status == 'ACTIVE' %}active{% endif %}">무시 제외</a>
+          {% for s in statuses %}
+          <a href="{{ filter_url(status=s) }}" class="chip {% if filters.status == s %}active{% endif %}">{{ status_labels[s] }}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">소스 티어</span>
+        <div class="chip-row">
+          <a href="{{ filter_url(tier='ALL') }}" class="chip {% if filters.tier == 'ALL' %}active{% endif %}">전체</a>
+          {% for t in source_tiers %}
+          <a href="{{ filter_url(tier=t) }}" class="chip {% if filters.tier == t %}active{% endif %}">{{ tier_labels[t] }}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">정렬</span>
+        <div class="chip-row">
+          <a href="{{ filter_url(sort='NEWEST') }}" class="chip {% if filters.sort == 'NEWEST' %}active{% endif %}">최신순</a>
+          <a href="{{ filter_url(sort='OLDEST') }}" class="chip {% if filters.sort == 'OLDEST' %}active{% endif %}">오래된순</a>
+        </div>
+      </div>
+
+      <form method="get" action="{{ url_for('index') }}" class="stacked-form">
+        <input type="hidden" name="category" value="{{ filters.category }}">
+        <input type="hidden" name="status" value="{{ filters.status }}">
+        <input type="hidden" name="tier" value="{{ filters.tier }}">
+        <input type="hidden" name="sort" value="{{ filters.sort }}">
+
+        <label class="toggle-row">
+          <span>미발행만 보기</span>
+          <span class="toggle">
+            <input type="checkbox" name="unposted" value="1" class="auto-submit" {% if filters.unposted == "1" %}checked{% endif %}>
+            <span class="toggle-slider"></span>
+          </span>
+        </label>
+
+        <div class="limit-row">
+          <span class="field-label">불러올 개수</span>
+          <select name="limit" class="auto-submit">
+            {% for n in range(20, 201, 10) %}<option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+          </select>
+        </div>
+      </form>
+    </div>
+
+    <hr>
+
     <h2>수동 콘텐츠 추가</h2>
     <form method="post" action="{{ url_for('manual_add') }}" class="stacked-form">
       <input type="hidden" name="next" value="{{ next_url }}">
@@ -23,44 +88,6 @@
         </select>
       </label>
       <button type="submit" class="btn btn-primary full">저장</button>
-    </form>
-
-    <hr>
-
-    <h2>필터 &amp; 정렬</h2>
-    <form method="get" action="{{ url_for('index') }}" class="stacked-form" id="filter-form">
-      <label>카테고리
-        <select name="category" class="auto-submit">
-          <option value="ALL" {% if filters.category == "ALL" %}selected{% endif %}>전체</option>
-          {% for c in categories %}<option value="{{ c }}" {% if filters.category == c %}selected{% endif %}>{{ category_labels[c] }}</option>{% endfor %}
-        </select>
-      </label>
-      <label>상태
-        <select name="status" class="auto-submit">
-          <option value="ACTIVE" {% if filters.status == "ACTIVE" %}selected{% endif %}>무시 제외 전체</option>
-          {% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ status_labels[s] }}</option>{% endfor %}
-        </select>
-      </label>
-      <label>소스 티어
-        <select name="tier" class="auto-submit">
-          <option value="ALL" {% if filters.tier == "ALL" %}selected{% endif %}>전체</option>
-          {% for t in source_tiers %}<option value="{{ t }}" {% if filters.tier == t %}selected{% endif %}>{{ tier_labels[t] }}</option>{% endfor %}
-        </select>
-      </label>
-      <label class="checkbox-row">
-        <input type="checkbox" name="unposted" value="1" class="auto-submit" {% if filters.unposted == "1" %}checked{% endif %}>
-        미발행만
-      </label>
-      <span class="field-label">정렬</span>
-      <div class="radio-row">
-        <label><input type="radio" name="sort" value="NEWEST" class="auto-submit" {% if filters.sort == "NEWEST" %}checked{% endif %}> 최신순</label>
-        <label><input type="radio" name="sort" value="OLDEST" class="auto-submit" {% if filters.sort == "OLDEST" %}checked{% endif %}> 오래된순</label>
-      </div>
-      <label>불러올 개수
-        <select name="limit" class="auto-submit">
-          {% for n in range(20, 201, 10) %}<option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
-        </select>
-      </label>
     </form>
   </aside>
 
@@ -90,7 +117,14 @@
       <article class="card">
         <div class="card-row">
           <div class="card-main">
-            <p class="card-title"><strong>{{ item['_badge'] }}{{ item['_title'] }}</strong> — {{ item['_meta'] }}</p>
+            <p class="card-title">
+              {% if item['_is_new_today'] %}<span class="new-badge" title="오늘 수집">N</span>{% endif %}{% if item['_title_date'] %}<span class="card-date">게시 {{ item['_title_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}<strong>{{ item['_title_text'] }}</strong>
+            </p>
+            <p class="card-meta">{{ item['_meta'] }}</p>
+            {% if item['_original_title'] %}
+            <button type="button" class="original-toggle" aria-expanded="false">원본 보기</button>
+            <p class="card-original" hidden>원문: {% if item['_original_date'] %}<span class="card-date">게시 {{ item['_original_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{{ item['_original_text'] }}{% else %}{{ item['_original_title'] }}{% endif %}</p>
+            {% endif %}
             <p class="card-summary">{{ item['_summary'] }}</p>
           </div>
           <details class="menu">
@@ -129,6 +163,7 @@
               </form>
               <hr>
               <p class="metric-caption">{{ item['_metric_caption'] }}</p>
+              {% if item.summaryKo %}<p class="full-summary">{{ item.summaryKo[:500] }}</p>{% endif %}
               {% if item.summary %}<p class="full-summary">{{ item.summary[:500] }}</p>{% endif %}
               {% if item.url %}<a class="btn full" href="{{ item.url }}" target="_blank" rel="noopener">원문 열기</a>{% endif %}
             </div>

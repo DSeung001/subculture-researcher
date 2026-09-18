@@ -1,8 +1,20 @@
+import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
 
 KST = ZoneInfo("Asia/Seoul")
+_LEADING_DATE = re.compile(
+    r"^(?P<date>\d{4}[./-]\d{1,2}[./-]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?)\s+(?P<title>.+)$"
+)
+
+
+def split_leading_date(text: str) -> tuple[str, str]:
+    """Split a leading YYYY.MM.DD-style date from a title, if present."""
+    match = _LEADING_DATE.match((text or "").strip())
+    if not match:
+        return "", text or ""
+    return match.group("date"), match.group("title")
 
 
 def is_new_today(item: dict, *, now: datetime | None = None) -> bool:
@@ -41,6 +53,22 @@ def sort_items(items: list[dict], *, newest_first: bool = True) -> list[dict]:
 
 def format_date_kst(value: datetime) -> str:
     return value.astimezone(KST).strftime("%Y-%m-%d %H:%M")
+
+
+def date_caption(item: dict) -> str:
+    """Label the shown timestamp as original publish date and/or collection time."""
+    parts = []
+    published_raw = item.get("publishedAt")
+    published = parse_published_at(published_raw)
+    if published:
+        if isinstance(published_raw, str) and len(published_raw.strip()) <= 10:
+            parts.append(f"게시 {published.date().isoformat()}")
+        else:
+            parts.append(f"게시 {format_date_kst(published)}")
+    collected = item.get("collectedAt")
+    if isinstance(collected, datetime):
+        parts.append(f"수집 {format_date_kst(collected)}")
+    return " · ".join(parts)
 
 
 def summary_preview(item: dict, length: int = 120) -> str:

@@ -36,7 +36,11 @@ Expected fields:
 
 - `url`
 - `title`
+- `titleKo`
 - `summary`
+- `summaryKo`
+- `sourceLanguage`
+- `translatedAt`
 - `source`
 - `sourceType`
 - `sourceUrl`
@@ -50,6 +54,8 @@ Expected fields:
 - `postedAt`
 - `collectedAt`
 - `createdAt`
+
+`titleKo` and `summaryKo` are Korean translations of foreign titles/summaries from the free MyMemory API. Hangul-majority text is stored as-is. Article bodies are never stored.
 
 ## Allowed categories
 

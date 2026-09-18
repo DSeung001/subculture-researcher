@@ -7,11 +7,12 @@ from flask import Flask, flash, redirect, render_template, request, url_for
 from firebase_client import get_db
 from content_store import add_manual_content
 from presentation import (
-    effective_date,
+    date_caption,
     format_date_kst,
     is_new_today,
     metric_caption,
     sort_items,
+    split_leading_date,
     summary_preview,
 )
 
@@ -92,7 +93,7 @@ def current_filters():
         "tier": request.args.get("tier", "ALL"),
         "unposted": request.args.get("unposted", ""),
         "sort": request.args.get("sort", "NEWEST"),
-        "limit": clamp(parse_int(request.args.get("limit"), 50), 20, 200),
+        "limit": clamp(parse_int(request.args.get("limit"), 200), 20, 200),
         "visible": clamp(parse_int(request.args.get("visible"), CHUNK_SIZE), CHUNK_SIZE, 10_000),
     }
 
@@ -148,8 +149,18 @@ def index():
         tier_value = item.get("sourceTier") or "MEDIA"
         posted_at = item.get("postedAt")
 
-        item["_title"] = item.get("title") or "(제목 없음)"
-        item["_badge"] = "🆕 " if is_new_today(item) else ""
+        original_title = item.get("title") or "(제목 없음)"
+        title_ko = (item.get("titleKo") or "").strip()
+        display_title = title_ko or original_title
+        title_date, title_text = split_leading_date(display_title)
+        original_date, original_text = split_leading_date(original_title)
+        item["_title"] = display_title
+        item["_title_date"] = title_date
+        item["_title_text"] = title_text
+        item["_original_title"] = original_title if title_ko and title_ko != original_title else ""
+        item["_original_date"] = original_date
+        item["_original_text"] = original_text
+        item["_is_new_today"] = is_new_today(item)
         posted_label = (
             f"발행 {format_date_kst(posted_at)}"
             if isinstance(posted_at, datetime)
@@ -164,7 +175,7 @@ def index():
                 TIER_LABELS.get(tier_value, tier_value),
                 STATUS_LABELS.get(status_value, status_value),
                 posted_label,
-                format_date_kst(effective_date(item)),
+                date_caption(item),
             ]
             if value
         )
@@ -195,6 +206,7 @@ def index():
         has_more=visible_count < len(items),
         more_url=build_url(filters, visible=filters["visible"] + CHUNK_SIZE),
         remaining=min(CHUNK_SIZE, len(items) - visible_count),
+        filter_url=lambda **overrides: build_url(filters, visible=CHUNK_SIZE, **overrides),
     )
 
 

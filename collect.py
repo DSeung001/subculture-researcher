@@ -6,10 +6,37 @@ from collectors.rss import collect_rss
 from content_store import ContentStore
 from firebase_client import get_db
 from sources_config import load_sources
+from translate import enrich_translation, needs_translation
 
 
 COLLECTORS = {"rss": collect_rss, "html": collect_html_links}
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
+
+
+def backfill_translations(db) -> None:
+    processed = updated = skipped = failed = 0
+    for snapshot in db.collection("contents").stream():
+        processed += 1
+        data = snapshot.to_dict() or {}
+        if (data.get("titleKo") or "").strip():
+            skipped += 1
+            continue
+        title = data.get("title") or ""
+        summary = data.get("summary") or ""
+        if not needs_translation(title) and not needs_translation(summary):
+            skipped += 1
+            continue
+        fields = enrich_translation(data)
+        if not (fields.get("titleKo") or fields.get("summaryKo")):
+            failed += 1
+            continue
+        snapshot.reference.update(fields)
+        updated += 1
+        print(f"[번역] {title} -> {fields.get('titleKo') or fields.get('summaryKo')}")
+    print(
+        f"번역 보완 종료: processed={processed} updated={updated} "
+        f"skipped={skipped} failed={failed}"
+    )
 
 
 def main(argv=None):
@@ -17,12 +44,20 @@ def main(argv=None):
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="Firestore에 연결하지 않고 수집 결과 출력")
     mode.add_argument("--check-duplicates", action="store_true", help="기존 Firestore URL 중복을 읽기 전용으로 점검")
+    mode.add_argument(
+        "--backfill-translations", action="store_true",
+        help="titleKo가 없는 외국어 기존 문서만 MyMemory로 번역해 보완",
+    )
     parser.add_argument("--source", action="append", help="수집할 소스 이름 (여러 번 지정 가능)")
     args = parser.parse_args(argv)
 
     if args.check_duplicates:
         store = ContentStore(get_db())
         print(json.dumps({"duplicates": store.duplicates(), "invalidUrlDocumentIds": store.invalid_urls}, ensure_ascii=False, indent=2))
+        return
+
+    if args.backfill_translations:
+        backfill_translations(get_db())
         return
 
     sources = load_sources()

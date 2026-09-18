@@ -7,6 +7,7 @@
 - `sources.yaml`에 등록된 공식/미디어 소스를 자동 수집 (`python collect.py`)
 - 사용자 커뮤니티/포럼 글은 수집 대상에서 제외 (신규 상품 · 애니메이션 정보 · 피규어 정보만 유지)
 - 같은 URL은 SHA-256 document ID로 중복 저장 방지
+- 일본어·영어 등 외국어 제목은 MyMemory 무료 API로 한국어 번역(`titleKo`)을 함께 저장
 - Flask 리뷰 앱(`python app.py`)에서 카테고리/티어/발행여부로 필터링하고, 채택 / 보류 / 무시로 분류
 - X 등에서 발견한 게시물 URL을 리뷰 앱에서 수동으로 추가 저장
 
@@ -68,6 +69,22 @@ python collect.py
 ```
 
 `sources.yaml`의 활성화된 소스를 순서대로 수집합니다. HTML 소스는 `robots.txt` 확인에 실패하거나 자동 수집이 허용되지 않으면 건너뜁니다.
+
+신규 항목의 제목(및 있는 경우 요약)이 한글이 아니면 MyMemory 무료 번역 API로 한국어를 만들어 `titleKo` / `summaryKo`에 저장합니다. 원문 제목은 그대로 두고, 리뷰 앱에서 번역을 먼저 보여 줍니다. 본문은 저장하지 않습니다.
+
+선택적으로 이메일 주소를 넣으면 일일 한도가 5,000자에서 50,000자로 늘어납니다.
+
+```bash
+export MYMEMORY_EMAIL="you@example.com"
+```
+
+이미 저장된 외국어 항목에 번역이 없다면:
+
+```bash
+python collect.py --backfill-translations
+```
+
+`--dry-run`은 Firestore에 쓰지 않으므로 번역 API도 호출하지 않습니다.
 
 ### 5. 리뷰 앱 실행
 

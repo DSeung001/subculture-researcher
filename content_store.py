@@ -7,6 +7,8 @@ from urllib.parse import unquote_plus, urljoin, urlsplit, urlunsplit
 from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
 
+from translate import enrich_translation
+
 
 TRACKING_PARAMS = {
     "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
@@ -96,6 +98,7 @@ class ContentStore:
         else:
             ref = self.db.collection("contents").document(target_id)
             if not existing:
+                data.update(enrich_translation(item))
                 try:
                     ref.create(data)
                     created = True
