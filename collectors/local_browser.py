@@ -41,6 +41,12 @@ def _extract_candidate_url(locator, base_url: str) -> str | None:
             return normalize_url(match.group(0), base_url)
         except ValueError:
             return None
+    relative = QUOTED_PATH_RE.search(onclick)
+    if relative:
+        try:
+            return normalize_url(relative.group(1), base_url)
+        except ValueError:
+            return None
     return None
 
 
@@ -73,7 +79,7 @@ def _title(locator, context: str) -> str:
     return "(제목 없음)"
 
 
-def _product_fields(source: dict, text: str) -> dict:
+def _product_fields(source: dict, text: str, locator=None) -> dict:
     values = [int(value.replace(",", "")) for value in PRICE_RE.findall(text)]
     price = next((value for value in values if value >= 1000), None)
     upper = text.upper()
@@ -84,12 +90,34 @@ def _product_fields(source: dict, text: str) -> dict:
     else:
         status = "IN_STOCK"
 
+    deadline = None
+    if any(word in text for word in ("예약", "마감", "종료")):
+        match = KOREAN_DATE_RE.search(text)
+        if match:
+            year, month, day = map(int, match.groups())
+            deadline = f"{year:04d}-{month:02d}-{day:02d}"
+
+    image_url = None
+    if locator is not None:
+        try:
+            image_url = locator.evaluate(
+                """el => {
+                    const node = el.closest('article, li, section, div') || el.parentElement || el;
+                    const img = node.querySelector('img');
+                    return img ? (img.currentSrc || img.src || null) : null;
+                }"""
+            )
+        except Exception:
+            image_url = None
+
     return {
         "entityType": "PRODUCT",
         "shop": source.get("shop") or source["name"],
         "saleStatus": status,
         "price": price,
         "currency": "KRW" if price is not None else None,
+        "preorderEndAt": deadline,
+        "imageUrl": image_url,
         "productCheckedAt": datetime.now(timezone.utc),
     }
 
@@ -188,7 +216,7 @@ def local_browser_items(source: dict):
                     "_errors": [],
                 }
                 if source.get("product_mode", False):
-                    item.update(_product_fields(source, context_text))
+                    item.update(_product_fields(source, context_text, locator))
 
                 seen.add(url)
                 yield item
