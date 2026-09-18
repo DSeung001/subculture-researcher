@@ -41,6 +41,11 @@ def doc_id(url: str) -> str:
     return hashlib.sha256(normalize_url(url).encode("utf-8")).hexdigest()
 
 
+def category_collection(db, category: str):
+    """Each category lives in its own Firestore collection: categories/{CATEGORY}/contents."""
+    return db.collection("categories").document(category or "UNKNOWN").collection("contents")
+
+
 class ContentStore:
     def __init__(self, db=None):
         """db=None is an isolated dry run; no Firestore access or credentials."""
@@ -49,7 +54,8 @@ class ContentStore:
         self.invalid_urls: list[str] = []
         self.preview: list[dict] = []
         if db is not None:
-            for snapshot in db.collection("contents").select(["url", "status"]).stream():
+            # collection_group reads every category's "contents" subcollection in one query.
+            for snapshot in db.collection_group("contents").select(["url", "status"]).stream():
                 data = snapshot.to_dict() or {}
                 try:
                     url = normalize_url(data.get("url") or "")
@@ -57,12 +63,18 @@ class ContentStore:
                     self.invalid_urls.append(snapshot.id)
                     continue
                 self.by_url.setdefault(url, []).append(
-                    {"id": snapshot.id, "status": data.get("status")}
+                    {"id": snapshot.id, "status": data.get("status"), "ref": snapshot.reference}
                 )
 
     def duplicates(self) -> list[dict]:
         return [
-            {"url": url, "documents": sorted(docs, key=lambda d: d["id"])}
+            {
+                "url": url,
+                "documents": sorted(
+                    ({"id": d["id"], "status": d["status"]} for d in docs),
+                    key=lambda d: d["id"],
+                ),
+            }
             for url, docs in sorted(self.by_url.items()) if len(docs) > 1
         ]
 
@@ -71,11 +83,13 @@ class ContentStore:
         canonical_id = doc_id(url)
         existing = self.by_url.get(url, [])
         # All processes choose the same legacy document, without changing its ID.
-        target_id = min(
-            (doc["id"] for doc in existing),
-            key=lambda value: (value != canonical_id, value),
-            default=canonical_id,
+        target = min(
+            existing,
+            key=lambda doc: (doc["id"] != canonical_id, doc["id"]),
+            default=None,
         )
+        target_id = target["id"] if target else canonical_id
+        category = item.get("category") or "UNKNOWN"
         metrics = {}
         for field in METRICS:
             value = item.get(field)
@@ -102,11 +116,13 @@ class ContentStore:
         data.update(metrics)
 
         created = False
+        ref = None
         if self.db is None:
             created = not existing
             self.preview.append({k: v for k, v in data.items() if k != "collectedAt"})
         else:
-            ref = self.db.collection("contents").document(target_id)
+            # A document keeps living in the category collection it was first saved under.
+            ref = target["ref"] if target else category_collection(self.db, category).document(target_id)
             if not existing:
                 data.update(enrich_translation(item))
                 try:
@@ -120,7 +136,7 @@ class ContentStore:
                 ref.update(updates)
 
         if not existing:
-            self.by_url[url] = [{"id": target_id, "status": "NEW" if created else None}]
+            self.by_url[url] = [{"id": target_id, "status": "NEW" if created else None, "ref": ref}]
         return {
             "inserted": int(created),
             "existing": int(not created),

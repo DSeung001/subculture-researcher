@@ -124,7 +124,7 @@
       <article class="card">
         <div class="card-row">
           <label class="card-select">
-            <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_id'] }}" form="draft-create-form" aria-label="임시글에 포함">
+            <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_ref'] }}" form="draft-create-form" aria-label="임시글에 포함">
           </label>
           <div class="card-main">
             <p class="card-title">
@@ -141,27 +141,27 @@
             {% if item['_summary'] %}<p class="card-summary">{{ item['_summary'] }}</p>{% endif %}
           </div>
           <div class="card-actions">
-            <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
               <input type="hidden" name="status" value="KEEP">
               <input type="hidden" name="next" value="{{ next_url }}">
               <button type="submit" class="icon-btn" aria-label="채택" data-tooltip="채택">✅</button>
             </form>
-            <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
               <input type="hidden" name="status" value="HOLD">
               <input type="hidden" name="next" value="{{ next_url }}">
               <button type="submit" class="icon-btn" aria-label="보류" data-tooltip="보류">⏸️</button>
             </form>
-            <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
               <input type="hidden" name="status" value="IGNORE">
               <input type="hidden" name="next" value="{{ next_url }}">
               <button type="submit" class="icon-btn" aria-label="무시" data-tooltip="무시">🚫</button>
             </form>
-            <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
               <input type="hidden" name="status" value="NEW">
               <input type="hidden" name="next" value="{{ next_url }}">
               <button type="submit" class="icon-btn" aria-label="새 항목" data-tooltip="새 항목">🔄</button>
             </form>
-            <form method="post" action="{{ url_for('publish_item', item_id=item['_id']) }}">
+            <form method="post" action="{{ url_for('publish_item', category=item['_category'], item_id=item['_id']) }}">
               <input type="hidden" name="next" value="{{ next_url }}">
               <button type="submit" class="icon-btn" aria-label="발행함" data-tooltip="발행함">📤</button>
             </form>
@@ -175,7 +175,7 @@
           <button type="button" class="modal-close" data-dialog-close aria-label="닫기">✕</button>
         </div>
         <div class="more-body">
-          <form method="post" action="{{ url_for('save_note', item_id=item['_id']) }}" class="note-form">
+          <form method="post" action="{{ url_for('save_note', category=item['_category'], item_id=item['_id']) }}" class="note-form">
             <input type="hidden" name="next" value="{{ next_url }}">
             <label>메모
               <textarea name="note" rows="3" placeholder="트윗에 쓸 한 줄 / 채택 이유">{{ item.note or '' }}</textarea>

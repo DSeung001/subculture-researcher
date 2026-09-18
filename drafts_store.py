@@ -54,14 +54,22 @@ def _unique_ids(source_ids) -> list[str]:
     return ids
 
 
+def _content_ref(db, source_id: str):
+    """source_id is "CATEGORY:doc_id" — the category picks which contents collection to look in."""
+    category, _, doc_id = source_id.partition(":")
+    if not category or not doc_id:
+        raise DraftError("잘못된 항목 ID입니다.")
+    return db.collection("categories").document(category).collection("contents").document(doc_id)
+
+
 def _load_contents(db, source_ids: list[str]) -> list[dict]:
     items = []
     for source_id in source_ids:
-        snapshot = db.collection("contents").document(source_id).get()
+        snapshot = _content_ref(db, source_id).get()
         if not snapshot.exists:
             raise DraftError("선택한 항목 중 없는 자료가 있습니다.")
         item = snapshot.to_dict() or {}
-        item["_id"] = snapshot.id
+        item["_id"] = source_id
         items.append(item)
     return items
 
@@ -127,13 +135,13 @@ def list_drafts(db, status: str = "DRAFT", limit: int = 1000) -> list[dict]:
 
     sources = {}
     if source_ids:
-        refs = [db.collection("contents").document(source_id) for source_id in source_ids]
-        for snapshot in db.get_all(refs):
+        refs = [_content_ref(db, source_id) for source_id in source_ids]
+        for source_id, snapshot in zip(source_ids, db.get_all(refs)):
             if not snapshot.exists:
                 continue
             item = snapshot.to_dict() or {}
-            item["_id"] = snapshot.id
-            sources[snapshot.id] = item
+            item["_id"] = source_id
+            sources[source_id] = item
 
     for draft in drafts:
         bundled = []
@@ -177,7 +185,7 @@ def publish_draft(db, draft_id: str) -> None:
     now = datetime.now(timezone.utc)
     ref.update({"status": "POSTED", "postedAt": now, "updatedAt": now})
     for source_id in data.get("sourceIds") or []:
-        content_ref = db.collection("contents").document(source_id)
+        content_ref = _content_ref(db, source_id)
         content = content_ref.get()
         if content.exists and not (content.to_dict() or {}).get("postedAt"):
             content_ref.update({"postedAt": now})

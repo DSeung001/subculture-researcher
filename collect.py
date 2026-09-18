@@ -49,7 +49,7 @@ def render_table(rows: list[tuple]) -> str:
 
 def backfill_translations(db) -> None:
     processed = updated = skipped = failed = 0
-    for snapshot in db.collection("contents").stream():
+    for snapshot in db.collection_group("contents").stream():
         processed += 1
         data = snapshot.to_dict() or {}
         if (data.get("titleKo") or "").strip():

@@ -1,6 +1,6 @@
 # Subculture Researcher
 
-애니메이션·피규어·굿즈 관련 신제품/뉴스 정보를 자동/수동으로 수집해 Firestore에 저장하고, Flask 리뷰 앱에서 검토·분류하는 개인용 리서치 도구입니다.
+애니메이션·피규어·굿즈·페스티벌(컨벤션/행사) 관련 신제품/뉴스 정보를 자동/수동으로 수집해 Firestore에 카테고리별 컬렉션으로 저장하고, Flask 리뷰 앱에서 검토·분류하는 개인용 리서치 도구입니다.
 
 ## 핵심 기능
 
@@ -55,6 +55,11 @@ Firebase Console에서 Service Account JSON 키를 발급하고 프로젝트 루
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/other-key.json"
 ```
+
+콘텐츠는 카테고리별로 나뉜 Firestore 컬렉션(`categories/{카테고리}/contents`)에 저장됩니다.
+리뷰 앱에서 "전체" 카테고리를 처음 볼 때 Firestore가 `collectedAt` 정렬을 위한 복합 색인
+생성을 요구할 수 있습니다. 터미널에 뜨는 오류 메시지의 링크를 클릭하면 Firebase 콘솔에서
+한 번만 색인을 만들면 됩니다(이후에는 필요 없음).
 
 ### 4. 데이터 수집
 

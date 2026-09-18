@@ -28,7 +28,7 @@ from presentation import (
 )
 
 
-CATEGORIES = ["ANIME", "CHARACTER", "FIGURE", "GOODS", "COLLECTION", "UNKNOWN"]
+CATEGORIES = ["ANIME", "CHARACTER", "FIGURE", "GOODS", "COLLECTION", "FESTIVAL", "UNKNOWN"]
 STATUSES = ["NEW", "KEEP", "HOLD", "IGNORE"]
 ANGLES = ["NEWS", "COMPARE", "SIZE", "PRICE", "QUESTION", "GUIDE", "COLLECTION"]
 SOURCE_TIERS = ["OFFICIAL", "MEDIA"]
@@ -39,6 +39,7 @@ CATEGORY_LABELS = {
     "FIGURE": "피규어",
     "GOODS": "굿즈",
     "COLLECTION": "컬렉션",
+    "FESTIVAL": "페스티벌",
     "UNKNOWN": "미분류",
 }
 STATUS_LABELS = {
@@ -93,8 +94,8 @@ def db():
     return _db
 
 
-def update_content(document_id: str, **fields):
-    db().collection("contents").document(document_id).update(fields)
+def update_content(category: str, document_id: str, **fields):
+    db().collection("categories").document(category or "UNKNOWN").collection("contents").document(document_id).update(fields)
 
 
 def safe_next(raw: str | None) -> str:
@@ -124,19 +125,34 @@ def build_url(filters: dict, **overrides) -> str:
     return url_for("index", **params)
 
 
-def fetch_contents_page(after_id: str):
-    query = (
-        db()
-        .collection("contents")
-        .order_by("collectedAt", direction=firestore.Query.DESCENDING)
-    )
-    if after_id:
-        cursor = db().collection("contents").document(after_id).get()
-        if cursor.exists:
-            query = query.start_after(cursor)
+def contents_query(category: str):
+    # A chosen category reads its own collection; "ALL" merges every category via collection_group.
+    if category and category != "ALL":
+        return db().collection("categories").document(category).collection("contents")
+    return db().collection_group("contents")
+
+
+def cursor_token(snapshot) -> str:
+    category = (snapshot.to_dict() or {}).get("category") or "UNKNOWN"
+    return f"{category}:{snapshot.id}"
+
+
+def resolve_cursor(token: str):
+    category, _, doc_id = (token or "").partition(":")
+    if not category or not doc_id:
+        return None
+    snapshot = db().collection("categories").document(category).collection("contents").document(doc_id).get()
+    return snapshot if snapshot.exists else None
+
+
+def fetch_contents_page(after_token: str, category: str):
+    query = contents_query(category).order_by("collectedAt", direction=firestore.Query.DESCENDING)
+    cursor = resolve_cursor(after_token)
+    if cursor is not None:
+        query = query.start_after(cursor)
     query = query.limit(PAGE_SIZE)
     docs = list(query.stream())
-    return docs, len(docs) == PAGE_SIZE, (docs[-1].id if docs else "")
+    return docs, len(docs) == PAGE_SIZE, (cursor_token(docs[-1]) if docs else "")
 
 
 @app.get("/")
@@ -144,13 +160,15 @@ def index():
     filters = current_filters()
     unposted_only = filters["unposted"] == "1"
 
-    docs, has_more, cursor_id = fetch_contents_page(filters["after"])
+    docs, has_more, cursor_id = fetch_contents_page(filters["after"], filters["category"])
 
     items = []
     all_sources = set()
     for snapshot in docs:
         item = snapshot.to_dict()
         item["_id"] = snapshot.id
+        item["_category"] = item.get("category") or "UNKNOWN"
+        item["_ref"] = f"{item['_category']}:{item['_id']}"
         if item.get("source"):
             all_sources.add(item["source"])
 
@@ -349,23 +367,23 @@ def sources_page():
     )
 
 
-@app.post("/items/<item_id>/status")
-def set_status(item_id):
+@app.post("/items/<category>/<item_id>/status")
+def set_status(category, item_id):
     status = request.form.get("status")
     if status in STATUSES:
-        update_content(item_id, status=status)
+        update_content(category, item_id, status=status)
     return redirect(safe_next(request.form.get("next")))
 
 
-@app.post("/items/<item_id>/publish")
-def publish_item(item_id):
-    update_content(item_id, postedAt=datetime.now(timezone.utc))
+@app.post("/items/<category>/<item_id>/publish")
+def publish_item(category, item_id):
+    update_content(category, item_id, postedAt=datetime.now(timezone.utc))
     return redirect(safe_next(request.form.get("next")))
 
 
-@app.post("/items/<item_id>/note")
-def save_note(item_id):
-    update_content(item_id, note=request.form.get("note", "").strip())
+@app.post("/items/<category>/<item_id>/note")
+def save_note(category, item_id):
+    update_content(category, item_id, note=request.form.get("note", "").strip())
     return redirect(safe_next(request.form.get("next")))
 
 

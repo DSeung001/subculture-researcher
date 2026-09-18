@@ -29,9 +29,20 @@ own machine only. There is no separate backend API beyond this review app.
 5. Manually save X URLs when useful.
 6. Bundle one or more inbox items into a draft and review it on the drafts tab.
 
-## Firestore collection
+## Firestore collections
 
-`contents/{sha256(url)}`
+Content is split into one Firestore collection per category, each nested under a
+`categories` shard document:
+
+`categories/{CATEGORY}/contents/{sha256(url)}`
+
+A document keeps living in the category collection it was first saved under, even if
+its `category` field is edited later — moving it would change its document path.
+The review UI reads a single category with `categories/{CATEGORY}/contents`, and reads
+across every category at once with a Firestore `collection_group("contents")` query
+(same `collectedAt` ordering and pagination either way). The `collection_group` query
+needs a one-time Firestore composite index for `collectedAt`; the first time it runs,
+the Firestore client error includes a direct link to create it.
 
 Expected fields:
 
@@ -65,6 +76,7 @@ Expected fields:
 - `FIGURE`
 - `GOODS`
 - `COLLECTION`
+- `FESTIVAL` — anime/figure/goods conventions and fan festivals (AGF, Comiket, Wonder Festival, etc.)
 - `UNKNOWN`
 
 ## Allowed content angles
@@ -91,7 +103,8 @@ product, anime, and figure info resources are collected.
 
 `drafts/{autoId}`
 
-- `sourceIds` — one or more `contents` document IDs
+- `sourceIds` — one or more `"CATEGORY:sha256(url)"` strings, each identifying a document
+  in `categories/{CATEGORY}/contents`
 - `angle` — same allowed values as `contentAngle`
 - `body` — assembled title/summary/URL/note text (no article body, no LLM)
 - `status` — `DRAFT` or `POSTED`
