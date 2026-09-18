@@ -1,16 +1,24 @@
 import argparse
 import json
 
+from collectors.anilist import collect_anilist
 from collectors.html_links import collect_html_links
 from collectors.json_api import collect_json_api
 from collectors.rss import collect_rss
+from collectors.youtube_feed import collect_youtube_feed
 from content_store import ContentStore
 from firebase_client import get_db
 from sources_config import load_sources
 from translate import enrich_translation, needs_translation
 
 
-COLLECTORS = {\n    "rss": collect_rss,\n    "html": collect_html_links,\n    "json_api": collect_json_api,\n    "anilist": collect_anilist,\n    "youtube_feed": collect_youtube_feed,\n}
+COLLECTORS = {
+    "rss": collect_rss,
+    "html": collect_html_links,
+    "json_api": collect_json_api,
+    "anilist": collect_anilist,
+    "youtube_feed": collect_youtube_feed,
+}
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
 TABLE_HEADERS = ("소스", "처리", "신규", "기존", "갱신", "실패", "실패 사유")
 
