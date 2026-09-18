@@ -1,176 +1,115 @@
-import hashlib
 import re
 from datetime import datetime, timezone
-from urllib.parse import parse_qsl, urlencode, urldefrag, urljoin, urlparse, urlunparse
-from urllib.robotparser import RobotFileParser
+from decimal import Decimal
 
-import requests
 from bs4 import BeautifulSoup
-from firebase_admin import firestore
+
+from content_store import METRICS, normalize_url
+from collectors.common import save_records
+from collectors.http import RobotsPolicy, get_html
 
 
-USER_AGENT = (
-    "SubcultureResearcher/0.1 "
-    "(+https://github.com/DSeung001/subculture-researcher)"
-)
-TRACKING_PARAMS = {
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_term",
-    "utm_content",
-    "fbclid",
-    "gclid",
-}
+def parse_count(text: str) -> int:
+    """Parse a count element, never arbitrary numbers from article/body text."""
+    match = re.fullmatch(r"\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*([kKmM만천]?)\s*(?:회|개)?\s*", text)
+    if not match:
+        raise ValueError(f"반응 수치를 해석할 수 없음: {text!r}")
+    number, unit = match.groups()
+    multiplier = {"": 1, "k": 1000, "m": 1000000, "만": 10000, "천": 1000}[unit.lower()]
+    value = Decimal(number.replace(",", "")) * multiplier
+    if value != value.to_integral_value():
+        raise ValueError(f"반응 수치가 정수가 아님: {text!r}")
+    return int(value)
 
 
-def _doc_id(url: str) -> str:
-    return hashlib.sha256(url.encode("utf-8")).hexdigest()
+def extract_metrics(root, selectors: dict, *, required=False) -> tuple[dict, list[str]]:
+    values, errors = {}, []
+    for field, selector in selectors.items():
+        if field not in METRICS:
+            raise ValueError(f"지원하지 않는 수치 필드: {field}")
+        node = root.select_one(selector)
+        if node is None:
+            if required:
+                errors.append(f"{field} 요소를 찾을 수 없음: {selector}")
+            continue
+        try:
+            values[field] = parse_count(node.get_text(" ", strip=True))
+            values[f"{field}CheckedAt"] = datetime.now(timezone.utc)
+        except ValueError as exc:
+            errors.append(str(exc))
+    return values, errors
 
 
-def _normalize_url(base_url: str, href: str) -> str:
-    absolute = urljoin(base_url, href)
-    absolute, _ = urldefrag(absolute)
-    parsed = urlparse(absolute)
-
-    query = [
-        (key, value)
-        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
-        if key not in TRACKING_PARAMS
-    ]
-
-    return urlunparse(
-        (
-            parsed.scheme,
-            parsed.netloc.lower(),
-            parsed.path,
-            parsed.params,
-            urlencode(query, doseq=True),
-            "",
-        )
-    )
-
-
-def _robots_status(url: str, timeout_seconds: int = 15) -> tuple[bool, str]:
-    parsed = urlparse(url)
-    robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-
-    try:
-        # RobotFileParser.read()는 stdlib urllib를 써서 macOS에서
-        # SSL 인증서 검증에 실패할 수 있다. 페이지 수집과 같은
-        # requests+certifi 경로로 robots.txt를 읽는다.
-        response = requests.get(
-            robots_url,
-            headers={"User-Agent": USER_AGENT},
-            timeout=timeout_seconds,
-        )
-    except requests.RequestException as exc:
-        return False, f"robots.txt를 확인할 수 없음: {exc}"
-
-    if response.status_code == 404:
-        return True, ""
-    if response.status_code >= 400:
-        return False, f"robots.txt 응답 오류: HTTP {response.status_code}"
-
-    parser = RobotFileParser()
-    parser.parse(response.text.splitlines())
-    if parser.can_fetch(USER_AGENT, url):
-        return True, ""
-    return False, "robots.txt에서 자동 수집을 허용하지 않음"
-
-
-def _matches(url: str, patterns: list[str]) -> bool:
-    if not patterns:
-        return True
-    return any(re.search(pattern, url) for pattern in patterns)
-
-
-def collect_html_links(db, source: dict) -> dict[str, int]:
-    source_url = source["url"]
-
-    if source.get("respect_robots", True):
-        allowed, reason = _robots_status(
-            source_url,
-            timeout_seconds=source.get("timeout_seconds", 15),
-        )
-        if not allowed:
-            return {
-                "processed": 0,
-                "inserted": 0,
-                "skipped": 1,
-                "reason": reason,
-            }
-
-    response = requests.get(
-        source_url,
-        headers={"User-Agent": USER_AGENT},
-        timeout=source.get("timeout_seconds", 15),
-    )
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
-    selector = source.get("link_selector", "a[href]")
-    allow_patterns = source.get("allow_patterns", [])
-    deny_patterns = source.get("deny_patterns", [])
-    max_items = int(source.get("max_items", 50))
-    min_title_length = int(source.get("min_title_length", 4))
-
-    processed = 0
-    inserted = 0
-    seen_urls: set[str] = set()
-
-    for anchor in soup.select(selector):
+def extract_links(html: str, base_url: str, source: dict):
+    soup = BeautifulSoup(html, "html.parser")
+    for anchor in soup.select(source.get("link_selector", "a[href]")):
         href = anchor.get("href")
         if not href:
             continue
-
-        url = _normalize_url(source_url, href)
-
-        if url in seen_urls:
+        try:
+            url = normalize_url(href, base_url)
+        except ValueError:
             continue
-        if not _matches(url, allow_patterns):
+        allow = source.get("allow_patterns", [])
+        deny = source.get("deny_patterns", [])
+        if allow and not any(re.search(pattern, url) for pattern in allow):
             continue
-        if deny_patterns and _matches(url, deny_patterns):
+        if any(re.search(pattern, url) for pattern in deny):
             continue
-
-        title = " ".join(anchor.get_text(" ", strip=True).split())
-        if len(title) < min_title_length:
+        title_node = anchor.select_one(source["title_selector"]) if source.get("title_selector") else anchor
+        if title_node is None:
             continue
-
-        seen_urls.add(url)
-        processed += 1
-
-        ref = db.collection("contents").document(_doc_id(url))
-        if ref.get().exists:
-            if processed >= max_items:
-                break
+        title = " ".join(title_node.get_text(" ", strip=True).split())
+        if len(title) < int(source.get("min_title_length", 4)):
             continue
+        item = {"url": url, "title": title, "publishedAt": None, "_errors": []}
+        if source.get("published_selector"):
+            date_node = anchor.select_one(source["published_selector"])
+            if date_node is not None:
+                date = date_node.get("datetime") or date_node.get_text(" ", strip=True)
+                try:
+                    item["publishedAt"] = (
+                        datetime.strptime(date, source["published_format"]).date().isoformat()
+                        if source.get("published_format") else date
+                    )
+                except ValueError:
+                    item["_errors"].append(f"게시일 형식 오류: {date}")
+        values, errors = extract_metrics(anchor, source.get("list_metrics", {}))
+        item.update(values)
+        item["_errors"].extend(errors)
+        yield item
 
-        ref.set(
-            {
-                "url": url,
-                "title": title,
-                "summary": "",
-                "source": source["name"],
-                "sourceType": "html",
-                "sourceUrl": source_url,
-                "region": source.get("region"),
-                "category": source.get("category", "UNKNOWN"),
-                "contentAngle": source.get("content_angle", "NEWS"),
-                "status": "NEW",
-                "publishedAt": None,
-                "collectedAt": firestore.SERVER_TIMESTAMP,
-                "createdAt": datetime.now(timezone.utc).isoformat(),
-            }
-        )
-        inserted += 1
 
-        if processed >= max_items:
+def html_items(source: dict):
+    limit = int(source.get("max_items", 50))
+    if limit <= 0:
+        return
+    policy = RobotsPolicy(source.get("respect_robots", True), source.get("timeout_seconds", 15))
+    policy.check(source["url"])
+    if source.get("render_js", False):
+        # Static/RSS/manual paths do not import or launch Playwright.
+        from collectors.rendered import rendered_items
+        yield from rendered_items(source, policy)
+        return
+    html, final_url = get_html(source["url"], policy, source.get("timeout_seconds", 15))
+    seen = set()
+    for item in extract_links(html, final_url, source):
+        if item["url"] in seen:
+            continue
+        seen.add(item["url"])
+        detail_selectors = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
+        if detail_selectors:
+            try:
+                detail_html, _ = get_html(item["url"], policy, source.get("timeout_seconds", 15))
+                values, errors = extract_metrics(BeautifulSoup(detail_html, "html.parser"), detail_selectors, required=True)
+                item.update(values)
+                item["_errors"].extend(errors)
+            except Exception as exc:
+                item["_errors"].append(f"상세 페이지 실패: {exc}")
+        yield item
+        if len(seen) >= limit:
             break
 
-    return {
-        "processed": processed,
-        "inserted": inserted,
-        "skipped": 0,
-        "reason": "",
-    }
+
+def collect_html_links(db, source: dict, store=None) -> dict:
+    return save_records(html_items(source), db, source, store)

@@ -29,14 +29,25 @@ sources:
   # 국내 애니/굿즈 뉴스. 애니메이션 유입용 콘텐츠 후보를 수집한다.
   - name: 애니플러스 뉴스
     type: html
-    url: https://news.aniplustv.com/
+    url: https://news.aniplustv.com/news
+    render_js: true
+    render_timeout_seconds: 30
+    link_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
+    wait_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
+    title_selector: h3
+    published_selector: p
+    published_format: '%Y/%m/%d'
+    next_page_selector: 'button[aria-label="다음 페이지"]'
+    max_pages: 2
+    detail_wait_selector: 'div:has(> div > button[aria-label="좋아요"]) > span'
+    detail_metrics:
+      likeCount: 'div:has(> div > button[aria-label="좋아요"]) > span'
+    # 공개 화면에 조회수가 없어 viewCount 선택자는 지정하지 않는다.
     region: KR
     category: ANIME
     content_angle: NEWS
     allow_patterns:
-      - '^https://news\.aniplustv\.com/'
-    deny_patterns:
-      - '^https://news\.aniplustv\.com/$'
+      - '^https://news\.aniplustv\.com/news/[0-9]+$'
     max_items: 40
     enabled: true
     respect_robots: true
@@ -63,6 +74,19 @@ sources:
     content_angle: NEWS
     allow_patterns:
       - '^https://bbs\.ruliweb\.com/family/242/board/300017/read/'
+    max_items: 50
+    enabled: true
+    respect_robots: true
+
+  # 국내 피규어 커뮤니티 VOC. 입양/개봉/소장 글을 수집한다.
+  - name: 덕벤 프라모델/피규어
+    type: html
+    url: https://www.inven.co.kr/board/party/3714?category=피규어
+    region: KR
+    category: FIGURE
+    content_angle: COLLECTION
+    allow_patterns:
+      - '^https://www\.inven\.co\.kr/board/party/3714/\d+'
     max_items: 50
     enabled: true
     respect_robots: true

@@ -1,10 +1,9 @@
-import hashlib
-from datetime import datetime, timezone
-
 import streamlit as st
 from firebase_admin import firestore
 
 from firebase_client import get_db
+from content_store import add_manual_content
+from presentation import metric_caption
 
 
 CATEGORIES = ["ANIME", "CHARACTER", "FIGURE", "GOODS", "COLLECTION", "UNKNOWN"]
@@ -41,33 +40,6 @@ def db():
     return get_db()
 
 
-def doc_id(url: str) -> str:
-    return hashlib.sha256(url.encode("utf-8")).hexdigest()
-
-
-def add_manual_content(url: str, title: str, category: str, angle: str):
-    ref = db().collection("contents").document(doc_id(url.strip()))
-    if ref.get().exists:
-        return False
-
-    ref.set(
-        {
-            "url": url.strip(),
-            "title": title.strip() or "(제목 없음)",
-            "summary": "",
-            "source": "수동 입력",
-            "sourceType": "manual",
-            "category": category,
-            "contentAngle": angle,
-            "status": "NEW",
-            "publishedAt": None,
-            "collectedAt": firestore.SERVER_TIMESTAMP,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-        }
-    )
-    return True
-
-
 def update_content(document_id: str, **fields):
     db().collection("contents").document(document_id).update(fields)
 
@@ -97,12 +69,16 @@ with st.sidebar:
         if not url.strip():
             st.error("URL을 입력해주세요.")
         else:
-            created = add_manual_content(url, title, category, angle)
-            if created:
-                st.success("저장했습니다.")
-                st.rerun()
+            try:
+                created = add_manual_content(db(), url, title, category, angle)
+            except ValueError as exc:
+                st.error(str(exc))
             else:
-                st.info("이미 저장된 URL입니다.")
+                if created:
+                    st.success("저장했습니다.")
+                    st.rerun()
+                else:
+                    st.info("이미 저장된 URL입니다.")
 
     st.divider()
     st.header("필터")
@@ -168,6 +144,7 @@ for item in items:
         if value
     )
     st.caption(meta)
+    st.caption(metric_caption(item))
 
     summary = item.get("summary")
     if summary:

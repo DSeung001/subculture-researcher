@@ -1,47 +1,39 @@
-import hashlib
-from datetime import datetime, timezone
-from typing import Any
-
 import feedparser
-from firebase_admin import firestore
+import requests
+
+from content_store import normalize_url
+from collectors.common import save_records
+from collectors.http import USER_AGENT
 
 
-def _doc_id(url: str) -> str:
-    return hashlib.sha256(url.encode("utf-8")).hexdigest()
-
-
-def collect_rss(db, source: dict[str, Any]) -> dict[str, int]:
-    feed = feedparser.parse(source["url"])
-    inserted = 0
-    processed = 0
-
+def rss_items(source: dict):
+    response = requests.get(source["url"], headers={"User-Agent": USER_AGENT}, timeout=source.get("timeout_seconds", 15))
+    response.raise_for_status()
+    feed = feedparser.parse(response.content)
+    if feed.bozo and not feed.entries:
+        raise ValueError(f"RSS 해석 실패: {feed.get('bozo_exception')}")
+    seen = set()
+    limit = int(source.get("max_items", 50))
+    if limit <= 0:
+        return
     for entry in feed.entries:
-        url = entry.get("link")
-        if not url:
+        if not entry.get("link"):
             continue
-
-        processed += 1
-        ref = db.collection("contents").document(_doc_id(url))
-        snapshot = ref.get()
-
-        if snapshot.exists:
+        try:
+            url = normalize_url(entry.link, response.url)
+        except ValueError:
             continue
+        if url in seen:
+            continue
+        seen.add(url)
+        yield {
+            "url": url, "title": entry.get("title") or "(untitled)",
+            "summary": entry.get("summary", "")[:500],
+            "publishedAt": entry.get("published") or entry.get("updated"),
+        }
+        if len(seen) >= limit:
+            return
 
-        ref.set(
-            {
-                "url": url,
-                "title": entry.get("title", "(untitled)"),
-                "summary": entry.get("summary", ""),
-                "source": source["name"],
-                "sourceType": "rss",
-                "category": source.get("category", "UNKNOWN"),
-                "contentAngle": "NEWS",
-                "status": "NEW",
-                "publishedAt": entry.get("published") or entry.get("updated"),
-                "collectedAt": firestore.SERVER_TIMESTAMP,
-                "createdAt": datetime.now(timezone.utc).isoformat(),
-            }
-        )
-        inserted += 1
 
-    return {"processed": processed, "inserted": inserted}
+def collect_rss(db, source: dict, store=None) -> dict:
+    return save_records(rss_items(source), db, source, store)
