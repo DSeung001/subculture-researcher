@@ -1,8 +1,72 @@
 sources:
-  # Add RSS feeds here after confirming the source permits automated access.
-  # Example:
-  # - name: example-anime-news
-  #   type: rss
-  #   url: https://example.com/feed.xml
-  #   category: ANIME
-  #   enabled: true
+  # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
+  - name: HOBBY Watch 피규어
+    type: html
+    url: https://hobby.watch.impress.co.jp/category/figure/
+    region: JP
+    category: FIGURE
+    content_angle: NEWS
+    allow_patterns:
+      - '^https://hobby\.watch\.impress\.co\.jp/docs/news/'
+      - '^https://hobby\.watch\.impress\.co\.jp/docs/review/'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 제조사 공식 뉴스. 신제품/예약/출시 공지를 원천 데이터로 사용한다.
+  - name: Good Smile Company 뉴스
+    type: html
+    url: https://www.goodsmile.com/en/news
+    region: JP
+    category: FIGURE
+    content_angle: NEWS
+    allow_patterns:
+      - '^https://www\.goodsmile\.com/en/news/'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 국내 애니/굿즈 뉴스. 애니메이션 유입용 콘텐츠 후보를 수집한다.
+  - name: 애니플러스 뉴스
+    type: html
+    url: https://news.aniplustv.com/
+    region: KR
+    category: ANIME
+    content_angle: NEWS
+    allow_patterns:
+      - '^https://news\.aniplustv\.com/'
+    deny_patterns:
+      - '^https://news\.aniplustv\.com/$'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 국내 피규어 커뮤니티 VOC. 질문/후기/장식장 고민을 찾기 위한 소스.
+  - name: DC 피규어 마이너 갤러리
+    type: html
+    url: https://gall.dcinside.com/mgallery/board/lists/?id=figuregall
+    region: KR
+    category: COLLECTION
+    content_angle: QUESTION
+    allow_patterns:
+      - '^https://gall\.dcinside\.com/mgallery/board/view/\?id=figuregall'
+    max_items: 50
+    enabled: true
+    respect_robots: true
+
+  # 국내 피규어 정보/리뷰 커뮤니티.
+  - name: 루리웹 피규어 정보
+    type: html
+    url: https://bbs.ruliweb.com/family/242/board/300017
+    region: KR
+    category: FIGURE
+    content_angle: NEWS
+    allow_patterns:
+      - '^https://bbs\.ruliweb\.com/family/242/board/300017/read/'
+    max_items: 50
+    enabled: true
+    respect_robots: true
+
+  # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.
+  # 라프텔, animate 서울홍대점, AGF Korea, 일러스타 페스, 코믹월드
+  # 발견한 게시물은 Streamlit의 "수동 콘텐츠 추가"로 저장한다.
