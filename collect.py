@@ -2,6 +2,7 @@ import argparse
 import json
 
 from collectors.anilist import collect_anilist
+from collectors.figurefarm import collect_figurefarm
 from collectors.html_links import collect_html_links
 from collectors.json_api import collect_json_api
 from collectors.rss import collect_rss
@@ -17,6 +18,7 @@ COLLECTORS = {
     "html": collect_html_links,
     "json_api": collect_json_api,
     "anilist": collect_anilist,
+    "figurefarm": collect_figurefarm,
     "youtube_feed": collect_youtube_feed,
 }
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
