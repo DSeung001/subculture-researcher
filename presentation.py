@@ -1,3 +1,4 @@
+import math
 import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -47,7 +48,64 @@ def effective_date(item: dict) -> datetime:
     return datetime.min.replace(tzinfo=timezone.utc)
 
 
-def sort_items(items: list[dict], *, newest_first: bool = True) -> list[dict]:
+def content_score(item: dict, *, now: datetime | None = None) -> float:
+    """Comparable editorial score for every source; no DB migration required."""
+    now = now or datetime.now(timezone.utc)
+    published = effective_date(item)
+    age_hours = max(0.0, (now - published).total_seconds() / 3600)
+    recency = max(0.0, 36.0 - age_hours / 6.0)
+
+    score = recency
+    if item.get("sourceTier") == "OFFICIAL":
+        score += 8.0
+
+    for field, weight in (("viewCount", 3.0), ("likeCount", 4.0)):
+        value = item.get(field)
+        if isinstance(value, int) and value > 0:
+            score += min(18.0, math.log10(value + 1) * weight)
+
+    trending = item.get("trending")
+    if isinstance(trending, int) and trending > 0:
+        score += min(30.0, math.log10(trending + 1) * 8.0)
+
+    popularity = item.get("popularity")
+    if isinstance(popularity, int) and popularity > 0:
+        score += min(18.0, math.log10(popularity + 1) * 3.0)
+
+    favourites = item.get("favourites")
+    if isinstance(favourites, int) and favourites > 0:
+        score += min(10.0, math.log10(favourites + 1) * 2.0)
+
+    average_score = item.get("averageScore")
+    if isinstance(average_score, int):
+        score += max(0.0, min(10.0, average_score / 10.0))
+
+    return round(score, 1)
+
+
+def signal_labels(item: dict) -> list[str]:
+    labels = []
+    score = content_score(item)
+    if score >= 60:
+        labels.append("HOT")
+    if item.get("trending"):
+        labels.append("TREND")
+    if item.get("sourceTier") == "OFFICIAL":
+        labels.append("OFFICIAL")
+    if is_new_today(item):
+        labels.append("NEW")
+    return labels
+
+
+def sort_items(
+    items: list[dict], *, newest_first: bool = True, recommended: bool = False
+) -> list[dict]:
+    if recommended:
+        return sorted(
+            items,
+            key=lambda item: (content_score(item), effective_date(item)),
+            reverse=True,
+        )
     return sorted(items, key=effective_date, reverse=newest_first)
 
 
@@ -82,6 +140,18 @@ def summary_preview(item: dict, length: int = 120) -> str:
 
 def metric_caption(item: dict) -> str:
     parts = []
+    for field, label in (
+        ("trending", "AniList 트렌딩"),
+        ("popularity", "인기도"),
+        ("favourites", "즐겨찾기"),
+        ("averageScore", "평균점수"),
+    ):
+        value = item.get(field)
+        if value is not None:
+            parts.append(
+                f"{label} {value:,}" if isinstance(value, int)
+                else f"{label} {value}"
+            )
     for field, label in (("viewCount", "조회수"), ("likeCount", "좋아요")):
         value = item.get(field)
         if value is None:

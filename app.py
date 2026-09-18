@@ -12,6 +12,8 @@ from presentation import (
     format_date_kst,
     is_new_today,
     metric_caption,
+    content_score,
+    signal_labels,
     sort_items,
     split_leading_date,
     summary_preview,
@@ -106,7 +108,7 @@ def current_filters():
         "tier": request.args.get("tier", "ALL"),
         "source": request.args.get("source", "ALL"),
         "unposted": request.args.get("unposted", ""),
-        "sort": request.args.get("sort", "NEWEST"),
+        "sort": request.args.get("sort", "RECOMMENDED"),
         "limit": clamp(parse_int(request.args.get("limit"), 200), 20, 200),
         "visible": clamp(parse_int(request.args.get("visible"), CHUNK_SIZE), CHUNK_SIZE, 10_000),
     }
@@ -157,7 +159,11 @@ def index():
 
     source_options = sorted(all_sources)
 
-    items = sort_items(items, newest_first=(filters["sort"] == "NEWEST"))
+    items = sort_items(
+        items,
+        newest_first=(filters["sort"] == "NEWEST"),
+        recommended=(filters["sort"] == "RECOMMENDED"),
+    )
     visible_count = min(filters["visible"], len(items))
     page_items = items[:visible_count]
 
@@ -208,6 +214,8 @@ def index():
         )
         item["_summary"] = summary_preview(item)
         item["_metric_caption"] = metric_caption(item)
+        item["_signal_score"] = content_score(item)
+        item["_signal_labels"] = signal_labels(item)
 
     counts = {
         "loaded": len(docs),

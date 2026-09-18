@@ -16,6 +16,10 @@ TRACKING_PARAMS = {
     "fbclid", "gclid", "dclid", "msclkid",
 }
 METRICS = ("viewCount", "likeCount")
+SIGNAL_FIELDS = (
+    "trending", "popularity", "favourites", "averageScore",
+    "nextAiringAt", "episode", "signalCheckedAt",
+)
 
 
 def normalize_url(url: str, base_url: str = "") -> str:
@@ -79,6 +83,12 @@ class ContentStore:
                 metrics[field] = value
                 metrics[f"{field}CheckedAt"] = item.get(f"{field}CheckedAt") or datetime.now(timezone.utc)
 
+        signals = {
+            field: item.get(field)
+            for field in SIGNAL_FIELDS
+            if item.get(field) is not None
+        }
+
         data = {
             **{k: v for k, v in item.items() if not k.startswith("_")},
             "url": url,
@@ -105,15 +115,16 @@ class ContentStore:
                 except AlreadyExists:
                     # Another collector/manual submission created this URL first.
                     pass
-            if not created and metrics:
-                ref.update(metrics)
+            updates = {**metrics, **signals}
+            if not created and updates:
+                ref.update(updates)
 
         if not existing:
             self.by_url[url] = [{"id": target_id, "status": "NEW" if created else None}]
         return {
             "inserted": int(created),
             "existing": int(not created),
-            "updated": int(not created and bool(metrics)),
+            "updated": int(not created and bool(metrics or signals)),
         }
 
 

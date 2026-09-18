@@ -39,6 +39,7 @@
       <div class="field-group">
         <span class="field-label">정렬</span>
         <div class="chip-row">
+          <a href="{{ filter_url(sort='RECOMMENDED') }}" class="chip {% if filters.sort == 'RECOMMENDED' %}active{% endif %}">추천순</a>
           <a href="{{ filter_url(sort='NEWEST') }}" class="chip {% if filters.sort == 'NEWEST' %}active{% endif %}">최신순</a>
           <a href="{{ filter_url(sort='OLDEST') }}" class="chip {% if filters.sort == 'OLDEST' %}active{% endif %}">오래된순</a>
         </div>
@@ -134,7 +135,11 @@
               {% if item['_is_new_today'] %}<span class="new-badge" title="오늘 수집">N</span>{% endif %}<span class="title-variant title-translated">{% if item['_title_date'] %}<span class="card-date">게시 {{ item['_title_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}{% if item['_lang_tag'] %}<span class="lang-tag">[{{ item['_lang_tag'] }}]</span>{% endif %}<strong>{{ item['_title_text'] }}</strong></span>{% if item['_original_title'] %}<span class="title-variant title-original" hidden>{% if item['_original_date'] %}<span class="card-date">게시 {{ item['_original_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}<strong>{{ item['_original_text'] }}</strong></span><button type="button" class="original-toggle" aria-pressed="false">원어 제목</button>{% endif %}{% if item.url %}<a class="original-toggle" href="{{ item.url }}" target="_blank" rel="noopener">자세히보기</a>{% endif %}
             </p>
             <div class="card-meta-row">
-              <p class="card-meta">{{ item['_meta'] }}</p>
+              <p class="card-meta">
+                <strong>추천 {{ item['_signal_score'] }}</strong>
+                {% for label in item['_signal_labels'] %} · {{ label }}{% endfor %}
+                · {{ item['_meta'] }}
+              </p>
               <button type="button" class="more-trigger" data-dialog-target="more-dialog-{{ item['_id'] }}">더보기</button>
             </div>
             {% if item['_summary'] %}<p class="card-summary">{{ item['_summary'] }}</p>{% endif %}

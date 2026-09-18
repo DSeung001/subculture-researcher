@@ -1,4 +1,64 @@
 sources:
+  # 애니메이션 작품 자체의 인기/트렌드 신호. 기사 DB 복제가 아니라 소재 발견용으로 소량만 수집한다.
+  - name: AniList 트렌딩 애니
+    type: anilist
+    url: https://graphql.anilist.co
+    region: GLOBAL
+    category: ANIME
+    content_angle: NEWS
+    source_tier: MEDIA
+    max_items: 30
+    enabled: true
+
+  # 일본 기업 보도자료의 만화/애니 카테고리.
+  - name: PR TIMES 만화·애니
+    type: html
+    url: https://prtimes.jp/main/html/searchbiscate/busi_cate_id/007/lv2/20
+    link_selector: 'a[href*="/main/html/rd/p/"]'
+    region: JP
+    category: ANIME
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    allow_patterns:
+      - '^https://prtimes\.jp/main/html/rd/p/[0-9]+\.[0-9]+\.html$'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 일본 애니 공식 YouTube 채널. 채널 페이지에서 ID를 해석한 뒤 공식 Atom feed만 읽는다.
+  - name: KADOKAWA Anime YouTube
+    type: youtube_feed
+    url: https://www.youtube.com/@KADOKAWAanime
+    channel_url: https://www.youtube.com/@KADOKAWAanime
+    region: JP
+    category: ANIME
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    max_items: 15
+    enabled: true
+
+  - name: Aniplex YouTube
+    type: youtube_feed
+    url: https://www.youtube.com/@aniplex
+    channel_url: https://www.youtube.com/@aniplex
+    region: JP
+    category: ANIME
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    max_items: 15
+    enabled: true
+
+  - name: TOHO animation YouTube
+    type: youtube_feed
+    url: https://www.youtube.com/@TOHOanimation
+    channel_url: https://www.youtube.com/@TOHOanimation
+    region: JP
+    category: ANIME
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    max_items: 15
+    enabled: true
+
   # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
   - name: HOBBY Watch 피규어
     type: html
