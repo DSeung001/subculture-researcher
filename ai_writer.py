@@ -19,7 +19,7 @@ GEMINI_URL = (
 )
 TIMEOUT_SECONDS = 30
 SUMMARY_CHARS = 300
-REGION_LABELS = {"KR": "국내", "JP": "일본", "GLOBAL": "해외"}
+REGION_LABELS = {"KR": "국내", "JP": "일본", "US": "미국", "CN": "중국", "GLOBAL": "해외"}
 
 # Stage 1: pick which candidates are worth writing about at all. Kept as a
 # separate call (rather than folding selection into the write prompt) because

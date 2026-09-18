@@ -323,6 +323,68 @@ sources:
     item_delay_seconds: 0.7
     enabled: true
 
+  # 국내 리셀러의 호요버스(원신/스타레일/젠레스존제로) 공식 라이선스 굿즈. 예약마감/가격이 목록에 노출된다.
+  - name: 따빼몰 호요버스 굿즈
+    type: html
+    url: https://ttabbaemall.co.kr/category/hoyoverse/296/
+    link_selector: 'p.name a'
+    title_selector: ':scope > span:not(.title)'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://ttabbaemall\.co\.kr/product/detail\.html\?product_no=\d+'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 국내 리셀러의 명조(워더링 웨이브) 공식 라이선스 굿즈.
+  - name: 따빼몰 명조 굿즈
+    type: html
+    url: https://ttabbaemall.co.kr/category/명조워더링-웨이브/339/
+    link_selector: 'p.name a'
+    title_selector: ':scope > span:not(.title)'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://ttabbaemall\.co\.kr/product/detail\.html\?product_no=\d+'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 국내 정품 피규어샵의 예약상품 목록. 장르 제한 없이 미국/일본/중국 라이선스 피규어가 섞여 있다.
+  - name: 피규어프레소 예약상품
+    type: html
+    url: https://m.figurepresso.com/product/preorder.html?cate_no=24
+    link_selector: 'li.item a[href^="/product/"]'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://m\.figurepresso\.com/product/.+/\d+/'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
+  # 미국 공식 피규어 브랜드 뉴스. Sideshow는 Queue-it 대기실(사실상 항상 리다이렉트)로
+  # 막혀 있어 자동 수집이 불가능해 McFarlane Toys 공식 뉴스로 대체했다.
+  - name: McFarlane Toys 뉴스
+    type: html
+    url: https://www.mcfarlane.com/news
+    region: US
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    allow_patterns:
+      - '^https://www\.mcfarlane\.com/post/'
+    max_items: 40
+    enabled: true
+    respect_robots: true
+
   # 다른 대형 페스티벌은 확인 결과 자동 수집기로 붙이기 어려웠다:
   # - Wonder Festival(wonfes.jp) 공지: robots.txt는 허용하지만 모든 공지가 /info/ 한 페이지 안의
   #   #info{id} 앵커로만 구분돼, URL 기준 중복 제거(SHA-256) 모델과 맞지 않는다.

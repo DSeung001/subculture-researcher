@@ -70,6 +70,8 @@ TIER_LABELS = {
 REGION_LABELS = {
     "JP": "일본",
     "KR": "국내",
+    "US": "미국",
+    "CN": "중국",
 }
 LANGUAGE_TAGS = {
     "en": "EN",
