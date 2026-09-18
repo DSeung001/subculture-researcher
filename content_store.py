@@ -20,6 +20,10 @@ SIGNAL_FIELDS = (
     "trending", "popularity", "favourites", "averageScore",
     "nextAiringAt", "episode", "signalCheckedAt",
 )
+PRODUCT_FIELDS = (
+    "entityType", "shop", "saleStatus", "preorderEndAt", "releaseWindowText",
+    "manufacturer", "sizeText", "price", "currency", "imageUrl", "productCheckedAt",
+)
 
 
 def normalize_url(url: str, base_url: str = "") -> str:
@@ -102,6 +106,11 @@ class ContentStore:
             for field in SIGNAL_FIELDS
             if item.get(field) is not None
         }
+        product_fields = {
+            field: item.get(field)
+            for field in PRODUCT_FIELDS
+            if item.get(field) is not None
+        }
 
         data = {
             **{k: v for k, v in item.items() if not k.startswith("_")},
@@ -131,7 +140,7 @@ class ContentStore:
                 except AlreadyExists:
                     # Another collector/manual submission created this URL first.
                     pass
-            updates = {**metrics, **signals}
+            updates = {**metrics, **signals, **product_fields}
             if not created and updates:
                 ref.update(updates)
 
@@ -140,7 +149,7 @@ class ContentStore:
         return {
             "inserted": int(created),
             "existing": int(not created),
-            "updated": int(not created and bool(metrics or signals)),
+            "updated": int(not created and bool(metrics or signals or product_fields)),
         }
 
 
@@ -148,10 +157,20 @@ def add_manual_content(
     db, url: str, title: str, category: str, angle: str, source_tier: str = "MEDIA",
 ) -> bool:
     # Refresh the legacy index on submission, not on every page render.
+    normalized = normalize_url(url)
+    is_laftel_product = (
+        (urlsplit(normalized).hostname or "").endswith("laftel.net")
+        and category == "FIGURE"
+    )
     result = ContentStore(db).save({
-        "url": url, "title": title.strip() or "(제목 없음)", "summary": "",
-        "source": "수동 입력", "sourceType": "manual", "category": category,
+        "url": normalized, "title": title.strip() or "(제목 없음)", "summary": "",
+        "source": "Laftel Store" if is_laftel_product else "수동 입력",
+        "sourceType": "manual_product" if is_laftel_product else "manual",
+        "category": category,
         "contentAngle": angle, "sourceTier": source_tier,
+        "entityType": "PRODUCT" if is_laftel_product else None,
+        "shop": "Laftel" if is_laftel_product else None,
+        "saleStatus": "UNKNOWN" if is_laftel_product else None,
         "note": "", "postedAt": None, "publishedAt": None,
     })
     return bool(result["inserted"])

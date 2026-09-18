@@ -79,6 +79,7 @@
       <input type="hidden" name="next" value="{{ next_url }}">
       <label>URL<input type="text" name="url" placeholder="https://..."></label>
       <label>제목<input type="text" name="title"></label>
+      <p class="subtitle">라프텔 스토어 상품 URL은 카테고리를 피규어로 선택하면 상품(PRODUCT)으로 저장됩니다.</p>
       <label>카테고리
         <select name="category">
           {% for c in categories %}<option value="{{ c }}">{{ category_labels[c] }}</option>{% endfor %}
@@ -138,6 +139,7 @@
               </p>
               <button type="button" class="more-trigger" data-dialog-target="more-dialog-{{ item['_id'] }}">더보기</button>
             </div>
+            {% if item['_product_caption'] %}<p class="card-summary"><strong>{{ item['_product_caption'] }}</strong></p>{% endif %}
             {% if item['_summary'] %}<p class="card-summary">{{ item['_summary'] }}</p>{% endif %}
           </div>
           <div class="card-actions">
