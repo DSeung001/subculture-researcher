@@ -195,11 +195,16 @@
     </div>
 
     <hr>
-    {% if has_more %}
-      <a class="btn full" href="{{ more_url }}">더 보기 (+{{ remaining }}개)</a>
-    {% else %}
-      <p class="subtitle">전체 {{ counts.filtered }}건 모두 표시했습니다.</p>
-    {% endif %}
+    <div id="load-more" class="load-more"{% if has_more %} data-more-url="{{ more_url }}"{% endif %}>
+      {% if has_more %}
+        <p class="subtitle load-more-status">더 불러오는 중…</p>
+        <noscript>
+          <a class="btn full" href="{{ more_url }}">더 보기 (+{{ remaining }}개)</a>
+        </noscript>
+      {% else %}
+        <p class="subtitle">전체 {{ counts.filtered }}건 모두 표시했습니다.</p>
+      {% endif %}
+    </div>
   </main>
 </div>
 {% endblock %}

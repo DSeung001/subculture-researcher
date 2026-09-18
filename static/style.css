@@ -481,6 +481,15 @@ h1 { margin: 0 0 4px; font-size: 26px; }
 
 .btn.full { width: 100%; }
 
+.load-more {
+  padding: 8px 0 4px;
+  text-align: center;
+}
+
+.load-more-status {
+  margin: 0;
+}
+
 .note-form {
   display: flex;
   flex-direction: column;
