@@ -326,7 +326,7 @@ def create_draft_item():
     except DraftError as exc:
         flash(str(exc), "error")
         return redirect(next_url)
-    flash("임시글을 만들었습니다.", "success")
+    flash("글을 만들었습니다.", "success")
     return redirect(url_for("drafts_page"))
 
 
@@ -337,7 +337,7 @@ def create_ai_draft_item():
     except (DraftError, AiWriterError) as exc:
         flash(str(exc), "error")
     else:
-        flash("임시글을 만들었습니다." if draft_id else "AI로 쓸 만한 새 재료가 없습니다.", "success" if draft_id else "info")
+        flash("글을 만들었습니다." if draft_id else "AI로 쓸 만한 새 재료가 없습니다.", "success" if draft_id else "info")
     return redirect(url_for("drafts_page"))
 
 
@@ -370,15 +370,36 @@ def delete_draft_item(draft_id):
     except DraftError as exc:
         flash(str(exc), "error")
     else:
-        flash("임시글을 삭제했습니다.", "success")
+        flash("글을 삭제했습니다.", "success")
     return redirect(drafts_list_url())
+
+
+def _source_status(source: dict) -> str:
+    if not source.get("enabled", True):
+        return "DISABLED"
+    if source.get("local_only"):
+        return "MANUAL"
+    return "ENABLED"
 
 
 @app.get("/sources")
 def sources_page():
+    status = request.args.get("status", "ALL")
+    if status not in {"ALL", "ENABLED", "DISABLED", "MANUAL"}:
+        status = "ALL"
+
+    all_sources = load_sources()
+    counts = {"ALL": len(all_sources), "ENABLED": 0, "DISABLED": 0, "MANUAL": 0}
+    for source in all_sources:
+        counts[_source_status(source)] += 1
+
+    sources = all_sources if status == "ALL" else [s for s in all_sources if _source_status(s) == status]
+
     return render_template(
         "sources.html",
-        sources=load_sources(),
+        sources=sources,
+        status=status,
+        counts=counts,
         category_labels=CATEGORY_LABELS,
         region_labels=REGION_LABELS,
         tier_labels=TIER_LABELS,

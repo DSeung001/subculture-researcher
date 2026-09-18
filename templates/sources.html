@@ -2,37 +2,57 @@
 {% block body %}
 <main class="sources-page">
   <h1>수집 목록</h1>
-  <p class="subtitle">sources.yaml에 등록된 자동 수집 소스 목록입니다 (읽기 전용).</p>
+  <p class="subtitle">sources.yaml에 등록된 자동/수동 수집 소스 목록입니다 (읽기 전용).</p>
 
-  <table class="sources-table">
-    <thead>
-      <tr>
-        <th>이름</th>
-        <th>URL</th>
-        <th>카테고리</th>
-        <th>지역</th>
-        <th>소스 티어</th>
-        <th>상태</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in sources %}
-      <tr class="{% if not s.get('enabled', True) %}disabled-row{% endif %}">
-        <td>{{ s.name }}</td>
-        <td><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a></td>
-        <td>{{ category_labels.get(s.category, s.category) }}</td>
-        <td>{{ region_labels.get(s.region, s.region) }}</td>
-        <td>{{ tier_labels.get(s.source_tier, s.source_tier) }}</td>
-        <td>
-          {% if not s.get('enabled', True) %}
-          <span class="status-badge status-disabled">비활성</span>
-          {% else %}
-          <span class="status-badge status-enabled">활성</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="stats">
+    <div class="stat"><span class="stat-value">{{ counts.ALL }}</span><span class="stat-label">전체</span></div>
+    <div class="stat"><span class="stat-value">{{ counts.ENABLED }}</span><span class="stat-label">활성</span></div>
+    <div class="stat"><span class="stat-value">{{ counts.DISABLED }}</span><span class="stat-label">비활성</span></div>
+    <div class="stat"><span class="stat-value">{{ counts.MANUAL }}</span><span class="stat-label">수동</span></div>
+  </div>
+
+  <div class="chip-row page-chips">
+    <a href="{{ url_for('sources_page', status='ALL') }}" class="chip {% if status == 'ALL' %}active{% endif %}">전체</a>
+    <a href="{{ url_for('sources_page', status='ENABLED') }}" class="chip {% if status == 'ENABLED' %}active{% endif %}">활성</a>
+    <a href="{{ url_for('sources_page', status='DISABLED') }}" class="chip {% if status == 'DISABLED' %}active{% endif %}">비활성</a>
+    <a href="{{ url_for('sources_page', status='MANUAL') }}" class="chip {% if status == 'MANUAL' %}active{% endif %}">수동</a>
+  </div>
+
+  <div class="table-scroll">
+    <table class="sources-table">
+      <thead>
+        <tr>
+          <th>이름</th>
+          <th>URL</th>
+          <th>카테고리</th>
+          <th>지역</th>
+          <th>소스 티어</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sources %}
+        <tr class="{% if not s.get('enabled', True) %}disabled-row{% endif %}">
+          <td>{{ s.name }}</td>
+          <td class="url-cell"><a href="{{ s.url }}" target="_blank" rel="noopener" title="{{ s.url }}">{{ s.url }}</a></td>
+          <td><span class="tag">{{ category_labels.get(s.category, s.category) }}</span></td>
+          <td><span class="tag">{{ region_labels.get(s.region, s.region) }}</span></td>
+          <td><span class="tag">{{ tier_labels.get(s.source_tier, s.source_tier) }}</span></td>
+          <td>
+            {% if not s.get('enabled', True) %}
+            <span class="status-badge status-disabled">비활성</span>
+            {% elif s.get('local_only') %}
+            <span class="status-badge status-manual">수동</span>
+            {% else %}
+            <span class="status-badge status-enabled">활성</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-row">표시할 소스가 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </main>
 {% endblock %}

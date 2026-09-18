@@ -125,7 +125,7 @@
       <article class="card">
         <div class="card-row">
           <label class="card-select">
-            <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_ref'] }}" form="draft-create-form" aria-label="임시글에 포함">
+            <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_ref'] }}" form="draft-create-form" aria-label="글에 포함">
           </label>
           <div class="card-main">
             <p class="card-title">
@@ -209,6 +209,6 @@
 <form id="draft-create-form" method="post" action="{{ url_for('create_draft_item') }}" class="draft-bar" hidden>
   <input type="hidden" name="next" value="{{ next_url }}">
   <span class="draft-bar-count">0개 선택</span>
-  <button type="submit" class="btn btn-primary">임시글 만들기</button>
+  <button type="submit" class="btn btn-primary">글 만들기</button>
 </form>
 {% endblock %}

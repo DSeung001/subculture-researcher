@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}임시글 · 서브컬처 리서처{% endblock %}
+{% block title %}글 · 서브컬처 리서처{% endblock %}
 {% block body %}
 <main>
-  <h1>임시글</h1>
+  <h1>글</h1>
   <p class="subtitle">인박스에서 고른 단건·다건 재료를 묶어 둔 초안입니다.</p>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -22,16 +22,17 @@
   </div>
 
   <form method="post" action="{{ url_for('create_ai_draft_item') }}">
-    <button type="submit" class="btn btn-primary">AI로 임시글 만들기</button>
+    <button type="submit" class="btn btn-primary">AI로 글 만들기</button>
   </form>
 
   <div class="items">
     {% for draft in drafts %}
-    <article class="card">
+    <article class="card draft-card">
       <div class="card-meta-row">
+        <span class="status-badge {% if draft.status == 'POSTED' %}status-enabled{% else %}status-draft{% endif %}">{{ draft['_status_label'] }}</span>
+        <span class="tag">{{ draft['_angle_label'] }}</span>
         <p class="card-meta">
-          {{ draft['_status_label'] }} · {{ draft['_angle_label'] }}
-          {% if draft['_created'] %} · 작성 {{ draft['_created'] }}{% endif %}
+          {% if draft['_created'] %}작성 {{ draft['_created'] }}{% endif %}
           {% if draft['_posted'] %} · 발행 {{ draft['_posted'] }}{% endif %}
           · 재료 {{ draft['_sources']|length }}개
         </p>
@@ -73,7 +74,7 @@
       {% endif %}
     </article>
     {% else %}
-    <p class="subtitle">표시할 임시글이 없습니다. 인박스에서 항목을 선택해 만들어 주세요.</p>
+    <p class="subtitle">표시할 글이 없습니다. 인박스에서 항목을 선택해 만들어 주세요.</p>
     {% endfor %}
   </div>
 </main>
