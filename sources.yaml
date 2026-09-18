@@ -99,50 +99,6 @@ sources:
     enabled: false
     respect_robots: true
 
-  # 국내 피규어 커뮤니티 VOC. 질문/후기/장식장 고민을 찾기 위한 소스였으나
-  # 사용자 커뮤니티 배제 정책으로 비활성화. 신규 상품/애니/피규어 정보만 남긴다.
-  - name: DC 피규어 마이너 갤러리
-    type: html
-    url: https://gall.dcinside.com/mgallery/board/lists/?id=figuregall
-    region: KR
-    category: COLLECTION
-    content_angle: QUESTION
-    source_tier: COMMUNITY
-    allow_patterns:
-      - '^https://gall\.dcinside\.com/mgallery/board/view/\?id=figuregall'
-    max_items: 50
-    enabled: false
-    respect_robots: true
-
-  # 국내 피규어 정보/리뷰 커뮤니티였으나 사용자 커뮤니티 배제 정책으로 비활성화.
-  - name: 루리웹 피규어 정보
-    type: html
-    url: https://bbs.ruliweb.com/family/242/board/300017
-    region: KR
-    category: FIGURE
-    content_angle: NEWS
-    source_tier: COMMUNITY
-    allow_patterns:
-      - '^https://bbs\.ruliweb\.com/family/242/board/300017/read/'
-    max_items: 50
-    enabled: false
-    respect_robots: true
-
-  # 국내 피규어 커뮤니티 VOC. 입양/개봉/소장 글을 수집하던 소스였으나
-  # 사용자 커뮤니티 배제 정책으로 비활성화.
-  - name: 덕벤 프라모델/피규어
-    type: html
-    url: https://www.inven.co.kr/board/party/3714?category=피규어
-    region: KR
-    category: FIGURE
-    content_angle: COLLECTION
-    source_tier: COMMUNITY
-    allow_patterns:
-      - '^https://www\.inven\.co\.kr/board/party/3714/\d+'
-    max_items: 50
-    enabled: false
-    respect_robots: true
-
   # 아래 채널은 X 중심이라 웹 자동 스크래핑하지 않는다.
   # 라프텔, animate 서울홍대점, AGF Korea, 일러스타 페스, 코믹월드
-  # 발견한 게시물은 Streamlit의 "수동 콘텐츠 추가"로 저장한다.
+  # 발견한 게시물은 리뷰 앱의 "수동 콘텐츠 추가"로 저장한다.

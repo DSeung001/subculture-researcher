@@ -12,16 +12,19 @@ The system should remain intentionally simple.
 Sources
   -> Python collectors
   -> Firestore
-  -> Streamlit review UI
+  -> Flask review UI (server-rendered Jinja2 templates)
 ```
 
-There is no separate backend API in the MVP.
+The review UI (`app.py`) is a local-only Flask app run with `python app.py`, using
+the Firebase Admin SDK on the server side (same service-account credentials as
+`collect.py`). It is not authenticated or deployed publicly — run it on your
+own machine only. There is no separate backend API beyond this review app.
 
 ## Core workflow
 
 1. Collect metadata from configured sources.
 2. Store one Firestore document per canonical URL.
-3. Review items in Streamlit.
+3. Review items in the Flask app.
 4. Mark each item as `NEW`, `KEEP`, `HOLD`, or `IGNORE`.
 5. Manually save X URLs when useful.
 
@@ -71,10 +74,9 @@ Expected fields:
 
 - `OFFICIAL` — manufacturer / official announcements
 - `MEDIA` — news hubs and retailer media
-- `COMMUNITY` — forums and VOC. Excluded by policy: sources are disabled in
-  `sources.yaml`, `ContentStore.save` refuses to write `COMMUNITY`-tier items,
-  and the Streamlit UI hard-filters them out. Only `OFFICIAL`/`MEDIA` resources
-  (new products, anime info, figure info) are collected and shown.
+
+User-community/forum sources (VOC) are out of scope by policy — only new
+product, anime, and figure info resources are collected.
 
 `note` is a short editorial memo for the combined X account. `postedAt` is set when the item has been published manually.
 

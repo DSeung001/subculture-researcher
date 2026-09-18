@@ -1,74 +1,16 @@
 # Subculture Researcher
 
-애니메이션, 피규어, 굿즈, 컬렉션 관련 정보를 자동/수동으로 수집하고 Firestore에 저장한 뒤 Streamlit에서 검토하는 개인용 리서치 도구입니다.
+애니메이션·피규어·굿즈 관련 신제품/뉴스 정보를 자동/수동으로 수집해 Firestore에 저장하고, Flask 리뷰 앱에서 검토·분류하는 개인용 리서치 도구입니다.
 
-이 프로젝트의 목적은 **FiguRoom의 SNS 콘텐츠를 만들기 전에 어떤 주제와 포맷이 반복적으로 가치가 있는지 빠르게 확인하는 것**입니다.
+## 핵심 기능
 
-## 컨셉
+- `sources.yaml`에 등록된 공식/미디어 소스를 자동 수집 (`python collect.py`)
+- 사용자 커뮤니티/포럼 글은 수집 대상에서 제외 (신규 상품 · 애니메이션 정보 · 피규어 정보만 유지)
+- 같은 URL은 SHA-256 document ID로 중복 저장 방지
+- Flask 리뷰 앱(`python app.py`)에서 카테고리/티어/발행여부로 필터링하고, 채택 / 보류 / 무시로 분류
+- X 등에서 발견한 게시물 URL을 리뷰 앱에서 수동으로 추가 저장
 
-```
-공식 사이트 / 커뮤니티 / 수동 URL
-              ↓
-        Python Collector
-              ↓
-           Firestore
-              ↑
-          Streamlit
-              ↓
-      채택 / 보류 / 무시
-```
-
-별도 API 서버를 두지 않습니다.
-
-- Collector는 로컬 Python 프로세스로 실행합니다.
-- 수집 데이터는 Firebase Firestore에 저장합니다.
-- Streamlit은 Firestore 데이터를 조회하고 분류합니다.
-- 같은 URL은 SHA-256 document ID를 사용해 중복 저장하지 않습니다.
-- X는 직접 스크래핑하지 않고 필요한 게시물을 수동으로 저장합니다.
-
-## 목적
-
-초기에는 아래 질문에 답하는 데 집중합니다.
-
-1. 국내외 서브컬처에서 어떤 이야기가 반복적으로 등장하는가?
-2. 애니, 캐릭터, 피규어, 장식장 중 어떤 주제가 콘텐츠 후보로 많이 나오는가?
-3. 어떤 항목을 실제 X 콘텐츠로 채택하게 되는가?
-4. 이후 게시 성과와 연결했을 때 어떤 주제 × 포맷 조합이 좋은가?
-
-현재는 콘텐츠 수집과 검토까지만 구현합니다.
-
-## 현재 수집 대상
-
-자동 수집 대상으로 설정된 소스는 `sources.yaml`에서 관리합니다.
-
-- HOBBY Watch 피규어 (`MEDIA`)
-- Good Smile Company 뉴스 (`OFFICIAL`)
-- Animate Times 굿즈 (`MEDIA`)
-- 애니플러스 뉴스 (`MEDIA`)
-
-설정은 있으나 당분간 비활성인 소스:
-
-- Kotobukiya 뉴스 (`OFFICIAL`, Cloudflare로 단순 HTTP 차단)
-- 애니메이트 코리아 페어·이벤트 (`MEDIA`, 목록이 JS 네비게이션)
-
-사용자 커뮤니티 배제 정책으로 비활성화한 소스 (신규 상품/애니메이션/피규어 정보만 유지):
-
-- DC 피규어 마이너 갤러리 (`COMMUNITY`)
-- 루리웹 피규어 정보 (`COMMUNITY`)
-- 덕벤 프라모델/피규어 (`COMMUNITY`)
-
-`ContentStore.save`는 `sourceTier: COMMUNITY` 항목을 Firestore에 아예 쓰지 않으며,
-Streamlit 화면도 해당 티어를 항상 숨깁니다.
-
-X 중심 채널은 자동 스크래핑하지 않습니다.
-
-- 라프텔
-- animate 서울홍대점
-- AGF Korea
-- 일러스타 페스
-- 코믹월드
-
-자세한 수집 정책은 [source.md](./source.md)를 참고하세요.
+소스 목록과 수집 정책은 [source.md](./source.md), Firestore 필드 구조는 [agent.md](./agent.md)를 참고하세요.
 
 ## 실행 방법
 
@@ -125,93 +67,12 @@ $env:GOOGLE_APPLICATION_CREDENTIALS="$PWD\firebase-key.json"
 python collect.py
 ```
 
-실행 시 `sources.yaml`의 활성화된 소스를 순서대로 확인합니다.
+`sources.yaml`의 활성화된 소스를 순서대로 수집합니다. HTML 소스는 `robots.txt` 확인에 실패하거나 자동 수집이 허용되지 않으면 건너뜁니다.
 
-HTML 소스는 `robots.txt` 확인에 실패하거나 자동 수집이 허용되지 않으면 건너뜁니다.
-
-### 5. 대시보드 실행
+### 5. 리뷰 앱 실행
 
 ```bash
-streamlit run app.py
+python app.py
 ```
 
-브라우저에서 다음 작업을 할 수 있습니다.
-
-- 최신 수집 항목 확인
-- 카테고리 / 소스 티어 / 미발행 필터
-- 채택 / 보류 / 무시
-- 발행 메모(`note`) 저장과 발행함(`postedAt`) 표시
-- X 등에서 찾은 URL 수동 추가
-
-## Firestore 구조
-
-```
-contents/{sha256(url)}
-  url
-  title
-  summary
-  source
-  sourceType
-  sourceUrl
-  region
-  category
-  contentAngle
-  sourceTier
-  note
-  status
-  publishedAt
-  postedAt
-  collectedAt
-  createdAt
-```
-
-주요 값:
-
-```
-category
-  ANIME
-  CHARACTER
-  FIGURE
-  GOODS
-  COLLECTION
-  UNKNOWN
-
-contentAngle
-  NEWS
-  COMPARE
-  SIZE
-  PRICE
-  QUESTION
-  GUIDE
-  COLLECTION
-
-sourceTier
-  OFFICIAL
-  MEDIA
-  COMMUNITY (배제됨: 저장/화면 모두에서 제외)
-
-status
-  NEW
-  KEEP
-  HOLD
-  IGNORE
-```
-
-결합 계정 운영용 필드:
-
-- `sourceTier`: 공식 / 미디어 / 커뮤니티 비중을 맞출 때 필터
-- `note`: KEEP 후 트윗에 쓸 한 줄·채택 이유
-- `postedAt`: X에 발행한 시각 (미발행은 `null`)
-
-## MVP에서 하지 않는 것
-
-- X 자동 스크래핑
-- 자동 게시
-- LLM 자동 요약
-- 벡터 DB
-- 추천 모델
-- 별도 백엔드 API
-- 사용자 로그인
-- 클라우드 스케줄러
-
-먼저 실제로 며칠 사용하면서 어떤 소스와 필드가 필요한지 확인한 뒤 확장합니다.
+`http://127.0.0.1:5000`에서 로컬 전용으로 실행됩니다 (인증 없음, 외부에 공개하지 마세요).

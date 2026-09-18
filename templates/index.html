@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="layout">
+  <aside class="sidebar">
+    <h2>수동 콘텐츠 추가</h2>
+    <form method="post" action="{{ url_for('manual_add') }}" class="stacked-form">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <label>URL<input type="text" name="url" placeholder="https://..."></label>
+      <label>제목<input type="text" name="title"></label>
+      <label>카테고리
+        <select name="category">
+          {% for c in categories %}<option value="{{ c }}">{{ category_labels[c] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>콘텐츠 포맷
+        <select name="angle">
+          {% for a in angles %}<option value="{{ a }}">{{ angle_labels[a] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>소스 티어
+        <select name="source_tier">
+          {% for t in source_tiers %}<option value="{{ t }}" {% if t == "MEDIA" %}selected{% endif %}>{{ tier_labels[t] }}</option>{% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary full">저장</button>
+    </form>
+
+    <hr>
+
+    <h2>필터 &amp; 정렬</h2>
+    <form method="get" action="{{ url_for('index') }}" class="stacked-form" id="filter-form">
+      <label>카테고리
+        <select name="category" class="auto-submit">
+          <option value="ALL" {% if filters.category == "ALL" %}selected{% endif %}>전체</option>
+          {% for c in categories %}<option value="{{ c }}" {% if filters.category == c %}selected{% endif %}>{{ category_labels[c] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>상태
+        <select name="status" class="auto-submit">
+          <option value="ACTIVE" {% if filters.status == "ACTIVE" %}selected{% endif %}>무시 제외 전체</option>
+          {% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ status_labels[s] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>소스 티어
+        <select name="tier" class="auto-submit">
+          <option value="ALL" {% if filters.tier == "ALL" %}selected{% endif %}>전체</option>
+          {% for t in source_tiers %}<option value="{{ t }}" {% if filters.tier == t %}selected{% endif %}>{{ tier_labels[t] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="unposted" value="1" class="auto-submit" {% if filters.unposted == "1" %}checked{% endif %}>
+        미발행만
+      </label>
+      <span class="field-label">정렬</span>
+      <div class="radio-row">
+        <label><input type="radio" name="sort" value="NEWEST" class="auto-submit" {% if filters.sort == "NEWEST" %}checked{% endif %}> 최신순</label>
+        <label><input type="radio" name="sort" value="OLDEST" class="auto-submit" {% if filters.sort == "OLDEST" %}checked{% endif %}> 오래된순</label>
+      </div>
+      <label>불러올 개수
+        <select name="limit" class="auto-submit">
+          {% for n in range(20, 201, 10) %}<option value="{{ n }}" {% if filters.limit == n %}selected{% endif %}>{{ n }}</option>{% endfor %}
+        </select>
+      </label>
+    </form>
+  </aside>
+
+  <main>
+    <h1>서브컬처 리서처</h1>
+    <p class="subtitle">애니 · 피규어 · 굿즈 · 컬렉션 콘텐츠 후보를 모아보는 개인용 리서치 인박스</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-list">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="stats">
+      <div class="stat"><span class="stat-value">{{ counts.loaded }}</span><span class="stat-label">불러온 항목</span></div>
+      <div class="stat"><span class="stat-value">{{ counts.filtered }}</span><span class="stat-label">필터 결과</span></div>
+      <div class="stat"><span class="stat-value">{{ counts.new }}</span><span class="stat-label">새 항목</span></div>
+      <div class="stat"><span class="stat-value">{{ counts.today }}</span><span class="stat-label">오늘 추가</span></div>
+    </div>
+
+    <div class="items">
+      {% for item in items %}
+      <article class="card">
+        <div class="card-row">
+          <div class="card-main">
+            <p class="card-title"><strong>{{ item['_badge'] }}{{ item['_title'] }}</strong> — {{ item['_meta'] }}</p>
+            <p class="card-summary">{{ item['_summary'] }}</p>
+          </div>
+          <details class="menu">
+            <summary>⋯ 관리</summary>
+            <div class="menu-body">
+              <div class="btn-grid">
+                <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+                  <input type="hidden" name="status" value="KEEP">
+                  <input type="hidden" name="next" value="{{ next_url }}">
+                  <button type="submit" class="btn btn-primary">✅ 채택</button>
+                </form>
+                <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+                  <input type="hidden" name="status" value="HOLD">
+                  <input type="hidden" name="next" value="{{ next_url }}">
+                  <button type="submit" class="btn">⏸️ 보류</button>
+                </form>
+                <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+                  <input type="hidden" name="status" value="IGNORE">
+                  <input type="hidden" name="next" value="{{ next_url }}">
+                  <button type="submit" class="btn">🚫 무시</button>
+                </form>
+                <form method="post" action="{{ url_for('set_status', item_id=item['_id']) }}">
+                  <input type="hidden" name="status" value="NEW">
+                  <input type="hidden" name="next" value="{{ next_url }}">
+                  <button type="submit" class="btn">🔄 새 항목</button>
+                </form>
+              </div>
+              <form method="post" action="{{ url_for('publish_item', item_id=item['_id']) }}">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <button type="submit" class="btn full">📤 발행함</button>
+              </form>
+              <form method="post" action="{{ url_for('save_note', item_id=item['_id']) }}" class="note-form">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <input type="text" name="note" value="{{ item.note or '' }}" placeholder="트윗에 쓸 한 줄 / 채택 이유">
+                <button type="submit" class="btn">메모 저장</button>
+              </form>
+              <hr>
+              <p class="metric-caption">{{ item['_metric_caption'] }}</p>
+              {% if item.summary %}<p class="full-summary">{{ item.summary[:500] }}</p>{% endif %}
+              {% if item.url %}<a class="btn full" href="{{ item.url }}" target="_blank" rel="noopener">원문 열기</a>{% endif %}
+            </div>
+          </details>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    <hr>
+    {% if has_more %}
+      <a class="btn full" href="{{ more_url }}">더 보기 (+{{ remaining }}개)</a>
+    {% else %}
+      <p class="subtitle">전체 {{ counts.filtered }}건 모두 표시했습니다.</p>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

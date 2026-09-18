@@ -62,44 +62,19 @@
 - 티어: `MEDIA`
 - 목적: 국내 페어·이벤트·입고성 소식
 - 상태: 목록이 `javascript:gd_btn_view(...)` 이라 HTML 링크 수집 불가 → `enabled: false`
-- 대안: 필요한 게시물 URL을 Streamlit 수동 추가로 저장
-
-## 사용자 커뮤니티 배제
-
-아래 소스는 사용자 커뮤니티(포럼/갤러리) 글을 다뤄 "신규 상품 · 애니메이션 정보 · 피규어 정보"만 남기는
-정책에 따라 배제했습니다. `sources.yaml`에서 `enabled: false`로 전환했고, `ContentStore.save`가
-`sourceTier: COMMUNITY` 항목의 Firestore 쓰기를 거부하며, 기존에 저장돼 있던 문서도 삭제했습니다.
-
-### DC 피규어 마이너 갤러리
-
-- URL: https://gall.dcinside.com/mgallery/board/lists/?id=figuregall
-- 지역: 한국
-- 티어: `COMMUNITY`
-- 배제 전 목적: 실제 컬렉터의 질문, 장식장, 공간 부족, 구매 고민 등 VOC 탐색
-
-### 루리웹 피규어 정보
-
-- URL: https://bbs.ruliweb.com/family/242/board/300017
-- 지역: 한국
-- 티어: `COMMUNITY`
-- 배제 전 목적: 피규어 신제품 정보, 리뷰, 구매 관련 화제 후보 수집
-
-### 덕벤 프라모델/피규어
-
-- URL: https://www.inven.co.kr/board/party/3714?category=피규어
-- 지역: 한국
-- 티어: `COMMUNITY`
-- 배제 전 목적: 피규어 입양, 개봉, 소장 등 컬렉션 VOC 탐색
+- 대안: 필요한 게시물 URL을 리뷰 앱에서 수동 추가로 저장
 
 ## 수동 수집
 
 아래 채널은 X 중심으로 운영되거나 자동 접근 정책을 별도로 확인해야 하므로 MVP에서는 자동 스크래핑하지 않습니다.
+사용자 커뮤니티/포럼(예: DC 갤러리, 루리웹, 인벤 등) 글도 "신규 상품 · 애니메이션 정보 · 피규어 정보"만
+남기는 정책에 따라 자동 수집 대상에 포함하지 않습니다.
 
 ### 라프텔
 
 - 용도: 애니메이션 Top-of-Funnel 소재
 - 관찰 포인트: 신작, 공개작, 캐릭터, 장면, 시즌 화제
-- 저장 방법: 필요한 X 게시물 URL을 Streamlit에서 수동 저장
+- 저장 방법: 필요한 X 게시물 URL을 리뷰 앱에서 수동 저장
 
 ### animate 서울홍대점
 
