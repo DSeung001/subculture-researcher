@@ -9,6 +9,7 @@ from ai_drafts import run_trending_draft
 from collection_runner import MANUAL_ENTRY, run_collection
 from content_store import ContentStore
 from firebase_client import get_db
+from image_backfill import backfill_images
 from sources_config import automatic_sources, is_manual_source, load_sources
 from translate import enrich_translation, needs_translation
 
@@ -53,7 +54,15 @@ def main(argv=None):
         "--backfill-translations", action="store_true",
         help="titleKo가 없는 외국어 기존 문서만 MyMemory로 번역해 보완",
     )
+    mode.add_argument(
+        "--backfill-images", action="store_true",
+        help="imageUrl이 없는 기존 문서만 썸네일·표지·상세 대표 이미지로 보완 (기존 이미지는 덮어쓰지 않음)",
+    )
     parser.add_argument("--source", action="append", help="수집할 자동 소스 이름 (여러 번 지정 가능)")
+    parser.add_argument(
+        "--force-refresh", action="store_true",
+        help="수집 결과 캐시(AniList 등)를 무시하고 다시 수집",
+    )
     parser.add_argument(
         "--no-ai-draft",
         action="store_true",
@@ -72,6 +81,10 @@ def main(argv=None):
 
     if args.backfill_translations:
         backfill_translations(get_db())
+        return
+
+    if args.backfill_images:
+        backfill_images(get_db(), load_sources())
         return
 
     all_sources = load_sources()
@@ -97,6 +110,7 @@ def main(argv=None):
         allow_manual=False,
         inter_source_delay=None if args.dry_run else INTER_SOURCE_DELAY,
         show_progress=True,
+        force_refresh=args.force_refresh,
     )
 
     if db is not None and not args.no_ai_draft:

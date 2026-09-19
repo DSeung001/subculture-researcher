@@ -27,6 +27,15 @@
       </div>
 
       <div class="field-group">
+        <span class="field-label">수집 기간</span>
+        <div class="chip-row">
+          {% for d in day_choices %}
+          <a href="{{ filter_url(days=d) }}" class="chip {% if filters.days == d %}active{% endif %}">{% if d == 'ALL' %}전체 기간{% else %}최근 {{ d }}일{% endif %}</a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field-group">
         <span class="field-label">소스 티어</span>
         <div class="chip-row">
           <a href="{{ filter_url(tier='ALL') }}" class="chip {% if filters.tier == 'ALL' %}active{% endif %}">전체</a>
@@ -48,6 +57,7 @@
       <form method="get" action="{{ url_for('index') }}" class="stacked-form">
         <input type="hidden" name="category" value="{{ filters.category }}">
         <input type="hidden" name="status" value="{{ filters.status }}">
+        <input type="hidden" name="days" value="{{ filters.days }}">
         <input type="hidden" name="tier" value="{{ filters.tier }}">
         <input type="hidden" name="sort" value="{{ filters.sort }}">
 

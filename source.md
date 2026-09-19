@@ -83,8 +83,29 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 | `image_selector` | 상세 페이지에서 `og:image` 대신 쓸 이미지 셀렉터 |
 | `image_deny_patterns` | 소스별로 추가 배제할 이미지 경로 정규식(예: 저화질 미리보기 `blur_\d+`) |
 | `image_field` / `image_html_field` | JSON API 소스: 이미지 URL 필드 / 본문 HTML 필드(첫 `<img>` 사용) |
+| `page_param` / `max_pages` | 목록 페이지네이션(HTML·JSON API). 1페이지는 `url` 그대로, 2페이지부터 쿼리 `page_param=N`. 새 링크가 없는 페이지·`max_items`·`max_pages`에서 멈추고, 2페이지 이후 robots.txt 거부는 앞 페이지 결과만 남기고 중단 |
+| `page_count_field` | JSON API: 응답의 전체 페이지 수 필드. 여기까지만 요청 |
+| `detail_refresh_hours` | 이미 저장된 URL의 상세 재요청 간격(기본 72시간, `0`이면 항상 요청). 상품(`product_mode`)은 이 간격마다 가격·예약 상태를 갱신, 사진 전용(`fetch_detail_image`)은 사진이 있으면 다시 열지 않고 없으면 이 간격으로만 재시도 |
 
 이미 저장된 항목은 다음 수집 때 같은 URL의 값(사진 포함)이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
+
+### 소스별 목록 규모 메모
+
+- 페이지네이션 사용: 따빼몰(`?page=`, 30건/페이지), 애니메이트 코리아(`&page=`, 30건), Animate Times(`?p=`, 20건), AGF Korea(`gotoPage`, 10건, `pageCount`까지).
+- 늘릴 수 없음: McFarlane Toys 뉴스는 사이트 자체가 게시물 2개, 라프텔 스토어는 홈 상품 46개 중 NEW 배지 상품만이 의도된 범위입니다.
+
+## 캐시·보완·정리 명령
+
+| 작업 | 명령 |
+|---|---|
+| 캐시 무시하고 수집(AniList 등) | `python collect.py --force-refresh --source "AniList 트렌딩 애니"` |
+| 사진 없는 기존 문서 보완 | `python collect.py --backfill-images` |
+| 제목 없음 잔여 문서 정리(X 게시물, `laftel.net` 홈) | `python delete_untitled_x.py --dry-run` 후 `--dry-run` 없이 실행 |
+| 작품 링크 없는 항목 요약(카탈로그 보강용) | `python seed_works.py --unmatched` |
+
+- AniList 결과 캐시는 `collector_state/anilist_trending`의 `version`이 코드의 `CACHE_VERSION`과 다르면 무시됩니다. 수집 필드를 바꿀 때 이 값을 올립니다.
+- `--backfill-images`는 `imageUrl`이 비어 있는 문서에만 씁니다(덮어쓰지 않음). YouTube URL은 영상 ID로 썸네일을 만들고, AniList는 미디어 ID를 50개씩 한 번에 조회하며, `fetch_detail_image` 소스는 상세 페이지를 최대 60건까지 robots.txt·요청 간격을 지키며 엽니다.
+- Firestore 문서에 `detailCheckedAt`(상세 페이지를 마지막으로 확인한 시각) 필드가 추가됩니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
 
 ## 수집 원칙
 

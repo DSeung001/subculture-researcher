@@ -3,6 +3,7 @@
 import json
 import re
 import unicodedata
+from collections import Counter
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -17,7 +18,7 @@ from library_models import (Collection, CollectionItem, Item, ItemWork, LINK_MOD
                             SavedFilter, SyncState, TERM_MODELS, Work, WorkAlias)
 
 from content_model import content_id
-from content_store import UNTITLED_TITLE, is_untitled_x_post
+from content_store import UNTITLED_TITLE, is_untitled_leftover
 
 
 TAXONOMIES = {
@@ -51,6 +52,9 @@ def item_title_text(data):
     return normalized(" ".join(str(data.get(k) or "") for k in ("title", "titleKo")))
 
 
+BRACKET_TOKEN = re.compile(r"[【\[『「]([^】\]』」]{1,30})[】\]』」]")
+
+
 def work_keywords(work):
     """Display keywords: canonical name plus aliases (comma- or newline-separated)."""
     aliases = work.get("aliases") or ""
@@ -75,12 +79,13 @@ def work_keywords(work):
 def match_keyword(text, keyword):
     """Return the matched keyword if it appears in normalized title text, else None."""
     alias = normalized(keyword)
-    # Short aliases are noisy; ASCII aliases require word boundaries.
+    # Short aliases are noisy; ASCII aliases must not sit inside another Latin word or number.
+    # Hangul/kana next to them is fine: shop titles often glue the name to a product noun.
     if len(alias) < 2:
         return None
     pattern = re.escape(alias)
     if alias.isascii():
-        pattern = r"(?<!\w)" + pattern + r"(?!\w)"
+        pattern = r"(?<![a-z0-9])" + pattern + r"(?![a-z0-9])"
     if re.search(pattern, text):
         return keyword.strip()
     return None
@@ -147,7 +152,7 @@ class Library:
             return result.rowcount or 0
 
     def untitled_x_items(self):
-        """Local rows whose URL is an X status and title is the untitled placeholder."""
+        """Local rows stored as untitled leftovers: X status posts and the laftel.net home."""
         with self.connect() as session:
             rows = session.scalars(select(Item)).all()
             matched = []
@@ -159,7 +164,7 @@ class Library:
                     except (TypeError, ValueError, json.JSONDecodeError):
                         payload = {}
                     title = payload.get("title") or title
-                if is_untitled_x_post(row.url or "", title):
+                if is_untitled_leftover(row.url or "", title):
                     matched.append({"id": row.id, "url": row.url or "", "title": title})
             return matched
 
@@ -369,6 +374,26 @@ class Library:
                     for item_id, term_id, name in links:
                         by_id[item_id]["terms"][table].append({"item_id": item_id, "id": term_id, "name": name})
             return rows, total
+
+    def unclassified_report(self, samples=5, top=25):
+        """Read-only view of items with no work link, to decide which works to add to the catalog."""
+        with self.connect() as session:
+            rows = session.execute(
+                select(Item.source, Item.title).where(~exists().where(ItemWork.item_id == Item.id))
+            ).all()
+        by_source, tokens, examples = Counter(), Counter(), {}
+        for source, title in rows:
+            source = source or "(출처 없음)"
+            by_source[source] += 1
+            tokens.update(BRACKET_TOKEN.findall(title or ""))
+            if len(examples.setdefault(source, [])) < samples:
+                examples[source].append(title or "")
+        return {
+            "total": len(rows),
+            "by_source": by_source.most_common(),
+            "bracket_tokens": tokens.most_common(top),
+            "samples": examples,
+        }
 
     def suggestions(self, items, works):
         result = {}

@@ -1,7 +1,7 @@
 """One URL identity and atomic write path for every collector and manual entry."""
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote_plus, urljoin, urlsplit, urlunsplit
 
 from firebase_admin import firestore
@@ -22,10 +22,15 @@ SIGNAL_FIELDS = (
     "trending", "popularity", "favourites", "averageScore",
     "nextAiringAt", "episode", "signalCheckedAt",
 )
+# Also carries imageUrl/detailCheckedAt: these refresh on re-collection of an existing document.
 PRODUCT_FIELDS = (
     "entityType", "shop", "saleStatus", "preorderEndAt", "releaseWindowText",
     "manufacturer", "sizeText", "price", "currency", "imageUrl", "productCheckedAt",
+    "detailCheckedAt",
 )
+# Fields read into the per-run URL index so collectors can skip detail pages they need not refetch.
+INDEX_FIELDS = ("url", "status", "imageUrl", "price", "productCheckedAt", "detailCheckedAt")
+DEFAULT_DETAIL_REFRESH_HOURS = 72.0
 
 
 def normalize_url(url: str, base_url: str = "") -> str:
@@ -65,13 +70,35 @@ def is_untitled_x_post(url: str, title: str) -> bool:
     return "/status/" in (parsed.path or "")
 
 
+_LAFTEL_HOSTS = {"laftel.net", "www.laftel.net"}
+
+
+def is_untitled_laftel_home(url: str, title: str) -> bool:
+    """True only for the bare laftel.net home stored with the untitled placeholder.
+
+    The retired 「라프텔 인기·신작」 browser collection left these behind; real
+    Laftel product pages have their own path and title.
+    """
+    if (title or "") != UNTITLED_TITLE:
+        return False
+    try:
+        parsed = urlsplit((url or "").strip())
+    except ValueError:
+        return False
+    return (parsed.hostname or "").lower() in _LAFTEL_HOSTS and parsed.path in ("", "/")
+
+
+def is_untitled_leftover(url: str, title: str) -> bool:
+    return is_untitled_x_post(url, title) or is_untitled_laftel_home(url, title)
+
+
 def delete_untitled_x_contents(db, *, dry_run: bool = False) -> dict:
-    """Delete Firestore contents that are X status posts with title '(제목 없음)'."""
+    """Delete Firestore leftovers stored with title '(제목 없음)': X status posts and the laftel.net home."""
     matched = []
     for snapshot in db.collection_group("contents").stream():
         data = snapshot.to_dict() or {}
         url = data.get("url") or ""
-        if not is_untitled_x_post(url, data.get("title") or ""):
+        if not is_untitled_leftover(url, data.get("title") or ""):
             continue
         matched.append({
             "id": content_id(snapshot),
@@ -98,16 +125,18 @@ class ContentStore:
         self.preview: list[dict] = []
         if db is not None:
             # collection_group reads every category's "contents" subcollection in one query.
-            for snapshot in db.collection_group("contents").select(["url", "status"]).stream():
+            for snapshot in db.collection_group("contents").select(list(INDEX_FIELDS)).stream():
                 data = snapshot.to_dict() or {}
                 try:
                     url = normalize_url(data.get("url") or "")
                 except ValueError:
                     self.invalid_urls.append(snapshot.id)
                     continue
-                self.by_url.setdefault(url, []).append(
-                    {"id": snapshot.id, "status": data.get("status"), "ref": snapshot.reference}
-                )
+                self.by_url.setdefault(url, []).append({
+                    "id": snapshot.id, "status": data.get("status"), "ref": snapshot.reference,
+                    "imageUrl": data.get("imageUrl"), "price": data.get("price"),
+                    "checkedAt": data.get("detailCheckedAt") or data.get("productCheckedAt"),
+                })
 
     def duplicates(self) -> list[dict]:
         return [
@@ -120,6 +149,39 @@ class ContentStore:
             }
             for url, docs in sorted(self.by_url.items()) if len(docs) > 1
         ]
+
+    def needs_detail(
+        self, url: str, *, product_mode: bool = False,
+        refresh_hours: float | None = DEFAULT_DETAIL_REFRESH_HOURS,
+    ) -> bool:
+        """Whether a detail page must be fetched for this listed URL.
+
+        A new URL always needs it. Product pages are refreshed once per
+        `refresh_hours` (price/sale status change). Photo-only pages never change,
+        so they are refetched only while the photo is missing, and then no more
+        often than `refresh_hours` so a page that has no photo is not hit every run.
+        `refresh_hours` of 0 turns skipping off.
+        """
+        if self.db is None:
+            return True
+        try:
+            normalized = normalize_url(url)
+        except ValueError:
+            return True
+        docs = self.by_url.get(normalized)
+        if not docs or not refresh_hours or refresh_hours <= 0:
+            return True
+        # Same document choice as save().
+        canonical_id = doc_id(normalized)
+        doc = min(docs, key=lambda d: (d["id"] != canonical_id, d["id"]))
+        if not product_mode and doc.get("imageUrl"):
+            return False
+        checked = doc.get("checkedAt")
+        if not isinstance(checked, datetime):
+            return True
+        if checked.tzinfo is None:
+            checked = checked.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) - checked >= timedelta(hours=refresh_hours)
 
     def save(self, item: dict) -> dict[str, int]:
         # Only plain http(s) image links are ever stored or rendered.

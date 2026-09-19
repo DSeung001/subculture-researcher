@@ -1,8 +1,9 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from firebase_admin import firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 from flask import Flask, flash, redirect, render_template, request, url_for
 
 from ai_drafts import create_trending_draft, create_work_drafts
@@ -46,6 +47,9 @@ DRAFT_STATUS_LABELS = {
 }
 
 PAGE_SIZE = 30
+# Inbox default: unreviewed items collected recently; older ones stay reachable via 「전체 기간」.
+DAY_CHOICES = ("7", "14", "30", "ALL")
+DEFAULT_DAYS = "14"
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
@@ -77,9 +81,11 @@ def safe_next(raw: str | None) -> str:
 
 
 def current_filters():
+    days = request.args.get("days", DEFAULT_DAYS)
     return {
         "category": request.args.get("category", "ALL"),
-        "status": request.args.get("status", "ACTIVE"),
+        "status": request.args.get("status", "NEW"),
+        "days": days if days in DAY_CHOICES else DEFAULT_DAYS,
         "tier": request.args.get("tier", "ALL"),
         "source": request.args.get("source", "ALL"),
         "unposted": request.args.get("unposted", ""),
@@ -119,8 +125,13 @@ def resolve_cursor(token: str):
     return snapshot if snapshot.exists else None
 
 
-def fetch_contents_page(after_token: str, category: str):
-    query = contents_query(category).order_by("collectedAt", direction=firestore.Query.DESCENDING)
+def fetch_contents_page(after_token: str, category: str, days: str = "ALL"):
+    query = contents_query(category)
+    if days != "ALL":
+        # Same field as the order_by below, so no composite index is needed.
+        cutoff = datetime.now(timezone.utc) - timedelta(days=int(days))
+        query = query.where(filter=FieldFilter("collectedAt", ">=", cutoff))
+    query = query.order_by("collectedAt", direction=firestore.Query.DESCENDING)
     cursor = resolve_cursor(after_token)
     if cursor is not None:
         query = query.start_after(cursor)
@@ -134,7 +145,9 @@ def index():
     filters = current_filters()
     unposted_only = filters["unposted"] == "1"
 
-    docs, has_more, cursor_id = fetch_contents_page(filters["after"], filters["category"])
+    docs, has_more, cursor_id = fetch_contents_page(
+        filters["after"], filters["category"], filters["days"],
+    )
 
     items = []
     all_sources = set()
@@ -187,6 +200,7 @@ def index():
         statuses=STATUSES,
         angles=ANGLES,
         source_tiers=SOURCE_TIERS,
+        day_choices=DAY_CHOICES,
         source_options=source_options,
         category_labels=CATEGORY_LABELS,
         status_labels=STATUS_LABELS,

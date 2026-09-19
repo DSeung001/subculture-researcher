@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from collectors.common import save_records
 from collectors.http import RobotsPolicy, get_html
 from collectors.images import detail_image
-from content_store import normalize_url
+from content_store import DEFAULT_DETAIL_REFRESH_HOURS, normalize_url
 
 
 DETAIL_LINK_RE = re.compile(r"/shop/detail\.php\?")
@@ -80,7 +80,19 @@ def _parse_price(text: str) -> int | None:
     return plausible[0] if plausible else (values[0] if values else None)
 
 
+def _list_title(anchor) -> str:
+    """Product name shown on the list card (`.ffm-product-card .name`); "" when the markup has none."""
+    card = anchor.find_parent(class_="ffm-product-card")
+    node = card.select_one(".name") if card is not None else None
+    return _clean(node.get_text(" ", strip=True)) if node else ""
+
+
+def _is_figure(title: str) -> bool:
+    return any(keyword.lower() in title.lower() for keyword in FIGURE_KEYWORDS)
+
+
 def _detail_urls(listing_html: str, base_url: str, limit: int):
+    """(detail URL, list-card title) pairs, deduplicated, at most `limit`."""
     soup = BeautifulSoup(listing_html, "html.parser")
     seen = set()
     for anchor in soup.select('a[href*="/shop/detail.php"], a[href*="detail.php"]'):
@@ -91,18 +103,25 @@ def _detail_urls(listing_html: str, base_url: str, limit: int):
         if not DETAIL_LINK_RE.search(url) or url in seen:
             continue
         seen.add(url)
-        yield url
+        yield url, _list_title(anchor)
         if len(seen) >= limit:
             return
 
 
-def figurefarm_items(source: dict):
+def figurefarm_items(source: dict, store=None):
     limit = max(1, int(source.get("max_items", 20)))
     timeout = int(source.get("timeout_seconds", 15))
     policy = RobotsPolicy(source.get("respect_robots", True), timeout, source)
 
     listing_html, listing_url = get_html(source["url"], policy, timeout, source)
-    for url in _detail_urls(listing_html, listing_url, limit):
+    refresh_hours = float(source.get("detail_refresh_hours", DEFAULT_DETAIL_REFRESH_HOURS))
+    for url, list_title in _detail_urls(listing_html, listing_url, limit):
+        # Non-figure products are never stored, so without this they would be fetched every run.
+        if source.get("figure_only", True) and list_title and not _is_figure(list_title):
+            continue
+        if store is not None and not store.needs_detail(url, product_mode=True, refresh_hours=refresh_hours):
+            yield {"url": url, "title": list_title or url, "_errors": []}
+            continue
         try:
             html, final_url = get_html(url, policy, timeout, source)
             soup = BeautifulSoup(html, "html.parser")
@@ -116,9 +135,7 @@ def figurefarm_items(source: dict):
                 }
                 continue
 
-            if source.get("figure_only", True) and not any(
-                keyword.lower() in title.lower() for keyword in FIGURE_KEYWORDS
-            ):
+            if source.get("figure_only", True) and not _is_figure(title):
                 continue
 
             deadline = _parse_deadline(full_text)
@@ -155,4 +172,4 @@ def figurefarm_items(source: dict):
 
 
 def collect_figurefarm(db, source: dict, store=None) -> dict:
-    return save_records(figurefarm_items(source), db, source, store)
+    return save_records(figurefarm_items(source, store), db, source, store)

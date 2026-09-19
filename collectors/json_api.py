@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 from content_store import normalize_url
 from collectors.common import save_records
-from collectors.http import pause_between_requests, request_headers
+from collectors.http import page_url, pause_between_requests, request_headers
 from collectors.images import first_image
 from image_urls import clean_image_url
 
@@ -32,42 +32,55 @@ def _entry_image(entry, source: dict, base_url: str) -> str | None:
     return None
 
 
-def json_api_items(source: dict):
+def _fetch_page(source: dict, page: int):
+    """Response JSON of `page`; `page_param` is a query key of the configured URL."""
     pause_between_requests(source)
     response = requests.get(
-        source["url"], headers=request_headers(), timeout=source.get("timeout_seconds", 15),
+        page_url(source["url"], source.get("page_param"), page),
+        headers=request_headers(), timeout=source.get("timeout_seconds", 15),
     )
     response.raise_for_status()
-    payload = response.json()
-    entries = _dig(payload, source["items_path"]) if source.get("items_path") else payload
+    return response.json()
+
+
+def json_api_items(source: dict):
     limit = int(source.get("max_items", 50))
     if limit <= 0:
         return
+    max_pages = max(1, int(source.get("max_pages", 1))) if source.get("page_param") else 1
     count = 0
-    for entry in entries or []:
-        title = _dig(entry, source["title_field"])
-        item_id = _dig(entry, source["id_field"])
-        if not title or item_id is None:
-            continue
-        try:
-            url = normalize_url(source["detail_url_template"].format(id=item_id), source["url"])
-        except ValueError:
-            continue
-        published_at = _dig(entry, source["date_field"]) if source.get("date_field") else None
-        if published_at and source.get("date_format"):
+    for page in range(1, max_pages + 1):
+        payload = _fetch_page(source, page)
+        entries = _dig(payload, source["items_path"]) if source.get("items_path") else payload
+        if not entries:
+            return
+        for entry in entries:
+            title = _dig(entry, source["title_field"])
+            item_id = _dig(entry, source["id_field"])
+            if not title or item_id is None:
+                continue
             try:
-                published_at = datetime.strptime(published_at, source["date_format"]).date().isoformat()
+                url = normalize_url(source["detail_url_template"].format(id=item_id), source["url"])
             except ValueError:
-                pass
-        item = {"url": url, "title": title, "publishedAt": published_at, "_errors": []}
-        if source.get("summary_field"):
-            item["summary"] = (_dig(entry, source["summary_field"]) or "")[:500]
-        image = _entry_image(entry, source, url)
-        if image:
-            item["imageUrl"] = image
-        yield item
-        count += 1
-        if count >= limit:
+                continue
+            published_at = _dig(entry, source["date_field"]) if source.get("date_field") else None
+            if published_at and source.get("date_format"):
+                try:
+                    published_at = datetime.strptime(published_at, source["date_format"]).date().isoformat()
+                except ValueError:
+                    pass
+            item = {"url": url, "title": title, "publishedAt": published_at, "_errors": []}
+            if source.get("summary_field"):
+                item["summary"] = (_dig(entry, source["summary_field"]) or "")[:500]
+            image = _entry_image(entry, source, url)
+            if image:
+                item["imageUrl"] = image
+            yield item
+            count += 1
+            if count >= limit:
+                return
+        page_count = _dig(payload, source["page_count_field"]) if source.get("page_count_field") else None
+        if isinstance(page_count, int) and page >= page_count:
             return
 
 

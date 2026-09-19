@@ -4,9 +4,9 @@ from decimal import Decimal
 
 from bs4 import BeautifulSoup
 
-from content_store import METRICS, normalize_url
-from collectors.common import extract_product_fields, save_records
-from collectors.http import RobotsPolicy, get_html
+from content_store import DEFAULT_DETAIL_REFRESH_HOURS, METRICS, normalize_url
+from collectors.common import RobotsDenied, extract_product_fields, save_records
+from collectors.http import RobotsPolicy, get_html, page_url
 from collectors.images import card_of, detail_image, list_image
 
 
@@ -157,7 +157,7 @@ def extract_links(html: str, base_url: str, source: dict):
         yield item
 
 
-def html_items(source: dict):
+def html_items(source: dict, store=None):
     limit = int(source.get("max_items", 50))
     if limit <= 0:
         return
@@ -172,45 +172,71 @@ def html_items(source: dict):
         from collectors.rendered import rendered_items
         yield from rendered_items(source, policy)
         return
-    html, final_url = get_html(
-        source["url"], policy, source.get("timeout_seconds", 15), source,
-    )
+    page_param = source.get("page_param")
+    max_pages = max(1, int(source.get("max_pages", 1))) if page_param else 1
     seen = set()
-    for item in extract_links(html, final_url, source):
-        if item["url"] in seen:
-            continue
-        seen.add(item["url"])
-        detail_selectors = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
-        product_mode = source.get("product_mode", False)
-        detail_image_mode = source.get("fetch_detail_image", False)
-        if detail_selectors or product_mode or detail_image_mode:
-            try:
-                detail_html, detail_url = get_html(
-                    item["url"], policy, source.get("timeout_seconds", 15), source,
-                )
-                detail_soup = BeautifulSoup(detail_html, "html.parser")
-                if detail_selectors:
-                    values, errors = extract_metrics(detail_soup, detail_selectors, required=True)
-                    item.update(values)
-                    item["_errors"].extend(errors)
-                # The detail page's own photo wins over the list thumbnail.
-                image_url = detail_image(detail_soup, detail_url, source) if (product_mode or detail_image_mode) else None
-                if product_mode:
-                    # Full-page text picks up nav/footer boilerplate (site-wide
-                    # "예약"/"마감" links, unrelated prices) as false product
-                    # signals; product_text_selector scopes to the product panel.
-                    text_selector = source.get("product_text_selector")
-                    text_root = detail_soup.select_one(text_selector) if text_selector else detail_soup
-                    full_text = visible_text(text_root) if text_root else ""
-                    item.update(extract_product_fields(source, full_text, image_url))
-                if image_url:
-                    item["imageUrl"] = image_url
-            except Exception as exc:
-                item["_errors"].append(f"상세 페이지 실패: {exc}")
-        yield item
-        if len(seen) >= limit:
-            break
+    for page in range(1, max_pages + 1):
+        try:
+            html, final_url = get_html(
+                page_url(source["url"], page_param, page), policy,
+                source.get("timeout_seconds", 15), source,
+            )
+        except RobotsDenied:
+            if page == 1:
+                raise
+            break  # later pages may be disallowed; keep what earlier pages gave
+        new_links = 0
+        for item in extract_links(html, final_url, source):
+            if item["url"] in seen:
+                continue
+            seen.add(item["url"])
+            new_links += 1
+            fetch_detail(item, source, policy, store)
+            yield item
+            if len(seen) >= limit:
+                return
+        if not new_links:
+            break  # the site ignored the page number or ran out of pages
+
+
+def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> None:
+    """Add detail-page fields (metrics, photo, product info) to a listed item in place."""
+    detail_selectors = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
+    product_mode = source.get("product_mode", False)
+    detail_image_mode = source.get("fetch_detail_image", False)
+    if not (detail_selectors or product_mode or detail_image_mode):
+        return
+    # Metrics change all the time, so pages that read them are never skipped.
+    if not detail_selectors and store is not None and not store.needs_detail(
+        item["url"], product_mode=product_mode,
+        refresh_hours=float(source.get("detail_refresh_hours", DEFAULT_DETAIL_REFRESH_HOURS)),
+    ):
+        return
+    try:
+        detail_html, detail_url = get_html(
+            item["url"], policy, source.get("timeout_seconds", 15), source,
+        )
+        detail_soup = BeautifulSoup(detail_html, "html.parser")
+        if detail_selectors:
+            values, errors = extract_metrics(detail_soup, detail_selectors, required=True)
+            item.update(values)
+            item["_errors"].extend(errors)
+        # The detail page's own photo wins over the list thumbnail.
+        image_url = detail_image(detail_soup, detail_url, source) if (product_mode or detail_image_mode) else None
+        if product_mode:
+            # Full-page text picks up nav/footer boilerplate (site-wide
+            # "예약"/"마감" links, unrelated prices) as false product
+            # signals; product_text_selector scopes to the product panel.
+            text_selector = source.get("product_text_selector")
+            text_root = detail_soup.select_one(text_selector) if text_selector else detail_soup
+            full_text = visible_text(text_root) if text_root else ""
+            item.update(extract_product_fields(source, full_text, image_url))
+        if image_url:
+            item["imageUrl"] = image_url
+        item["detailCheckedAt"] = datetime.now(timezone.utc)
+    except Exception as exc:
+        item["_errors"].append(f"상세 페이지 실패: {exc}")
 
 
 def collect_html_links(db, source: dict, store=None) -> dict:
-    return save_records(html_items(source), db, source, store)
+    return save_records(html_items(source, store), db, source, store)

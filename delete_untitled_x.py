@@ -1,4 +1,4 @@
-"""Delete leftover X status posts stored with title '(제목 없음)' from Firestore and local DB."""
+"""Delete leftover '(제목 없음)' documents (X status posts, the laftel.net home) from Firestore and local DB."""
 
 import argparse
 

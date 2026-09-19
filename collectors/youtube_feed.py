@@ -16,6 +16,25 @@ HTML_CHANNEL_ID_RE = re.compile(
 )
 
 
+VIDEO_ID_RE = re.compile(r"[0-9A-Za-z_-]{11}")
+VIDEO_URL_RE = re.compile(
+    r"(?:youtube\.com/(?:watch\?(?:[^#]*&)?v=|shorts/|embed/)|youtu\.be/)([0-9A-Za-z_-]{11})(?![0-9A-Za-z_-])"
+)
+
+
+def video_thumbnail(video_id: str) -> str | None:
+    video_id = (video_id or "").strip()
+    if VIDEO_ID_RE.fullmatch(video_id):
+        return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+    return None
+
+
+def youtube_thumbnail(url: str) -> str | None:
+    """Thumbnail derived from a video URL alone, for documents stored without one."""
+    match = VIDEO_URL_RE.search(url or "")
+    return video_thumbnail(match.group(1)) if match else None
+
+
 def _channel_id_from_text(text: str, pattern: re.Pattern) -> str | None:
     match = pattern.search(text or "")
     if not match:
@@ -86,10 +105,7 @@ def _thumbnail(entry) -> str | None:
         url = clean_image_url(media.get("url"))
         if url:
             return url
-    video_id = (entry.get("yt_videoid") or "").strip()
-    if re.fullmatch(r"[0-9A-Za-z_-]{11}", video_id):
-        return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-    return None
+    return video_thumbnail(entry.get("yt_videoid"))
 
 
 def collect_youtube_feed(db, source: dict, store=None) -> dict:

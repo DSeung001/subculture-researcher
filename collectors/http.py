@@ -1,4 +1,4 @@
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 import random
 import time
@@ -21,6 +21,16 @@ def request_headers() -> dict[str, str]:
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "ko-KR,ko;q=0.9,ja;q=0.8,en-US;q=0.7,en;q=0.6",
     }
+
+
+def page_url(url: str, param: str | None, page: int) -> str:
+    """List URL of `page`; page 1 is the configured URL untouched."""
+    if not param or page <= 1:
+        return url
+    parts = urlsplit(url)
+    query = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if k != param]
+    query.append((param, str(page)))
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 def request_delay_range(source: dict | None = None) -> tuple[float, float]:

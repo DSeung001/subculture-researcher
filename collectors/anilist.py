@@ -11,6 +11,9 @@ from image_urls import clean_image_url
 ANILIST_API = "https://graphql.anilist.co"
 CACHE_COLLECTION = "collector_state"
 CACHE_DOCUMENT = "anilist_trending"
+# Bump when the collected fields change so an older successful run cannot keep a newer field
+# (e.g. the cover image) from ever being collected.
+CACHE_VERSION = 2
 QUERY = """
 query TrendingAnime($page: Int!, $perPage: Int!) {
   Page(page: $page, perPage: $perPage) {
@@ -41,6 +44,40 @@ query TrendingAnime($page: Int!, $perPage: Int!) {
   }
 }
 """
+
+
+COVERS_QUERY = """
+query Covers($ids: [Int], $perPage: Int!) {
+  Page(page: 1, perPage: $perPage) {
+    media(id_in: $ids, type: ANIME) { id coverImage { large } }
+  }
+}
+"""
+COVERS_BATCH = 50
+
+
+def anilist_covers(ids: list[int], source: dict | None = None) -> dict[int, str]:
+    """Cover image URL by AniList media id, for works that already left the trending list."""
+    source = source or {}
+    covers = {}
+    for start in range(0, len(ids), COVERS_BATCH):
+        batch = ids[start:start + COVERS_BATCH]
+        pause_between_requests(source)
+        response = requests.post(
+            source.get("url") or ANILIST_API,
+            json={"query": COVERS_QUERY, "variables": {"ids": batch, "perPage": len(batch)}},
+            headers={**request_headers(), "Content-Type": "application/json"},
+            timeout=source.get("timeout_seconds", 20),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("errors"):
+            raise ValueError(f"AniList GraphQL 오류: {payload['errors'][0].get('message', payload['errors'][0])}")
+        for media in (((payload.get("data") or {}).get("Page") or {}).get("media")) or []:
+            cover = clean_image_url((media.get("coverImage") or {}).get("large"))
+            if cover:
+                covers[int(media["id"])] = cover
+    return covers
 
 
 def _title(media: dict) -> str:
@@ -100,6 +137,8 @@ def _cache_is_fresh(db, source: dict) -> tuple[bool, datetime | None]:
     last_success = data.get("lastSuccessAt")
     if not isinstance(last_success, datetime):
         return False, None
+    if data.get("version") != CACHE_VERSION:
+        return False, None
     if last_success.tzinfo is None:
         last_success = last_success.replace(tzinfo=timezone.utc)
     return (
@@ -109,7 +148,7 @@ def _cache_is_fresh(db, source: dict) -> tuple[bool, datetime | None]:
 
 
 def collect_anilist(db, source: dict, store=None) -> dict:
-    cached, last_success = _cache_is_fresh(db, source)
+    cached, last_success = (False, None) if source.get("force_refresh") else _cache_is_fresh(db, source)
     if cached:
         checked = last_success.isoformat() if last_success else "unknown"
         return {
@@ -129,6 +168,7 @@ def collect_anilist(db, source: dict, store=None) -> dict:
             {
                 "lastSuccessAt": firestore.SERVER_TIMESTAMP,
                 "cacheHours": float(source.get("cache_hours", 24)),
+                "version": CACHE_VERSION,
                 "source": source.get("name"),
             },
             merge=True,

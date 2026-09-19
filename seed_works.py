@@ -35,12 +35,31 @@ def seed(library: Library, catalog_path=CATALOG, assign=True):
     return created, linked
 
 
+def print_unmatched(library: Library):
+    report = library.unclassified_report()
+    print(f"작품 링크가 없는 항목: {report['total']}건")
+    for source, count in report["by_source"]:
+        print(f"\n[{source}] {count}건")
+        for title in report["samples"].get(source, []):
+            print(f"  - {title}")
+    print("\n자주 나오는 괄호 표기 (작품명·시리즈 후보):")
+    for token, count in report["bracket_tokens"]:
+        print(f"  {count:>4}  {token}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", help="Override database URL or legacy SQLite path")
     parser.add_argument("--catalog", default=str(CATALOG), help="YAML catalog path")
     parser.add_argument("--no-assign", action="store_true", help="Skip keyword auto-link")
+    parser.add_argument(
+        "--unmatched", action="store_true",
+        help="작품 링크가 없는 항목을 소스별로 요약해 출력만 함 (카탈로그 보강용, 변경 없음)",
+    )
     args = parser.parse_args()
+    if args.unmatched:
+        print_unmatched(Library(args.db))
+        return
     count, linked = seed(Library(args.db), args.catalog, assign=not args.no_assign)
     print(f"작품 {count}개 반영, 새로 연결한 링크 {linked}개")
 

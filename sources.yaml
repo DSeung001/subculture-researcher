@@ -113,6 +113,8 @@ sources:
     allow_patterns:
       - '^https://www\.animatetimes\.com/news/details\.php\?id=\d+'
     max_items: 50
+    page_param: p  # 「もっと見る」= ?p=2… (페이지당 20건)
+    max_pages: 3
     enabled: true
     respect_robots: true
     list_image_selector: img  # .c-item 카드의 기사별 이미지
@@ -165,6 +167,9 @@ sources:
     content_angle: NEWS
     source_tier: OFFICIAL
     max_items: 50
+    page_param: gotoPage  # 페이지당 10건, 응답의 pageCount까지
+    page_count_field: pageCount
+    max_pages: 4
     enabled: true
 
   # 수동 전용(YouTube RSS 등)은 위 manual_only 소스. 라프텔은 store.laftel.net 공개 HTML만
@@ -182,7 +187,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://ttabbaemall\.co\.kr/product/detail\.html\?product_no=\d+'
-    max_items: 50
+    max_items: 90
+    page_param: page  # Cafe24 ?page=N (페이지당 30건)
+    max_pages: 3
     request_delay_min_seconds: 2.0
     request_delay_max_seconds: 4.5
     enabled: true
@@ -203,7 +210,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://ttabbaemall\.co\.kr/product/detail\.html\?product_no=\d+'
-    max_items: 50
+    max_items: 90
+    page_param: page  # Cafe24 ?page=N (페이지당 30건)
+    max_pages: 3
     request_delay_min_seconds: 2.0
     request_delay_max_seconds: 4.5
     enabled: true
@@ -233,6 +242,7 @@ sources:
 
   # 라프텔 스토어 신상품(NEW 배지). 로그인 없이 공개 HTML이며 robots.txt가 허용한다.
   # 목록 카드 텍스트에서 가격·예약 상태를 읽어 상세 요청은 하지 않는다(예약마감일은 상세에만 있어 수집하지 않음).
+  # 홈의 상품 46개 중 NEW 배지 14개만 잡는 것이 의도(신상품 소스)라 max_items를 올려도 늘지 않는다.
   - name: 라프텔 스토어
     type: html
     url: https://store.laftel.net/
@@ -265,7 +275,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - 'goods_view\.php\?goodsNo=\d+'
-    max_items: 50
+    max_items: 90
+    page_param: page  # ?page=N (페이지당 30건)
+    max_pages: 3
     enabled: true
     respect_robots: true
     list_product_mode: true
@@ -274,6 +286,7 @@ sources:
 
   # 미국 공식 피규어 브랜드 뉴스. Sideshow는 Queue-it 대기실(사실상 항상 리다이렉트)로
   # 막혀 있어 자동 수집이 불가능해 McFarlane Toys 공식 뉴스로 대체했다.
+  # 뉴스 목록에 게시물이 2개뿐이고 페이지네이션이 없어 max_items를 올려도 늘지 않는다.
   - name: McFarlane Toys 뉴스
     type: html
     url: https://www.mcfarlane.com/news

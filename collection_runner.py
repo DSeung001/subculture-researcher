@@ -65,6 +65,7 @@ def run_collection(
     allow_manual: bool = False,
     inter_source_delay: tuple[float, float] | None = None,
     show_progress: bool = False,
+    force_refresh: bool = False,
 ) -> dict:
     store = ContentStore(db)
     duplicates = store.duplicates()
@@ -109,6 +110,8 @@ def run_collection(
             time.sleep(wait)
 
         try:
+            if force_refresh:
+                source = {**source, "force_refresh": True}  # collectors that cache results skip the cache
             result = collector(db, source, store=store)
             ran_any = True
             for key in COUNTS:
