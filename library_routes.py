@@ -1,12 +1,13 @@
 """Local-only curation routes; Firebase is contacted only on explicit sync."""
 
-import json
 from datetime import date
 
 from sqlalchemy.exc import IntegrityError
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 
+from ai_writer import AiWriterError, write_draft_body
+from drafts_store import MAX_SOURCES, DraftError, create_draft
 from local_library import FILTER_KEYS, TAXONOMIES, Library
 from library_database import SchemaError
 from presentation import card_view
@@ -68,11 +69,6 @@ def index():
     local.auto_assign_product_categories()
     filters = filters_from(request.args)
     overview = local.overview()
-    saved_id = request.args.get("saved", type=int)
-    if saved_id:
-        saved = next((f for f in overview["saved_filters"] if f["id"] == saved_id), None)
-        if saved:
-            return redirect(url_for("library.index", **json.loads(saved["filters"])))
     page = max(1, request.args.get("page", 1, type=int))
     collection_id = request.args.get("collection", type=int)
     collection = next((c for c in overview["collections"] if c["id"] == collection_id), None)
@@ -89,8 +85,8 @@ def index():
     return render_template(
         "library.html", items=items, total=total, terms=terms, taxonomies=TAXONOMIES,
         filters=filters, page=page, collection=collection, **overview,
-        suggestions=local.suggestions(items, terms["works"]),
         active=active_filters(filters, terms, collection_id), today=date.today().isoformat(),
+        draft_max=MAX_SOURCES,
         pages=max(1, -(-total // PAGE_SIZE)), sale_status=SALE_STATUS,
         page_url=lambda p: url_for("library.index", **filters, page=p, collection=collection_id),
     )
@@ -194,7 +190,7 @@ def collection_save():
     local = store()
     collection_id = request.form.get("id", type=int)
     if request.form.get("action") == "delete":
-        local.delete_group("collections", collection_id)
+        local.delete_collection(collection_id)
         return redirect(url_for("library.index"))
     collection_id = local.save_collection(request.form.get("name", ""), request.form.get("note", ""), collection_id)
     return redirect(url_for("library.index", collection=collection_id))
@@ -210,20 +206,27 @@ def collection_add():
 
 @library.post("/collections/member")
 def collection_member():
-    collection_id = request.form.get("collection_id", type=int)
-    store().edit_member(collection_id, request.form.get("item_id"), request.form.get("note", ""),
-                        request.form.get("position", "0"), request.form.get("action") == "remove")
+    store().remove_member(request.form.get("collection_id", type=int), request.form.get("item_id"))
     return back()
 
 
-@library.post("/filters")
-def filter_save():
-    if request.form.get("action") == "delete":
-        store().delete_group("saved_filters", request.form.get("id", type=int))
-    else:
-        store().save_filter(request.form.get("name", ""), filters_from(request.form))
-        flash("현재 필터를 저장했습니다.", "success")
-    return back()
+@library.post("/drafts")
+def draft_create():
+    """Turn the selected items into a draft and open it on the drafts page.
+
+    mode=plain builds a title/link list (no AI); mode=ai has the model write the body.
+    Items here are always in the local copy, so Firestore is never read.
+    """
+    ai = request.form.get("mode") == "ai"
+    try:
+        draft_id = create_draft(
+            store(), request.form.getlist("item_ids"), body_factory=write_draft_body if ai else None,
+        )
+    except (DraftError, AiWriterError) as exc:
+        flash(str(exc), "error")
+        return back()
+    flash("글을 만들었습니다. 본문을 다듬어 저장하세요.", "success")
+    return redirect(url_for("drafts_page", _anchor=f"draft-{draft_id}"))
 
 
 @library.errorhandler(ValueError)

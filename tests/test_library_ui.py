@@ -64,7 +64,7 @@ class LibraryUiTests(unittest.TestCase):
         filtered = self.client.get("/library?q=Frieren").get_data(as_text=True)
         self.assertIn("filter-chip", filtered)
         self.assertIn("초기화", filtered)
-        self.assertIn("현재 조건을 저장 필터로 저장", filtered)
+        self.assertNotIn("저장 필터", filtered)
 
     def test_past_deadline_is_marked_and_sale_status_is_labelled(self):
         product = {"entityType": "PRODUCT", "shop": "따빼몰", "currency": "KRW"}

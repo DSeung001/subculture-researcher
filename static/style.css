@@ -679,6 +679,12 @@ body.has-draft-bar main {
   padding-bottom: 96px;
 }
 
+/* 작품·기획: 사이드바 폭 대신 화면 전체 폭에 붙인다 */
+#library-draft-bar { left: 16px; }
+.draft-bar-count.is-over { color: var(--error); }
+.draft-bar .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.draft-card { scroll-margin-top: 16px; }
+
 .draft-card .card-meta-row {
   flex-wrap: wrap;
   align-items: center;
@@ -705,8 +711,8 @@ body.has-draft-bar main {
   border-bottom: 1px solid var(--border);
 }
 
-.draft-source { display: flex; align-items: center; gap: 12px; }
-.draft-source .card-thumb { width: 72px; height: 72px; }
+.draft-source-row { display: flex; align-items: center; gap: 12px; }
+.draft-source-row .card-thumb { width: 72px; height: 72px; }
 .draft-source-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 .draft-source-meta { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
 .draft-sources a { color: var(--info); text-decoration: none; }
@@ -903,7 +909,6 @@ code {
 .library-checkbox { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text); cursor: pointer; }
 .library-muted, .library-shell small { color: var(--muted); }
 .library-shell small { font-size: 12px; }
-.library-shell .library-position { width: 88px; }
 
 .library-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin: 8px 0; }
 .library-row .grow { flex: 1; min-width: 150px; }
@@ -934,8 +939,8 @@ code {
 .library-link.selected { background: var(--accent-soft); font-weight: 600; }
 .library-divider { height: 1px; margin: 8px 4px; background: var(--border); border: 0; }
 .work-list { max-height: 340px; overflow-y: auto; }
-.work-row, .side-row { display: flex; align-items: center; gap: 2px; }
-.work-row .library-link, .side-row .library-link { flex: 1; min-width: 0; }
+.work-row { display: flex; align-items: center; gap: 2px; }
+.work-row .library-link { flex: 1; min-width: 0; }
 .work-edit {
   flex-shrink: 0;
   padding: 4px 8px;
@@ -945,8 +950,6 @@ code {
   text-decoration: none;
 }
 .work-edit:hover { background: var(--chip); color: var(--text); }
-button.work-edit { border: 0; background: none; font-family: inherit; cursor: pointer; }
-.side-row form { margin: 0; }
 
 /* 소재 탐색 */
 .filter-form { display: flex; flex-direction: column; gap: 14px; }
@@ -972,9 +975,6 @@ button.work-edit { border: 0; background: none; font-family: inherit; cursor: po
 .filter-chip b { color: var(--muted); font-size: 11px; font-weight: 600; }
 .filter-chip i { color: var(--muted); font-style: normal; font-size: 12px; }
 .filter-chip:hover i { color: var(--error); }
-details.save-filter { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-details.save-filter summary { color: var(--muted); font-size: 13px; cursor: pointer; }
-details.save-filter form { margin-top: 10px; }
 
 /* 결과·일괄 작업 */
 .results-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -1000,29 +1000,7 @@ details.save-filter form { margin-top: 10px; }
   font-size: 12px;
 }
 .term.work { background: var(--accent-soft); border-color: #d9d2ff; color: #4b3fb5; font-weight: 600; }
-.suggestion {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  margin-top: 8px;
-  padding: 7px 10px;
-  background: var(--warn-soft);
-  border: 1px dashed var(--warn-border);
-  border-radius: 8px;
-  font-size: 13px;
-}
-.suggestion form { margin: 0 0 0 auto; }
-.member-form {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-}
-.member-form .form-actions { margin: 0; }
+.member-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
 
 .pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0 24px; font-size: 13px; color: var(--muted); }
 .empty-state { padding: 32px 16px; text-align: center; color: var(--muted); }
@@ -1045,7 +1023,6 @@ details.save-filter form { margin-top: 10px; }
 @media (max-width: 900px) {
   .library-grid { grid-template-columns: 1fr; }
   .library-side { position: static; max-height: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 12px; }
-  .member-form { grid-template-columns: 1fr; }
   .bulk-bar { grid-template-columns: 1fr; }
   .erd-details { grid-template-columns: 1fr; }
 }

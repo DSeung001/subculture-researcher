@@ -34,19 +34,17 @@ class LibraryTests(unittest.TestCase):
         self.lib.sync(cloud(snapshot(price=100)))
         work = self.lib.save_term("works", "프리렌", aliases="Frieren, フリーレン")
         self.lib.assign(["FIGURE:legacy"], "works", work)
-        tag = self.lib.save_term("tags", "관심")
-        self.lib.assign(["FIGURE:legacy"], "tags", tag)
+        category = self.lib.save_term("product_categories", "관심 카테고리")
+        self.lib.assign(["FIGURE:legacy"], "product_categories", category)
         group = self.lib.save_collection("예약상품 소개", "기획 메모")
         self.lib.add_to_collection(group, ["FIGURE:legacy"])
-        self.lib.edit_member(group, "FIGURE:legacy", "소개 메모", 3)
         self.lib.sync(cloud(snapshot(title="갱신 제목", price=200)))
         rows, total = self.lib.items({"works": work}, collection_id=group)
         self.assertEqual(total, 1)
         self.assertEqual(rows[0]["id"], "FIGURE:legacy")
         self.assertEqual(rows[0]["data"]["price"], 200)
-        self.assertEqual(rows[0]["collection_note"], "소개 메모")
-        self.assertEqual(rows[0]["position"], 3)
-        self.assertEqual(rows[0]["terms"]["tags"][0]["name"], "관심")
+        self.assertEqual(rows[0]["position"], 1)
+        self.assertIn("관심 카테고리", [t["name"] for t in rows[0]["terms"]["product_categories"]])
 
     def test_failed_stream_keeps_previous_snapshot(self):
         self.lib.sync(cloud(snapshot()))
@@ -74,19 +72,16 @@ class LibraryTests(unittest.TestCase):
         self.lib.delete_term("works", first)
         self.assertEqual(self.lib.items({"works": second})[1], 1)
 
-    def test_aliases_suggest_but_never_auto_assign(self):
+    def test_unlinking_is_not_undone_by_viewing_the_list(self):
         self.lib.sync(cloud(snapshot(), snapshot("2", title="artwork"), snapshot("3", title="ＦＲＩＥＲＥＮ 굿즈")))
-        # Clear links created by sync-time auto_assign so suggestions stay visible.
         work = self.lib.save_term("works", "장송의 프리렌", aliases="Frieren")
         self.lib.save_term("works", "짧은 이름", aliases="art")
         self.lib.assign(["FIGURE:legacy", "FIGURE:3"], "works", work, remove=True)
+        # Listing (with or without the unclassified filter) never re-links by keyword.
         rows, total = self.lib.items({"unclassified": "1"})
-        suggestions = self.lib.suggestions(rows, self.lib.terms()["works"])
         self.assertEqual(total, 3)
-        self.assertEqual(suggestions["FIGURE:legacy"][0]["id"], work)
-        self.assertEqual(suggestions["FIGURE:3"][0]["id"], work)
-        self.assertEqual(suggestions["FIGURE:2"], [])
         self.assertEqual(self.lib.items({"works": work})[1], 0)
+        self.assertEqual(self.lib.items({"unclassified": "1"})[1], 3)
 
     def test_auto_assign_works_is_additive_and_safe(self):
         self.lib.sync(cloud(
@@ -118,20 +113,30 @@ class LibraryTests(unittest.TestCase):
         self.lib.sync(cloud(snapshot("e", title="葬送のフリーレン 굿즈")))
         self.assertEqual(self.lib.items({"works": frieren})[1], 3)
 
-    def test_filters_members_and_saved_filter(self):
+    def test_filters_and_collection_members(self):
         self.lib.sync(cloud(snapshot(), snapshot("2", preorderEndAt=None)))
         self.assertEqual(self.lib.items({"deadline_from": "2026-10-01", "deadline_to": "2026-10-01"})[1], 1)
         group = self.lib.save_collection("기획")
         self.lib.add_to_collection(group, ["FIGURE:legacy", "FIGURE:2"])
-        self.lib.edit_member(group, "FIGURE:2", "먼저 소개", -1)
-        self.lib.add_to_collection(group, ["FIGURE:2"])
+        self.lib.add_to_collection(group, ["FIGURE:2"])  # already a member: no duplicate, order kept
         rows, total = self.lib.items({}, collection_id=group)
-        self.assertEqual(total, 2)
-        self.assertEqual(rows[0]["id"], "FIGURE:2")
-        self.assertEqual(rows[0]["collection_note"], "먼저 소개")
-        self.lib.save_filter("검색", {"q": "피규어", "arbitrary": "ignore"})
-        saved = self.lib.overview()["saved_filters"][0]
-        self.assertEqual(json.loads(saved["filters"]), {"q": "피규어"})
+        self.assertEqual((total, [r["id"] for r in rows]), (2, ["FIGURE:legacy", "FIGURE:2"]))
+        self.lib.remove_member(group, "FIGURE:legacy")
+        self.lib.remove_member(group, "FIGURE:legacy")  # removing a non-member is harmless
+        rows, total = self.lib.items({}, collection_id=group)
+        self.assertEqual((total, [r["id"] for r in rows]), (1, ["FIGURE:2"]))
+        self.assertEqual(self.lib.items({})[1], 2)  # the item itself stays in the library
+        self.lib.delete_collection(group)
+        self.assertEqual(self.lib.overview()["collections"], [])
+        self.assertEqual(self.lib.items({})[1], 2)
+
+    def test_only_works_and_product_categories_are_offered(self):
+        from local_library import TAXONOMIES
+        self.assertEqual(list(TAXONOMIES), ["works", "product_categories"])
+        self.assertEqual(set(self.lib.terms()), {"works", "product_categories"})
+        for table in ("tags", "information_types", "saved_filters"):
+            with self.assertRaises(ValueError):
+                self.lib.save_term(table, "x")
 
     def test_product_category_figure_filter_after_sync(self):
         figure_term = next(t for t in self.lib.terms()["product_categories"] if t["name"] == "피규어")

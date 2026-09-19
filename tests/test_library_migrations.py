@@ -41,7 +41,9 @@ class MigrationTests(unittest.TestCase):
             self.assertEqual(MigrationContext.configure(con).get_current_heads(), (head(),))
             differences = compare_metadata(MigrationContext.configure(con, opts={"compare_server_default": True}), Base.metadata)
             self.assertEqual(differences, [])
-        self.assertEqual(len(lib.terms()["information_types"]), 4)
+        self.assertEqual(len(lib.terms()["product_categories"]), 4)
+        with lib.engine.connect() as con:  # hidden from the screens, still seeded in the database
+            self.assertEqual(con.exec_driver_sql("SELECT COUNT(*) FROM information_types").scalar(), 4)
 
     def test_legacy_requires_explicit_upgrade_and_preserves_all_data(self):
         self.legacy()
@@ -57,11 +59,13 @@ class MigrationTests(unittest.TestCase):
         rows, total = lib.items({"works": 7}, collection_id=9)
         self.assertEqual(total, 1)
         self.assertEqual(rows[0]["collection_note"], "소개 메모")
-        self.assertEqual(rows[0]["terms"]["tags"][0]["id"], 8)
         self.assertEqual(lib.terms()["works"][0]["aliases"], "Frieren")
-        self.assertEqual(lib.overview()["saved_filters"][0]["id"], 10)
-        # Do not reinsert defaults the user had deleted in the legacy database.
-        self.assertEqual(lib.terms()["information_types"], [])
+        # Tags and saved filters are no longer shown, but their rows survive the upgrade.
+        with lib.engine.connect() as con:
+            self.assertEqual(con.exec_driver_sql("SELECT term_id FROM item_tags").fetchall(), [(8,)])
+            self.assertEqual(con.exec_driver_sql("SELECT id FROM saved_filters").fetchall(), [(10,)])
+            # Do not reinsert defaults the user had deleted in the legacy database.
+            self.assertEqual(con.exec_driver_sql("SELECT COUNT(*) FROM information_types").scalar(), 0)
         self.assertIsNone(upgrade_database(self.path))
         self.assertEqual(len(list(self.path.parent.glob("*.bak"))), 1)
 

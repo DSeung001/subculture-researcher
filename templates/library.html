@@ -5,7 +5,7 @@
   <header class="page-header">
     <div>
       <h1>작품·기획</h1>
-      <p class="subtitle">작품별로 소재를 모으고, 소개할 상품·예약·이벤트를 기획에 담으세요.</p>
+      <p class="subtitle">작품별로 소재를 모으고, 소개할 상품·예약·이벤트를 기획에 담으세요. 소재를 선택하면 아래에서 바로 글을 만들 수 있습니다.</p>
       <p class="page-meta">마지막 동기화: {{ sync.completed_at[:19] ~ ' UTC' if sync else '아직 없음' }} · 분류와 기획은 이 PC에 저장됩니다.</p>
     </div>
     <div class="page-actions">
@@ -29,14 +29,6 @@
           {% endfor %}
         </div>
         {% if not terms.works %}<p>분류 사전에서 작품을 먼저 추가하거나 <code>python seed_works.py</code>를 실행하세요.</p>{% endif %}
-      </section>
-      <section class="library-panel"><h2>저장 필터</h2>
-        {% for saved in saved_filters %}
-        <div class="side-row">
-          <a class="library-link" href="{{ url_for('library.index', saved=saved.id) }}">{{ saved.name }}</a>
-          <form method="post" action="{{ url_for('library.filter_save') }}"><input type="hidden" name="id" value="{{ saved.id }}"><button class="work-edit" name="action" value="delete" aria-label="{{ saved.name }} 필터 삭제" data-confirm="저장 필터를 삭제할까요?">삭제</button></form>
-        </div>
-        {% else %}<p>자주 쓰는 탐색 조건을 저장하세요.</p>{% endfor %}
       </section>
       <section class="library-panel"><h2>기획 묶음</h2>
         {% for group in collections %}<a class="library-link {% if collection and collection.id == group.id %}selected{% endif %}" href="{{ url_for('library.index', collection=group.id) }}">{{ group.name }}</a>{% endfor %}
@@ -83,15 +75,6 @@
           <small>적용 중</small>
           {% for chip in active %}<a class="filter-chip" href="{{ chip.remove_url }}" title="이 조건 해제"><b>{{ chip.label }}</b>{{ chip.value }}<i aria-hidden="true">✕</i></a>{% endfor %}
         </div>
-        <details class="save-filter">
-          <summary>현재 조건을 저장 필터로 저장</summary>
-          <form method="post" action="{{ url_for('library.filter_save') }}" class="library-row">
-            {% for key, value in filters.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
-            <input type="hidden" name="next" value="{{ request.full_path }}">
-            <label class="grow">필터 이름<input name="name" placeholder="예: 프리렌 예약 굿즈" required maxlength="200"></label>
-            <button class="btn">필터 저장</button>
-          </form>
-        </details>
         {% endif %}
       </section>
 
@@ -130,19 +113,10 @@
         {% elif slot == 'extra' %}
           {% if not item.terms.works %}<p class="card-flags"><span class="tag warn">작품 미분류</span></p>{% endif %}
           {% for table, label in taxonomies.items() %}{% if item.terms[table] %}<div class="term-row"><small>{{ label }}</small>{% for term in item.terms[table] %}<span class="term {{ 'work' if table == 'works' }}">{{ term.name }}</span>{% endfor %}</div>{% endif %}{% endfor %}
-          {% for suggestion in suggestions.get(item.id, []) %}
-          <form class="suggestion" method="post" action="{{ url_for('library.assign') }}">
-            <input type="hidden" name="item_ids" value="{{ item.id }}"><input type="hidden" name="table" value="works"><input type="hidden" name="term_id" value="{{ suggestion.id }}"><input type="hidden" name="next" value="{{ request.full_path }}">
-            <span>제목에서 ‘{{ suggestion.matched }}’ 일치 — 제안입니다. 확인 후 확정하세요.</span>
-            <button class="btn btn-sm">{{ suggestion.name }} 연결 확정</button>
-          </form>
-          {% endfor %}
           {% if collection %}
           <form method="post" action="{{ url_for('library.collection_member') }}" class="member-form">
             <input type="hidden" name="collection_id" value="{{ collection.id }}"><input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="next" value="{{ request.full_path }}">
-            <label>소개 순서<input type="number" name="position" value="{{ item.position }}" class="library-position" required></label>
-            <label>소개 메모<input name="note" value="{{ item.collection_note }}"></label>
-            <div class="form-actions"><button class="btn btn-sm btn-primary">저장</button><button class="btn btn-sm" name="action" value="remove">기획에서 빼기</button></div>
+            <button class="btn btn-sm">기획에서 빼기</button>
           </form>
           {% endif %}
         {% endif %}
@@ -166,5 +140,12 @@
     </div>
   </div>
 </main>
+
+<div id="library-draft-bar" class="draft-bar" hidden>
+  <span class="draft-bar-count" data-max="{{ draft_max }}">0개 선택</span>
+  <button type="submit" form="library-bulk" formaction="{{ url_for('library.draft_create') }}" name="mode" value="plain" class="btn btn-primary">글 만들기</button>
+  <button type="submit" form="library-bulk" formaction="{{ url_for('library.draft_create') }}" name="mode" value="ai" class="btn" data-ai-busy>AI로 글 쓰기</button>
+</div>
+{% include "_ai_busy.html" %}
 <script src="{{ url_for('static', filename='library.js') }}" defer></script>
 {% endblock %}

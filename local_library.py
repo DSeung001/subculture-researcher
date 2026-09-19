@@ -15,17 +15,17 @@ from sqlalchemy.orm import Session
 
 from library_database import DEFAULT_PATH, ensure_schema, make_engine
 from library_models import (Collection, CollectionItem, Draft, DraftItem, Item, ItemWork, LINK_MODELS,
-                            SavedFilter, SyncState, TERM_MODELS, Work, WorkAlias)
+                            SyncState, TERM_MODELS, Work, WorkAlias)
 
 from content_model import content_id
 from content_store import UNTITLED_TITLE, is_untitled_leftover
 
 
+# What the screens offer. information_types and tags stay in the database (their tables and any
+# rows are kept) but nothing links to them any more, so they are not shown or accepted.
 TAXONOMIES = {
     "works": "작품·IP",
     "product_categories": "제품 카테고리",
-    "information_types": "정보 유형",
-    "tags": "태그",
 }
 FILTER_KEYS = (*TAXONOMIES, "q", "unclassified", "deadline_from", "deadline_to")
 
@@ -113,7 +113,7 @@ class Library:
     def terms(self):
         with self.connect() as session:
             result = {table: [row_dict(row) for row in session.scalars(select(model).order_by(model.name))]
-                      for table, model in TERM_MODELS.items()}
+                      for table, model in TERM_MODELS.items() if table in TAXONOMIES}
             aliases = {}
             for row in session.scalars(select(WorkAlias).order_by(WorkAlias.name)):
                 aliases.setdefault(row.work_id, []).append(row.name)
@@ -188,7 +188,9 @@ class Library:
             rows = session.execute(select(Item.id, Item.source, Item.title)).all()
             curated = set(session.scalars(select(CollectionItem.item_id)))
             curated.update(session.scalars(select(DraftItem.item_id)))  # sources of a draft
-            for model in LINK_MODELS.values():
+            for table, model in LINK_MODELS.items():
+                if table == "product_categories":
+                    continue  # sync links every FIGURE item to 피규어 by itself, so it says nothing about local work
                 curated.update(session.scalars(select(model.item_id)))
         return [{"id": item_id, "source": source or "", "title": title or "", "curated": item_id in curated}
                 for item_id, source, title in rows if item_id not in cloud_ids]
@@ -466,7 +468,8 @@ class Library:
 
     def items(self, filters, page=1, collection_id=None):
         query = select(Item)
-        for table, link in LINK_MODELS.items():
+        for table in TAXONOMIES:
+            link = LINK_MODELS[table]
             if filters.get(table):
                 try:
                     term_id = int(filters[table])
@@ -502,8 +505,8 @@ class Library:
                 rows.append(row)
             by_id = {r["id"]: r for r in rows}
             if by_id:
-                for table, model in TERM_MODELS.items():
-                    link = LINK_MODELS[table]
+                for table in TAXONOMIES:
+                    model, link = TERM_MODELS[table], LINK_MODELS[table]
                     links = session.execute(select(link.item_id, model.id, model.name).join(
                         model, link.term_id == model.id).where(link.item_id.in_(by_id)).order_by(model.name))
                     for item_id, term_id, name in links:
@@ -530,29 +533,11 @@ class Library:
             "samples": examples,
         }
 
-    def suggestions(self, items, works):
-        result = {}
-        for item in items:
-            if item["terms"]["works"]:
-                continue
-            text = item_title_text(item["data"])
-            found = []
-            for work in works:
-                for keyword in work_keywords(work):
-                    matched = match_keyword(text, keyword)
-                    if matched:
-                        found.append({"id": work["id"], "name": work["name"],
-                                      "matched": normalized(matched)})
-                        break
-            result[item["id"]] = found
-        return result
-
     def overview(self):
         with self.connect() as session:
             sync = session.get(SyncState, 1)
             return {
                 "collections": [row_dict(r) for r in session.scalars(select(Collection).order_by(Collection.id.desc()))],
-                "saved_filters": [row_dict(r) for r in session.scalars(select(SavedFilter).order_by(SavedFilter.id.desc()))],
                 "sync": row_dict(sync) if sync else None,
             }
 
@@ -578,26 +563,15 @@ class Library:
                 session.execute(self.insert(CollectionItem).values(collection_id=collection_id, item_id=item_id,
                                 position=position).on_conflict_do_nothing())
 
-    def edit_member(self, collection_id, item_id, note, position, remove=False):
+    def remove_member(self, collection_id, item_id):
         with self.connect() as session:
             member = session.get(CollectionItem, (collection_id, item_id))
             if member:
-                if remove:
-                    session.delete(member)
-                else:
-                    member.note, member.position = note, int(position)
+                session.delete(member)
 
-    def save_filter(self, name, filters):
+    def delete_collection(self, collection_id):
         with self.connect() as session:
-            session.add(SavedFilter(name=clean_name(name), filters=json.dumps(
-                {k: filters[k] for k in FILTER_KEYS if filters.get(k)})))
-
-    def delete_group(self, table, group_id):
-        model = {"collections": Collection, "saved_filters": SavedFilter}.get(table)
-        if model is None:
-            raise ValueError("잘못된 목록입니다.")
-        with self.connect() as session:
-            session.execute(delete(model).where(model.id == group_id))
+            session.execute(delete(Collection).where(Collection.id == collection_id))
 
 
 def row_dict(row):

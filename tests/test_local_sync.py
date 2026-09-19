@@ -46,9 +46,9 @@ class LibraryCase(unittest.TestCase):
         self.lib.assign(
             ["FIGURE:b", "FIGURE:c", "FIGURE:e"], "product_categories", figure["id"], remove=True,
         )
-        # a: tagged, d: in a collection, b/e: no local work, c: still in the cloud
-        tag = self.lib.save_term("tags", "관심")
-        self.lib.assign(["FIGURE:a"], "tags", tag)
+        # a: linked to a work, d: in a collection, b/e: no local work, c: still in the cloud
+        work = self.lib.save_term("works", "관심 작품")
+        self.lib.assign(["FIGURE:a"], "works", work)
         group = self.lib.save_collection("기획")
         self.lib.add_to_collection(group, ["FIGURE:d"])
 
@@ -69,10 +69,10 @@ class OrphanTests(LibraryCase):
         self.assertEqual((result["matched"], result["deleted"]), (2, 2))
         self.assertEqual(sorted(item["id"] for item in result["kept_curated"]), ["FIGURE:a", "FIGURE:d"])
         self.assertEqual(self.ids(), ["FIGURE:a", "FIGURE:c", "FIGURE:d"])
-        # The curated item keeps its tag and collection membership.
+        # The curated item keeps its work link and collection membership.
         rows, _ = self.lib.items({})
-        tagged = next(row for row in rows if row["id"] == "FIGURE:a")
-        self.assertEqual([t["name"] for t in tagged["terms"]["tags"]], ["관심"])
+        linked = next(row for row in rows if row["id"] == "FIGURE:a")
+        self.assertEqual([t["name"] for t in linked["terms"]["works"]], ["관심 작품"])
 
     def test_dry_run_changes_nothing(self):
         result = self.lib.delete_orphans(self.CLOUD, dry_run=True)
@@ -83,6 +83,17 @@ class OrphanTests(LibraryCase):
         with self.assertRaises(ValueError):
             self.lib.delete_orphans(set())
         self.assertEqual(len(self.ids()), 5)
+
+
+class AutoCategoryIsNotWorkTests(LibraryCase):
+    def test_the_automatic_figure_category_does_not_protect_an_orphan(self):
+        figure = next(t for t in self.lib.terms()["product_categories"] if t["name"] == "피규어")
+        self.lib.assign(["FIGURE:b"], "product_categories", figure["id"])  # what sync does for every FIGURE item
+        by_id = {item["id"]: item["curated"] for item in self.lib.orphan_items(set())}
+        self.assertFalse(by_id["FIGURE:b"])
+        self.assertTrue(by_id["FIGURE:a"])  # a work link still counts
+        result = self.lib.delete_orphans({"FIGURE:c"})
+        self.assertIn("FIGURE:b", [item["id"] for item in result["items"]])
 
 
 class SyncStatusTests(LibraryCase):

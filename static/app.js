@@ -140,3 +140,22 @@ document.querySelectorAll("form.ai-draft-form").forEach((form) => {
     });
   });
 });
+
+// A submit button marked data-ai-busy (e.g. 「AI로 글 쓰기」 on a form that also has other buttons)
+// shows the same notice. Disabling is deferred: a submitter disabled inside the submit event
+// is left out of the form data, which would drop its name/value.
+document.addEventListener("submit", (event) => {
+  const submitter = event.submitter;
+  if (!submitter?.hasAttribute("data-ai-busy") || !event.target.checkValidity()) return;
+  if (aiBusy) aiBusy.hidden = false;
+  document.body.classList.add("ai-draft-busy-open");
+  setTimeout(() => {
+    event.target.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+    document.querySelectorAll("button[data-ai-busy], .draft-bar button").forEach((button) => { button.disabled = true; });
+  }, 0);
+});
+
+// Coming back with the browser's back button restores the page from cache with the notice still up.
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted && aiBusy && !aiBusy.hidden) location.reload();
+});

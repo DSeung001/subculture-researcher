@@ -41,16 +41,11 @@
   <p class="subtitle">작품별로 쓰려면 작품·기획에서 소재를 작품에 연결하세요.</p>
   {% endif %}
 
-  <div id="ai-draft-busy" class="ai-draft-busy" hidden aria-live="polite" aria-busy="true">
-    <div class="ai-draft-busy-card">
-      <p class="ai-draft-busy-title">글 만드는 중…</p>
-      <p class="ai-draft-busy-note">Gemini 호출이라 수십 초 걸릴 수 있습니다. 창을 닫지 마세요.</p>
-    </div>
-  </div>
+  {% include "_ai_busy.html" %}
 
   <div class="items">
     {% for draft in drafts %}
-    <article class="card draft-card">
+    <article class="card draft-card" id="draft-{{ draft['_id'] }}">
       <div class="card-meta-row">
         <span class="status-badge {% if draft.status == 'POSTED' %}status-enabled{% else %}status-draft{% endif %}">{{ draft['_status_label'] }}</span>
         <span class="tag">{{ draft['_angle_label'] }}</span>
@@ -62,7 +57,7 @@
       </div>
       <ul class="draft-sources">
         {% for source in draft['_sources'] %}
-        <li class="draft-source">
+        <li class="draft-source-row">
           {% if source['_image'] %}
           <a class="card-thumb" href="{{ source.url or source['_image'] }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="{{ source['_image'] }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
           {% else %}
