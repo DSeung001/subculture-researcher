@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-subculture}
+      POSTGRES_USER: ${POSTGRES_USER:-subculture}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - library-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.tools
+    profiles: ["tools"]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-subculture}
+      POSTGRES_USER: ${POSTGRES_USER:-subculture}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "migrate_library.py", "current"]
+
+volumes:
+  library-data:

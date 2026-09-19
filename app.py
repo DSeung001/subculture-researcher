@@ -91,6 +91,9 @@ PAGE_SIZE = 30
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
+from library_routes import library
+app.register_blueprint(library)
+
 _db = None
 
 
@@ -99,6 +102,9 @@ def db():
     if _db is None:
         _db = get_db()
     return _db
+
+
+app.config["LIBRARY_CLOUD_DB"] = db
 
 
 def update_content(category: str, document_id: str, **fields):

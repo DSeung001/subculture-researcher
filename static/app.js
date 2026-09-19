@@ -3,6 +3,11 @@ document.querySelectorAll(".auto-submit").forEach((el) => {
 });
 
 document.addEventListener("click", (event) => {
+  const confirmation = event.target.closest("[data-confirm]");
+  if (confirmation && !window.confirm(confirmation.dataset.confirm)) {
+    event.preventDefault();
+    return;
+  }
   const toggle = event.target.closest("button.original-toggle");
   if (toggle) {
     const titleEl = toggle.closest(".card-title");

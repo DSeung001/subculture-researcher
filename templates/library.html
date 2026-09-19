@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}작품·기획 · 서브컬처 리서처{% endblock %}
+{% block body %}
+<main class="library-shell">
+  <header class="library-header">
+    <div><h1>작품·기획</h1><p>작품별로 소재를 모으고, 소개할 상품·예약·이벤트를 기획에 담으세요.</p>
+      <small>마지막 동기화: {{ sync.completed_at[:19] ~ ' UTC' if sync else '아직 없음' }} · 분류와 기획은 이 PC에 저장됩니다.</small></div>
+    <div class="library-row"><a class="btn" href="{{ url_for('library.settings') }}">분류 사전</a><form method="post" action="{{ url_for('library.sync') }}"><button class="btn" type="submit">클라우드에서 동기화</button></form></div>
+  </header>
+  {% for kind, message in get_flashed_messages(with_categories=true) %}<p class="library-message {{ kind }}" role="status">{{ message }}</p>{% endfor %}
+  <div class="library-grid">
+    <aside>
+      <section class="library-panel"><h2>작품·IP</h2>
+        <a class="library-link" href="{{ url_for('library.index') }}">전체 소재</a>
+        <a class="library-link" href="{{ url_for('library.index', unclassified='1') }}">작품 미분류</a>
+        {% for work in terms.works %}<a class="library-link {% if filters.works == work.id|string %}selected{% endif %}" href="{{ url_for('library.index', works=work.id) }}">{{ work.name }}</a>{% endfor %}
+        {% if not terms.works %}<p>분류 사전에서 작품을 먼저 추가하세요.</p>{% endif %}
+      </section>
+      <section class="library-panel"><h2>저장 필터</h2>
+        {% for saved in saved_filters %}<div class="library-row"><a class="grow" href="{{ url_for('library.index', saved=saved.id) }}">{{ saved.name }}</a><form method="post" action="{{ url_for('library.filter_save') }}"><input type="hidden" name="id" value="{{ saved.id }}"><button class="btn" name="action" value="delete" aria-label="{{ saved.name }} 필터 삭제">삭제</button></form></div>{% else %}<p>자주 쓰는 탐색 조건을 저장하세요.</p>{% endfor %}
+      </section>
+      <section class="library-panel"><h2>기획 묶음</h2>
+        {% for group in collections %}<a class="library-link {% if collection and collection.id == group.id %}selected{% endif %}" href="{{ url_for('library.index', collection=group.id) }}">{{ group.name }}</a>{% endfor %}
+        <form method="post" action="{{ url_for('library.collection_save') }}" class="stacked-form"><label>새 기획<input name="name" required maxlength="200" placeholder="예: 이번 달 예약 굿즈"></label><button class="btn">기획 만들기</button></form>
+      </section>
+    </aside>
+    <div>
+      {% if collection %}
+      <section class="library-panel"><h2>기획 편집</h2>
+        <form method="post" action="{{ url_for('library.collection_save') }}" class="stacked-form">
+          <input type="hidden" name="id" value="{{ collection.id }}">
+          <label>제목<input name="name" value="{{ collection.name }}" required maxlength="200"></label>
+          <label>기획 메모<textarea name="note" rows="2">{{ collection.note }}</textarea></label>
+          <div class="library-row"><button class="btn">저장</button><button class="btn" name="action" value="delete" data-confirm="기획 묶음을 삭제할까요? 수집 항목은 유지됩니다.">기획 삭제</button></div>
+        </form>
+      </section>
+      {% endif %}
+      <section class="library-panel"><h2>{{ collection.name if collection else '소재 탐색' }}</h2>
+        <form method="get" class="library-filters">
+          {% if collection %}<input type="hidden" name="collection" value="{{ collection.id }}">{% endif %}
+          {% for table, label in taxonomies.items() %}<label>{{ label }}<select name="{{ table }}"><option value="">전체</option>{% for term in terms[table] %}<option value="{{ term.id }}" {% if filters[table] == term.id|string %}selected{% endif %}>{{ term.name }}</option>{% endfor %}</select></label>{% endfor %}
+          <label>제목·출처 검색<input name="q" value="{{ filters.q }}"></label>
+          <label>예약마감 시작<input type="date" name="deadline_from" value="{{ filters.deadline_from }}"></label>
+          <label>예약마감 끝<input type="date" name="deadline_to" value="{{ filters.deadline_to }}"></label>
+          <label class="library-checkbox"><input type="checkbox" name="unclassified" value="1" {% if filters.unclassified %}checked{% endif %}>작품 미분류만</label>
+          <button class="btn">조회</button>
+        </form>
+        <form method="post" action="{{ url_for('library.filter_save') }}" class="library-row">
+          {% for key, value in filters.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <label class="grow">현재 조건 저장<input name="name" placeholder="예: 프리렌 예약 굿즈" required maxlength="200"></label><button class="btn">필터 저장</button>
+        </form>
+      </section>
+      <section class="library-panel">
+        <div class="library-row"><h2 class="grow">{{ total }}개 소재</h2><label class="library-checkbox"><input type="checkbox" id="library-select-all">이 페이지 전체 선택</label></div>
+        <form id="library-bulk" method="post" action="{{ url_for('library.assign') }}">
+          <input type="hidden" name="next" value="{{ request.full_path }}">
+          <div class="library-row">
+            <label>분류 종류<select name="table" id="library-taxonomy">{% for table, label in taxonomies.items() %}<option value="{{ table }}">{{ label }}</option>{% endfor %}</select></label>
+            <label class="grow">연결할 분류<select name="term_id" id="library-term"><option value="">선택하세요</option>{% for table, label in taxonomies.items() %}{% for term in terms[table] %}<option data-table="{{ table }}" value="{{ term.id }}" {% if table != 'works' %}disabled hidden{% endif %}>{{ term.name }}</option>{% endfor %}{% endfor %}</select></label>
+            <button class="btn" name="action" value="add">일괄 연결</button><button class="btn" name="action" value="remove">연결 해제</button>
+          </div>
+          <div class="library-row"><label class="grow">기획 묶음<select name="collection_id"><option value="">선택하세요</option>{% for group in collections %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select></label><button class="btn" formaction="{{ url_for('library.collection_add') }}">선택 항목 담기</button></div>
+        </form>
+      </section>
+      {% for item in items %}
+      <article class="library-panel">
+        <div class="library-row"><input aria-label="{{ item.title }} 선택" type="checkbox" name="item_ids" value="{{ item.id }}" form="library-bulk" class="library-item-select"><h3 class="grow">{% if item.url.startswith('https://') or item.url.startswith('http://') %}<a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</h3></div>
+        <p class="library-muted">{{ item.source }} · {{ item.data.get('saleStatus') or '판매 상태 정보 없음' }}{% if item.deadline %} · 예약마감 {{ item.deadline }}{% endif %}{% if item.data.get('releaseWindowText') %} · 입고·발매예정 {{ item.data.releaseWindowText }}{% endif %}</p>
+        {% if item.data.get('summaryKo') or item.data.get('summary') %}<p>{{ (item.data.get('summaryKo') or item.data.get('summary'))[:350] }}</p>{% endif %}
+        {% for table, label in taxonomies.items() %}{% if item.terms[table] %}<div class="library-tags"><small>{{ label }}</small>{% for term in item.terms[table] %}<span>{{ term.name }}</span>{% endfor %}</div>{% endif %}{% endfor %}
+        {% if not item.terms.works %}<p class="library-muted">작품 미분류</p>{% endif %}
+        {% for suggestion in suggestions.get(item.id, []) %}<form class="library-row" method="post" action="{{ url_for('library.assign') }}"><input type="hidden" name="item_ids" value="{{ item.id }}"><input type="hidden" name="table" value="works"><input type="hidden" name="term_id" value="{{ suggestion.id }}"><input type="hidden" name="next" value="{{ request.full_path }}"><small>제목에서 ‘{{ suggestion.matched }}’ 일치</small><button class="btn">{{ suggestion.name }} 연결 확정</button></form>{% endfor %}
+        {% if collection %}<form method="post" action="{{ url_for('library.collection_member') }}" class="library-row"><input type="hidden" name="collection_id" value="{{ collection.id }}"><input type="hidden" name="item_id" value="{{ item.id }}"><input type="hidden" name="next" value="{{ request.full_path }}"><label>소개 순서<input type="number" name="position" value="{{ item.position }}" class="library-position" required></label><label class="grow">소개 메모<input name="note" value="{{ item.collection_note }}"></label><button class="btn">저장</button><button class="btn" name="action" value="remove">기획에서 빼기</button></form>{% endif %}
+      </article>
+      {% else %}<section class="library-panel"><h3>아직 표시할 소재가 없습니다.</h3><p>{{ '전체 소재에서 항목을 선택해 이 기획에 담아주세요.' if collection else '클라우드에서 동기화하거나 탐색 조건을 조정해주세요.' }}</p></section>{% endfor %}
+      <div class="library-row">{% if page > 1 %}<a class="btn" href="{{ page_url(page - 1) }}">이전</a>{% endif %}<span>{{ page }} 페이지</span>{% if page * 50 < total %}<a class="btn" href="{{ page_url(page + 1) }}">다음</a>{% endif %}</div>
+    </div>
+  </div>
+</main>
+<script src="{{ url_for('static', filename='library.js') }}" defer></script>
+{% endblock %}
