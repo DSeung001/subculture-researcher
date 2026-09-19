@@ -141,6 +141,21 @@
 
 AGF Korea는 현재 공개 JSON API가 있어 `FESTIVAL` 자동 수집을 유지하며, 로컬 브라우저 대상으로 중복 등록하지 않습니다.
 
+## 이미지 수집
+
+글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** `imageUrl`로 저장합니다(이미지 파일은 저장하지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
+
+| 설정 키 | 의미 |
+|---|---|
+| `list_image_selector` | 목록 카드 안의 이미지 셀렉터(예: `img`). 카드는 "다른 기사 링크가 나오기 직전까지의 상위 요소"로 자동 판별 |
+| `fetch_detail_image: true` | 상세 페이지를 열어 `og:image`(→ `twitter:image`)를 사용. 목록에 이미지가 없을 때만 사용 |
+| `image_selector` | 상세 페이지에서 `og:image` 대신 쓸 이미지 셀렉터 |
+| `image_deny_patterns` | 소스별로 추가 배제할 이미지 경로 정규식(예: 저화질 미리보기 `blur_\d+`) |
+| `image_field` / `image_html_field` | JSON API 소스: 이미지 URL 필드 / 본문 HTML 필드(첫 `<img>` 사용) |
+
+소스별 이미지 위치: HOBBY Watch·Animate Times·애니플러스는 목록 카드, PR TIMES·McFarlane은 상세 `og:image`, 따빼몰·피규어프레소·피규어팜은 상세 `og:image`(상품 대표 사진), AniList는 `coverImage`, YouTube는 영상 썸네일, AGF는 공지 본문 이미지입니다. Good Smile 뉴스는 상세 이미지가 배송·공지용 텍스트 그래픽이라 수집하지 않습니다.
+이미 저장된 항목은 다음 수집 때 같은 URL의 `imageUrl`이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
+
 ## 수집 원칙
 
 1. 자동 수집 전에 해당 사이트의 `robots.txt`를 확인합니다.

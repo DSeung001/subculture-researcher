@@ -29,21 +29,24 @@
     </section>
     <section class="library-panel">
       <h2>연결된 소재 {{ total }}개</h2>
+      {% from "_item_card.html" import item_card %}
+      {% if items %}
+      <div class="items">
       {% for item in items %}
-      <article class="term-item">
-        <div class="grow">
-          <strong>{% if item.url.startswith('https://') or item.url.startswith('http://') %}<a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</strong>
-          <div class="item-meta"><span class="tag">{{ item.source or '출처 없음' }}</span></div>
-        </div>
+      {% call(slot) item_card(item.view) %}
+        {% if slot == 'actions' %}
         <form method="post" action="{{ url_for('library.work_save', work_id=work.id) }}">
           <input type="hidden" name="action" value="unlink">
           <input type="hidden" name="item_id" value="{{ item.id }}">
           <button class="btn btn-sm" type="submit">연결 해제</button>
         </form>
-      </article>
+        {% endif %}
+      {% endcall %}
+      {% endfor %}
+      </div>
       {% else %}
       <div class="empty-state"><p>아직 연결된 소재가 없습니다. 키워드를 저장한 뒤 「자동 연결」을 눌러보세요.</p></div>
-      {% endfor %}
+      {% endif %}
       {% if total > 50 %}
       <nav class="pager" aria-label="페이지 이동">
         {% if page > 1 %}<a class="btn" href="{{ page_url(page - 1) }}">이전</a>{% endif %}

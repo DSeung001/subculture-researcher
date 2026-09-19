@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 
 from collectors.common import save_records
 from collectors.http import RobotsPolicy, get_html
+from collectors.images import detail_image
 from content_store import normalize_url
 
 
@@ -140,7 +141,7 @@ def figurefarm_items(source: dict):
                 "sizeText": _labeled_value(soup, "치수"),
                 "price": price,
                 "currency": "KRW" if price is not None else None,
-                "imageUrl": _first_meta(soup, "og:image"),
+                "imageUrl": detail_image(soup, final_url, source),
                 "productCheckedAt": datetime.now(timezone.utc),
                 "_errors": [],
             }

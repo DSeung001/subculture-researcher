@@ -1,10 +1,13 @@
 from datetime import datetime
 
 import requests
+from bs4 import BeautifulSoup
 
 from content_store import normalize_url
 from collectors.common import save_records
 from collectors.http import USER_AGENT
+from collectors.images import first_image
+from image_urls import clean_image_url
 
 
 def _dig(obj, path: str):
@@ -13,6 +16,20 @@ def _dig(obj, path: str):
             return None
         obj = obj[int(key)] if key.isdigit() else obj.get(key)
     return obj
+
+
+def _entry_image(entry, source: dict, base_url: str) -> str | None:
+    """`image_field` holds a URL; `image_html_field` holds HTML whose first usable <img> is used."""
+    deny = source.get("image_deny_patterns", [])
+    if source.get("image_field"):
+        url = clean_image_url(_dig(entry, source["image_field"]), base_url, deny)
+        if url:
+            return url
+    if source.get("image_html_field"):
+        html = _dig(entry, source["image_html_field"])
+        if isinstance(html, str):
+            return first_image(BeautifulSoup(html, "html.parser"), "img", base_url, deny)
+    return None
 
 
 def json_api_items(source: dict):
@@ -44,6 +61,9 @@ def json_api_items(source: dict):
         item = {"url": url, "title": title, "publishedAt": published_at, "_errors": []}
         if source.get("summary_field"):
             item["summary"] = (_dig(entry, source["summary_field"]) or "")[:500]
+        image = _entry_image(entry, source, url)
+        if image:
+            item["imageUrl"] = image
         yield item
         count += 1
         if count >= limit:

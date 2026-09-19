@@ -9,6 +9,7 @@ from google.api_core.exceptions import AlreadyExists
 
 from translate import enrich_translation
 from content_model import category_collection
+from image_urls import http_url
 
 
 TRACKING_PARAMS = {
@@ -79,6 +80,11 @@ class ContentStore:
         ]
 
     def save(self, item: dict) -> dict[str, int]:
+        # Only plain http(s) image links are ever stored or rendered.
+        image_url = http_url(item.get("imageUrl"))
+        item = {k: v for k, v in item.items() if k != "imageUrl"}
+        if image_url:
+            item["imageUrl"] = image_url
         url = normalize_url(item["url"])
         canonical_id = doc_id(url)
         existing = self.by_url.get(url, [])

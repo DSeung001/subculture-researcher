@@ -38,7 +38,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
-    product_mode: true
+    fetch_detail_image: true  # 목록에는 이미지가 없어 상세 og:image(보도자료 대표 이미지)를 쓴다
 
   # 일본 애니 공식 YouTube 채널. channel_id로 공식 Atom feed만 읽는다.
   # RSS가 간헐 404를 내므로 자동 스케줄에서 제외하고 collect_manual.py로만 실행한다.
@@ -95,7 +95,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
-    product_mode: true
+    list_image_selector: img  # li.item 안의 기사별 list.jpg
 
   # 제조사 공식 뉴스. 신제품/예약/출시 공지를 원천 데이터로 사용한다.
   - name: Good Smile Company 뉴스
@@ -110,7 +110,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
-    product_mode: true
+    # 이미지는 수집하지 않는다: 상세 og:image가 배송·공지용 텍스트 그래픽(/notice/)이라 제품 사진이 아니다.
 
   # 일본 굿즈/피규어 미디어 허브. 본문 카드(.c-item)만 모아 사이드 랭킹을 제외한다.
   - name: Animate Times 굿즈
@@ -126,7 +126,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
-    product_mode: true
+    list_image_selector: img  # .c-item 카드의 기사별 이미지
 
   # 국내 애니/굿즈 뉴스. 애니메이션 유입용 콘텐츠 후보를 수집한다.
   - name: 애니플러스 뉴스
@@ -154,7 +154,7 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
-    product_mode: true
+    list_image_selector: img  # 카드(a) 안의 기사별 이미지
 
   # 로그인/JS 이동이 필요한 국내 페어·이벤트. 로컬 Playwright 프로필로만 수집한다.
   - name: 애니메이트 코리아 페어·이벤트
@@ -188,6 +188,7 @@ sources:
     date_field: writeday
     date_format: '%Y-%m-%d %H:%M:%S.%f'
     detail_url_template: 'https://www.agfkorea.com/post/1/{id}'
+    image_html_field: content  # 공지 본문 HTML의 첫 <img>(안내 이미지)
     region: KR
     category: FESTIVAL
     content_angle: NEWS
@@ -211,6 +212,7 @@ sources:
     browser_profile: laftel
     interactive_message: '라프텔 로그인 후 인기 애니/이번주/분기/요일별 신작 등 원하는 목록 화면으로 이동하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href]'
+    list_image_selector: img  # 작품 카드의 포스터
     allow_patterns:
       - '^https://laftel\.net/'
     deny_patterns:
@@ -401,7 +403,9 @@ sources:
     max_items: 40
     enabled: true
     respect_robots: true
-    product_mode: true
+    fetch_detail_image: true  # 목록 이미지는 blur_30 저화질 미리보기라 상세 og:image(w_1000)를 쓴다
+    image_deny_patterns:
+      - 'blur_\d+'
 
   # 다른 대형 페스티벌은 확인 결과 자동 수집기로 붙이기 어려웠다:
   # - Wonder Festival(wonfes.jp) 공지: robots.txt는 허용하지만 모든 공지가 /info/ 한 페이지 안의

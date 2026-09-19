@@ -113,56 +113,30 @@
       {% endif %}
     {% endwith %}
 
+    {% from "_item_card.html" import item_card %}
     <div class="items">
       {% for item in items %}
-      <article class="card">
-        <div class="card-row">
-          <label class="card-select">
+      {% call(slot) item_card(item['_view']) %}
+        {% if slot == 'select' %}
+          <label class="card-select-label">
             <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_ref'] }}" form="draft-create-form" aria-label="글에 포함">
           </label>
-          <div class="card-main">
-            <p class="card-title">
-              {% if item['_is_new_today'] %}<span class="new-badge" title="오늘 수집">N</span>{% endif %}<span class="title-variant title-translated">{% if item['_title_date'] %}<span class="card-date">게시 {{ item['_title_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}{% if item['_lang_tag'] %}<span class="lang-tag">[{{ item['_lang_tag'] }}]</span>{% endif %}<strong>{{ item['_title_text'] }}</strong></span>{% if item['_original_title'] %}<span class="title-variant title-original" hidden>{% if item['_original_date'] %}<span class="card-date">게시 {{ item['_original_date'] }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}<strong>{{ item['_original_text'] }}</strong></span><button type="button" class="original-toggle" aria-pressed="false">원어 제목</button>{% endif %}{% if item.url %}<a class="original-toggle" href="{{ item.url }}" target="_blank" rel="noopener">자세히보기</a>{% endif %}
-            </p>
-            <div class="card-meta-row">
-              <p class="card-meta">
-                <strong>추천 {{ item['_signal_score'] }}</strong>
-                {% for label in item['_signal_labels'] %} · {{ label }}{% endfor %}
-                · {{ item['_meta'] }}
-              </p>
-              <button type="button" class="more-trigger" data-dialog-target="more-dialog-{{ item['_id'] }}">더보기</button>
-            </div>
-            {% if item['_product_caption'] %}<p class="card-summary"><strong>{{ item['_product_caption'] }}</strong></p>{% endif %}
-            {% if item['_summary'] %}<p class="card-summary">{{ item['_summary'] }}</p>{% endif %}
-          </div>
-          <div class="card-actions">
-            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
-              <input type="hidden" name="status" value="KEEP">
-              <input type="hidden" name="next" value="{{ next_url }}">
-              <button type="submit" class="icon-btn" aria-label="채택" data-tooltip="채택">✅</button>
-            </form>
-            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
-              <input type="hidden" name="status" value="HOLD">
-              <input type="hidden" name="next" value="{{ next_url }}">
-              <button type="submit" class="icon-btn" aria-label="보류" data-tooltip="보류">⏸️</button>
-            </form>
-            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
-              <input type="hidden" name="status" value="IGNORE">
-              <input type="hidden" name="next" value="{{ next_url }}">
-              <button type="submit" class="icon-btn" aria-label="무시" data-tooltip="무시">🚫</button>
-            </form>
-            <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
-              <input type="hidden" name="status" value="NEW">
-              <input type="hidden" name="next" value="{{ next_url }}">
-              <button type="submit" class="icon-btn" aria-label="새 항목" data-tooltip="새 항목">🔄</button>
-            </form>
-            <form method="post" action="{{ url_for('publish_item', category=item['_category'], item_id=item['_id']) }}">
-              <input type="hidden" name="next" value="{{ next_url }}">
-              <button type="submit" class="icon-btn" aria-label="발행함" data-tooltip="발행함">📤</button>
-            </form>
-          </div>
-        </div>
-      </article>
+        {% elif slot == 'meta_end' %}
+          <button type="button" class="more-trigger" data-dialog-target="more-dialog-{{ item['_id'] }}">더보기</button>
+        {% elif slot == 'actions' %}
+          {% for status, label, icon in [('KEEP', '채택', '✅'), ('HOLD', '보류', '⏸️'), ('IGNORE', '무시', '🚫'), ('NEW', '새 항목', '🔄')] %}
+          <form method="post" action="{{ url_for('set_status', category=item['_category'], item_id=item['_id']) }}">
+            <input type="hidden" name="status" value="{{ status }}">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <button type="submit" class="icon-btn" aria-label="{{ label }}" data-tooltip="{{ label }}">{{ icon }}</button>
+          </form>
+          {% endfor %}
+          <form method="post" action="{{ url_for('publish_item', category=item['_category'], item_id=item['_id']) }}">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <button type="submit" class="icon-btn" aria-label="발행함" data-tooltip="발행함">📤</button>
+          </form>
+        {% endif %}
+      {% endcall %}
 
       <dialog id="more-dialog-{{ item['_id'] }}" class="modal modal-wide">
         <div class="modal-header">
@@ -177,7 +151,7 @@
             </label>
             <button type="submit" class="btn btn-primary full">메모 저장</button>
           </form>
-          <p class="metric-caption">{{ item['_metric_caption'] }}</p>
+          <p class="metric-caption">{{ item['_view'].metric_caption }}</p>
           {% if item.summaryKo %}<p class="full-summary">{{ item.summaryKo[:500] }}</p>{% endif %}
           {% if item.summary %}<p class="full-summary">{{ item.summary[:500] }}</p>{% endif %}
         </div>

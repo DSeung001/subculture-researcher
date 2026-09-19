@@ -120,22 +120,15 @@
         </form>
       </section>
 
+      {% from "_item_card.html" import item_card %}
+      {% if items %}
+      <div class="items">
       {% for item in items %}
-      {% set status = sale_status.get(item.data.get('saleStatus')) %}
-      {% set price = item.data.get('price') %}
-      <article class="library-panel library-item">
-        <div class="item-check"><input aria-label="{{ item.title }} 선택" type="checkbox" name="item_ids" value="{{ item.id }}" form="library-bulk" class="library-item-select"></div>
-        <div>
-          <h3>{% if item.url.startswith('https://') or item.url.startswith('http://') %}<a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</h3>
-          <div class="item-meta">
-            {% if status %}<span class="status-badge {{ status[1] }}">{{ status[0] }}</span>{% endif %}
-            <span class="tag">{{ item.source or '출처 없음' }}</span>
-            {% if price is number %}<span>{{ '{:,}'.format(price) }}{{ '원' if (item.data.get('currency') or 'KRW') == 'KRW' else ' ' ~ item.data.currency }}</span>{% endif %}
-            {% if item.deadline %}<span class="{{ 'overdue' if item.deadline < today }}" title="{{ '예약마감이 지났습니다' if item.deadline < today }}">예약마감 {{ item.deadline }}</span>{% endif %}
-            {% if item.data.get('releaseWindowText') %}<span>입고·발매예정 {{ item.data.releaseWindowText }}</span>{% endif %}
-            {% if not item.terms.works %}<span class="tag warn">작품 미분류</span>{% endif %}
-          </div>
-          {% if item.data.get('summaryKo') or item.data.get('summary') %}<p class="item-summary">{{ (item.data.get('summaryKo') or item.data.get('summary'))[:350] }}</p>{% endif %}
+      {% call(slot) item_card(item.view) %}
+        {% if slot == 'select' %}
+          <label class="card-select-label"><input aria-label="{{ item.title }} 선택" type="checkbox" name="item_ids" value="{{ item.id }}" form="library-bulk" class="library-item-select"></label>
+        {% elif slot == 'extra' %}
+          {% if not item.terms.works %}<p class="card-flags"><span class="tag warn">작품 미분류</span></p>{% endif %}
           {% for table, label in taxonomies.items() %}{% if item.terms[table] %}<div class="term-row"><small>{{ label }}</small>{% for term in item.terms[table] %}<span class="term {{ 'work' if table == 'works' }}">{{ term.name }}</span>{% endfor %}</div>{% endif %}{% endfor %}
           {% for suggestion in suggestions.get(item.id, []) %}
           <form class="suggestion" method="post" action="{{ url_for('library.assign') }}">
@@ -152,14 +145,16 @@
             <div class="form-actions"><button class="btn btn-sm btn-primary">저장</button><button class="btn btn-sm" name="action" value="remove">기획에서 빼기</button></div>
           </form>
           {% endif %}
-        </div>
-      </article>
+        {% endif %}
+      {% endcall %}
+      {% endfor %}
+      </div>
       {% else %}
       <section class="library-panel empty-state">
         <h3>아직 표시할 소재가 없습니다.</h3>
         <p>{{ '전체 소재에서 항목을 선택해 이 기획에 담아주세요.' if collection else '클라우드에서 동기화하거나 탐색 조건을 조정해주세요.' }}</p>
       </section>
-      {% endfor %}
+      {% endif %}
 
       {% if pages > 1 %}
       <nav class="pager" aria-label="페이지 이동">

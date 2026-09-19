@@ -11,7 +11,9 @@ import time
 from pathlib import Path
 
 from collectors.common import extract_product_fields, save_records
+from collectors.images import MIN_SIDE
 from content_store import normalize_url
+from image_urls import clean_image_url
 
 
 ABSOLUTE_URL_RE = re.compile(r"https?://[^\s'\"<>]+")
@@ -76,20 +78,51 @@ def _title(locator, context: str) -> str:
     return "(제목 없음)"
 
 
-def _product_fields(source: dict, text: str, locator=None) -> dict:
-    image_url = None
-    if locator is not None:
-        try:
-            image_url = locator.evaluate(
-                """el => {
-                    const node = el.closest('article, li, section, div') || el.parentElement || el;
-                    const img = node.querySelector('img');
-                    return img ? (img.currentSrc || img.src || null) : null;
-                }"""
-            )
-        except Exception:
-            image_url = None
+CARD_IMAGES_JS = """(el, selector) => {
+    // Grow from the link to the widest ancestor that still holds only this item's links.
+    const found = [];
+    let node = el;
+    for (let depth = 0; node && depth < 6; depth += 1) {
+        if (depth > 0) {
+            const links = new Set(Array.from(node.querySelectorAll('a[href]'), a => a.href));
+            if (links.size > 1) break;
+        }
+        node.querySelectorAll(selector).forEach(img => {
+            if (found.some(f => f.el === img)) return;
+            found.push({
+                el: img,
+                lazy: img.getAttribute('data-src') || img.getAttribute('data-original') || '',
+                src: img.currentSrc || img.getAttribute('src') || '',
+                width: img.naturalWidth || 0,
+                height: img.naturalHeight || 0,
+            });
+        });
+        if (found.length) break;
+        node = node.parentElement;
+    }
+    return found.map(({el, ...rest}) => rest);
+}"""
 
+
+def _card_image(source: dict, locator, page_url: str) -> str | None:
+    """First real photo on the item's card; logos, icons and placeholders are skipped."""
+    selector = source.get("list_image_selector") or "img"
+    deny = source.get("image_deny_patterns", [])
+    try:
+        candidates = locator.evaluate(CARD_IMAGES_JS, selector)
+    except Exception:
+        return None
+    for candidate in candidates or []:
+        width, height = candidate.get("width") or 0, candidate.get("height") or 0
+        if width and height and width < MIN_SIDE and height < MIN_SIDE:
+            continue
+        url = clean_image_url(candidate.get("lazy") or candidate.get("src"), page_url, deny)
+        if url:
+            return url
+    return None
+
+
+def _product_fields(source: dict, text: str, image_url: str | None = None) -> dict:
     return extract_product_fields(source, text, image_url)
 
 
@@ -199,8 +232,12 @@ def local_browser_items(source: dict):
                     "publishedAt": None,
                     "_errors": [],
                 }
+                if source.get("product_mode", False) or source.get("list_image_selector"):
+                    image_url = _card_image(source, locator, page.url)
+                    if image_url:
+                        item["imageUrl"] = image_url
                 if source.get("product_mode", False):
-                    item.update(_product_fields(source, context_text, locator))
+                    item.update(_product_fields(source, context_text, item.get("imageUrl")))
 
                 seen.add(url)
                 yield item

@@ -2,6 +2,15 @@ document.querySelectorAll(".auto-submit").forEach((el) => {
   el.addEventListener("change", () => el.form.submit());
 });
 
+// A photo link that fails (hotlink block, 404) falls back to the card's empty thumbnail.
+const markBrokenThumb = (img) => img.closest(".card-thumb")?.classList.add("is-broken");
+document.addEventListener("error", (event) => {
+  if (event.target.matches?.("img.card-thumb-img")) markBrokenThumb(event.target);
+}, true);
+document.querySelectorAll("img.card-thumb-img").forEach((img) => {
+  if (img.complete && img.naturalWidth === 0) markBrokenThumb(img);
+});
+
 document.addEventListener("click", (event) => {
   const confirmation = event.target.closest("[data-confirm]");
   if (confirmation && !window.confirm(confirmation.dataset.confirm)) {

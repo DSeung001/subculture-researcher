@@ -1,0 +1,39 @@
+{#- One item card for every list (inbox, 작품·기획, 작품 편집).
+    `v` is presentation.card_view(item). Page-specific parts come in through the
+    call block, which is invoked once per slot:
+      {% call(slot) item_card(v) %}{% if slot == 'select' %}…{% endif %}{% endcall %}
+    Slots: select (checkbox), meta_end (right of the meta line), extra (below the summary),
+    actions (right column). An empty slot renders nothing. -#}
+{% macro item_card(v) %}
+{% set select = caller('select')|trim %}
+{% set meta_end = caller('meta_end')|trim %}
+{% set extra = caller('extra')|trim %}
+{% set actions = caller('actions')|trim %}
+<article class="card item-card">
+  <div class="card-row">
+    {% if select %}<div class="card-select">{{ select }}</div>{% endif %}
+    {% if v.image_url %}
+    <a class="card-thumb" href="{{ v.url or v.image_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="{{ v.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
+    {% else %}
+    <div class="card-thumb card-thumb-empty" aria-hidden="true"><span>{{ v.category_label }}</span></div>
+    {% endif %}
+    <div class="card-main">
+      <p class="card-title">
+        {% if v.is_new_today %}<span class="new-badge" title="오늘 수집">N</span>{% endif %}<span class="title-variant title-translated">{% if v.title_date %}<span class="card-date">게시 {{ v.title_date }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}{% if v.lang_tag %}<span class="lang-tag">[{{ v.lang_tag }}]</span>{% endif %}<strong>{{ v.title_text }}</strong></span>{% if v.original_title %}<span class="title-variant title-original" hidden>{% if v.original_date %}<span class="card-date">게시 {{ v.original_date }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}<strong>{{ v.original_text }}</strong></span><button type="button" class="original-toggle" aria-pressed="false">원어 제목</button>{% endif %}{% if v.url %}<a class="original-toggle" href="{{ v.url }}" target="_blank" rel="noopener">자세히보기</a>{% endif %}
+      </p>
+      <div class="card-meta-row">
+        <p class="card-meta">
+          <strong>추천 {{ v.signal_score }}</strong>
+          {% for label in v.signal_labels %} · {{ label }}{% endfor %}
+          · {{ v.meta }}
+        </p>
+        {{ meta_end }}
+      </div>
+      {% if v.product_caption %}<p class="card-summary"><strong>{{ v.product_caption }}</strong></p>{% endif %}
+      {% if v.summary %}<p class="card-summary">{{ v.summary }}</p>{% endif %}
+      {{ extra }}
+    </div>
+    {% if actions %}<div class="card-actions">{{ actions }}</div>{% endif %}
+  </div>
+</article>
+{% endmacro %}

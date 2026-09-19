@@ -4,7 +4,59 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
 
+from image_urls import http_url
+
 KST = ZoneInfo("Asia/Seoul")
+CATEGORY_LABELS = {
+    "ANIME": "애니",
+    "CHARACTER": "캐릭터",
+    "FIGURE": "피규어",
+    "GOODS": "굿즈",
+    "COLLECTION": "컬렉션",
+    "FESTIVAL": "페스티벌",
+    "UNKNOWN": "미분류",
+}
+STATUS_LABELS = {
+    "NEW": "새 항목",
+    "KEEP": "채택",
+    "HOLD": "보류",
+    "IGNORE": "무시",
+}
+ANGLE_LABELS = {
+    "NEWS": "뉴스",
+    "COMPARE": "비교",
+    "SIZE": "크기",
+    "PRICE": "가격",
+    "QUESTION": "질문/고민",
+    "GUIDE": "가이드",
+    "COLLECTION": "컬렉션",
+}
+TIER_LABELS = {
+    "OFFICIAL": "공식",
+    "MEDIA": "미디어",
+}
+REGION_LABELS = {
+    "JP": "일본",
+    "KR": "국내",
+    "US": "미국",
+    "CN": "중국",
+}
+LANGUAGE_TAGS = {
+    "en": "EN",
+    "ja": "JA",
+    "zh": "CH",
+    "zh-cn": "CH",
+    "zh-tw": "CH",
+    "ko": "KO",
+}
+SALE_STATUS_LABELS = {
+    "PREORDER": "예약중",
+    "IN_STOCK": "판매중",
+    "SOLD_OUT": "품절",
+    "UNKNOWN": "상태 미확인",
+}
+# Firestore documents reach the local library as JSON, so timestamps arrive as ISO strings.
+DATETIME_FIELDS = ("collectedAt", "postedAt", "viewCountCheckedAt", "likeCountCheckedAt")
 _LEADING_DATE = re.compile(
     r"^(?P<date>\d{4}[./-]\d{1,2}[./-]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?)\s+(?P<title>.+)$"
 )
@@ -179,27 +231,24 @@ def metric_caption(item: dict) -> str:
     return " | ".join(parts)
 
 
-def product_caption(item: dict) -> str:
+def product_caption(item: dict, *, today: str | None = None) -> str:
     if item.get("entityType") != "PRODUCT":
         return ""
     parts = []
     if item.get("shop"):
         parts.append(str(item["shop"]))
     status = item.get("saleStatus")
-    status_labels = {
-        "PREORDER": "예약중",
-        "IN_STOCK": "판매중",
-        "SOLD_OUT": "품절",
-        "UNKNOWN": "상태 미확인",
-    }
     if status:
-        parts.append(status_labels.get(status, str(status)))
+        parts.append(SALE_STATUS_LABELS.get(status, str(status)))
     price = item.get("price")
     if isinstance(price, int):
         currency = item.get("currency") or "KRW"
         parts.append(f"{price:,}원" if currency == "KRW" else f"{price:,} {currency}")
     if item.get("preorderEndAt"):
-        parts.append(f"예약마감 {item['preorderEndAt']}")
+        today = today or datetime.now(KST).date().isoformat()
+        deadline = str(item["preorderEndAt"])
+        # A stored PREORDER status can be stale; make an elapsed deadline visible.
+        parts.append(f"예약마감 {deadline}" + (" (마감 지남)" if deadline[:10] < today else ""))
     if item.get("releaseWindowText"):
         parts.append(f"입고 {item['releaseWindowText']}")
     if item.get("manufacturer"):
@@ -207,3 +256,70 @@ def product_caption(item: dict) -> str:
     if item.get("sizeText"):
         parts.append(str(item["sizeText"]))
     return " · ".join(parts)
+
+
+def _with_datetimes(item: dict) -> dict:
+    data = dict(item)
+    for field in DATETIME_FIELDS:
+        if isinstance(data.get(field), str):
+            data[field] = parse_published_at(data[field]) or data[field]
+    return data
+
+
+def card_view(item: dict) -> dict:
+    """Everything an item card shows, from one Firestore-shaped document.
+
+    The inbox (Firestore) and the local library (JSON payload of the same
+    document) both render through this, so the two lists cannot drift apart.
+    """
+    data = _with_datetimes(item)
+    category = data.get("category", "UNKNOWN")
+    angle = data.get("contentAngle", "NEWS")
+    status = data.get("status", "NEW")
+    tier = data.get("sourceTier") or "MEDIA"
+    posted_at = data.get("postedAt")
+
+    original_title = data.get("title") or "(제목 없음)"
+    title_ko = (data.get("titleKo") or "").strip()
+    display_title = title_ko or original_title
+    title_date, title_text = split_leading_date(display_title)
+    original_date, original_text = split_leading_date(original_title)
+    shows_original = bool(title_ko and title_ko != original_title)
+    language = (data.get("sourceLanguage") or "").strip().lower()
+    posted_label = (
+        f"발행 {format_date_kst(posted_at)}"
+        if isinstance(posted_at, datetime)
+        else ("발행됨" if posted_at else "미발행")
+    )
+    meta = " · ".join(
+        value for value in [
+            data.get("source"),
+            CATEGORY_LABELS.get(category, category),
+            ANGLE_LABELS.get(angle, angle),
+            TIER_LABELS.get(tier, tier),
+            STATUS_LABELS.get(status, status),
+            posted_label,
+            date_caption(data),
+        ] if value
+    )
+    return {
+        "title_text": title_text,
+        "title_date": title_date,
+        "original_title": original_title if shows_original else "",
+        "original_text": original_text,
+        "original_date": original_date,
+        "lang_tag": (
+            LANGUAGE_TAGS.get(language, language.upper())
+            if shows_original and language and language != "unknown" else ""
+        ),
+        "url": http_url(data.get("url")) or "",
+        "image_url": http_url(data.get("imageUrl")) or "",
+        "category_label": CATEGORY_LABELS.get(category, category),
+        "is_new_today": is_new_today(data),
+        "meta": meta,
+        "summary": summary_preview(data),
+        "metric_caption": metric_caption(data),
+        "product_caption": product_caption(data),
+        "signal_score": content_score(data),
+        "signal_labels": signal_labels(data),
+    }

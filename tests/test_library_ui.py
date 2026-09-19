@@ -67,12 +67,13 @@ class LibraryUiTests(unittest.TestCase):
         self.assertIn("현재 조건을 저장 필터로 저장", filtered)
 
     def test_past_deadline_is_marked_and_sale_status_is_labelled(self):
+        product = {"entityType": "PRODUCT", "shop": "따빼몰", "currency": "KRW"}
         self.lib.sync(cloud(
-            snapshot("old", preorderEndAt="2000-01-01", saleStatus="PREORDER", price=12000, currency="KRW"),
-            snapshot("future", preorderEndAt="2999-01-01", saleStatus="SOLD_OUT"),
+            snapshot("old", preorderEndAt="2000-01-01", saleStatus="PREORDER", price=12000, **product),
+            snapshot("future", preorderEndAt="2999-01-01", saleStatus="SOLD_OUT", **product),
         ))
         html = self.client.get("/library").get_data(as_text=True)
-        self.assertEqual(html.count('class="overdue"'), 1)
+        self.assertEqual(html.count("(마감 지남)"), 1)
         self.assertIn("예약중", html)
         self.assertIn("품절", html)
         self.assertIn("12,000원", html)

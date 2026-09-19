@@ -9,6 +9,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 
 from local_library import FILTER_KEYS, TAXONOMIES, Library
 from library_database import SchemaError
+from presentation import card_view
 
 
 library = Blueprint("library", __name__, url_prefix="/library")
@@ -26,6 +27,12 @@ FILTER_LABELS = {"q": "검색", "deadline_from": "마감 시작", "deadline_to":
 
 def store():
     return Library(current_app.config.get("LIBRARY_PATH"))
+
+
+def show(items):
+    """Give every row the same card model the inbox uses (payload = the Firestore document)."""
+    for item in items:
+        item["view"] = card_view(item["data"])
 
 
 def filters_from(values):
@@ -76,6 +83,7 @@ def index():
         flash("예약 마감일을 올바른 날짜로 입력해주세요.", "error")
         return redirect(url_for("library.index"))
     terms = local.terms()
+    show(items)
     return render_template(
         "library.html", items=items, total=total, terms=terms, taxonomies=TAXONOMIES,
         filters=filters, page=page, collection=collection, **overview,
@@ -112,6 +120,7 @@ def work_edit(work_id):
     except ValueError:
         flash("작품을 찾을 수 없습니다.", "error")
         return redirect(url_for("library.settings"))
+    show(items)
     return render_template(
         "library_work.html", work=work, items=items, total=total,
         page=max(1, request.args.get("page", 1, type=int)),

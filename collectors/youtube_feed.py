@@ -6,6 +6,7 @@ import requests
 from collectors.common import save_records
 from collectors.http import USER_AGENT
 from content_store import normalize_url
+from image_urls import clean_image_url
 
 
 CHANNEL_ID_RE = re.compile(r'UC[0-9A-Za-z_-]{22}')
@@ -62,7 +63,7 @@ def youtube_feed_items(source: dict):
         link = entry.get("link")
         if not link:
             continue
-        yield {
+        item = {
             "url": normalize_url(link),
             "title": entry.get("title") or "(untitled)",
             "summary": (entry.get("summary") or "")[:500],
@@ -71,6 +72,22 @@ def youtube_feed_items(source: dict):
             "channelId": channel_id,
             "_errors": [],
         }
+        thumbnail = _thumbnail(entry)
+        if thumbnail:
+            item["imageUrl"] = thumbnail
+        yield item
+
+
+def _thumbnail(entry) -> str | None:
+    """The video's own thumbnail: the feed's media:thumbnail, else derived from the video id."""
+    for media in entry.get("media_thumbnail") or []:
+        url = clean_image_url(media.get("url"))
+        if url:
+            return url
+    video_id = (entry.get("yt_videoid") or "").strip()
+    if re.fullmatch(r"[0-9A-Za-z_-]{11}", video_id):
+        return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+    return None
 
 
 def collect_youtube_feed(db, source: dict, store=None) -> dict:

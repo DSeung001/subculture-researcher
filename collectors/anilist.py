@@ -5,6 +5,7 @@ from firebase_admin import firestore
 
 from collectors.common import save_records
 from collectors.http import USER_AGENT
+from image_urls import clean_image_url
 
 
 ANILIST_API = "https://graphql.anilist.co"
@@ -24,6 +25,9 @@ query TrendingAnime($page: Int!, $perPage: Int!) {
         romaji
         english
         native
+      }
+      coverImage {
+        large
       }
       trending
       popularity
@@ -72,6 +76,9 @@ def anilist_items(source: dict):
             "signalCheckedAt": checked_at,
             "_errors": [],
         }
+        cover = clean_image_url((media.get("coverImage") or {}).get("large"))
+        if cover:
+            item["imageUrl"] = cover
         airing = media.get("nextAiringEpisode") or {}
         if airing.get("airingAt"):
             item["nextAiringAt"] = datetime.fromtimestamp(

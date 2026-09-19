@@ -28,61 +28,17 @@ from sources_config import load_sources
 
 load_dotenv()
 from presentation import (
-    date_caption,
+    ANGLE_LABELS,
+    CATEGORY_LABELS,
+    REGION_LABELS,
+    STATUS_LABELS,
+    TIER_LABELS,
+    card_view,
     format_date_kst,
-    is_new_today,
-    metric_caption,
-    product_caption,
-    content_score,
-    signal_labels,
     sort_items,
-    split_leading_date,
-    summary_preview,
 )
 
 
-CATEGORY_LABELS = {
-    "ANIME": "애니",
-    "CHARACTER": "캐릭터",
-    "FIGURE": "피규어",
-    "GOODS": "굿즈",
-    "COLLECTION": "컬렉션",
-    "FESTIVAL": "페스티벌",
-    "UNKNOWN": "미분류",
-}
-STATUS_LABELS = {
-    "NEW": "새 항목",
-    "KEEP": "채택",
-    "HOLD": "보류",
-    "IGNORE": "무시",
-}
-ANGLE_LABELS = {
-    "NEWS": "뉴스",
-    "COMPARE": "비교",
-    "SIZE": "크기",
-    "PRICE": "가격",
-    "QUESTION": "질문/고민",
-    "GUIDE": "가이드",
-    "COLLECTION": "컬렉션",
-}
-TIER_LABELS = {
-    "OFFICIAL": "공식",
-    "MEDIA": "미디어",
-}
-REGION_LABELS = {
-    "JP": "일본",
-    "KR": "국내",
-    "US": "미국",
-    "CN": "중국",
-}
-LANGUAGE_TAGS = {
-    "en": "EN",
-    "ja": "JA",
-    "zh": "CH",
-    "zh-cn": "CH",
-    "zh-tw": "CH",
-    "ko": "KO",
-}
 DRAFT_STATUSES = ["DRAFT", "POSTED"]
 DRAFT_STATUS_LABELS = {
     "DRAFT": "초안",
@@ -218,53 +174,8 @@ def index():
     next_url = build_url(list_filters)
 
     for item in items:
-        category_value = item.get("category", "UNKNOWN")
-        angle_value = item.get("contentAngle", "NEWS")
-        status_value = item.get("status", "NEW")
-        tier_value = item.get("sourceTier") or "MEDIA"
-        posted_at = item.get("postedAt")
-
-        original_title = item.get("title") or "(제목 없음)"
-        title_ko = (item.get("titleKo") or "").strip()
-        display_title = title_ko or original_title
-        title_date, title_text = split_leading_date(display_title)
-        original_date, original_text = split_leading_date(original_title)
-        item["_title"] = display_title
-        item["_title_date"] = title_date
-        item["_title_text"] = title_text
-        item["_original_title"] = original_title if title_ko and title_ko != original_title else ""
-        item["_original_date"] = original_date
-        item["_original_text"] = original_text
-        source_language = (item.get("sourceLanguage") or "").strip().lower()
-        item["_lang_tag"] = (
-            LANGUAGE_TAGS.get(source_language, source_language.upper())
-            if item["_original_title"] and source_language and source_language != "unknown"
-            else ""
-        )
-        item["_is_new_today"] = is_new_today(item)
-        posted_label = (
-            f"발행 {format_date_kst(posted_at)}"
-            if isinstance(posted_at, datetime)
-            else ("발행됨" if posted_at else "미발행")
-        )
-        item["_meta"] = " · ".join(
-            value
-            for value in [
-                item.get("source"),
-                CATEGORY_LABELS.get(category_value, category_value),
-                ANGLE_LABELS.get(angle_value, angle_value),
-                TIER_LABELS.get(tier_value, tier_value),
-                STATUS_LABELS.get(status_value, status_value),
-                posted_label,
-                date_caption(item),
-            ]
-            if value
-        )
-        item["_summary"] = summary_preview(item)
-        item["_metric_caption"] = metric_caption(item)
-        item["_product_caption"] = product_caption(item)
-        item["_signal_score"] = content_score(item)
-        item["_signal_labels"] = signal_labels(item)
+        # Same card model as the local library list (presentation.card_view).
+        item["_view"] = card_view(item)
 
     more_url = build_url(list_filters, after=cursor_id) if has_more and cursor_id else ""
 

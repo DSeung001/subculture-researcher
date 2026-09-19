@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timezone
 
 from content_store import ContentStore
+from image_urls import clean_image_url
 
 
 PRICE_RE = re.compile(r"(?<!\d)(\d{1,3}(?:,\d{3})+)\s*원")
@@ -54,16 +55,20 @@ def extract_product_fields(source: dict, text: str, image_url: str | None = None
             deadline = f"{year:04d}-{month:02d}-{day:02d}"
             break
 
-    return {
+    fields = {
         "entityType": "PRODUCT",
         "shop": source.get("shop") or source["name"],
         "saleStatus": status,
         "price": price,
         "currency": "KRW",
         "preorderEndAt": deadline,
-        "imageUrl": image_url,
         "productCheckedAt": datetime.now(timezone.utc),
     }
+    # Left out when absent so it never overwrites a photo found elsewhere (list card).
+    photo = clean_image_url(image_url, deny=source.get("image_deny_patterns", []))
+    if photo:
+        fields["imageUrl"] = photo
+    return fields
 
 
 def metadata(source: dict, **fields) -> dict:
