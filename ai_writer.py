@@ -72,12 +72,17 @@ PROMPT_TEMPLATE = (
     "- 마지막 줄에 본문 내용과 직접 관련된 해시태그를 2~4개 붙여줘 (띄어쓰기 없이, 예: #피규어 #굿스마일컴퍼니).\n"
     "- 번호로 준 소재를 모두 본문에 반영해줘 (하나라도 빼지 마).\n"
     "- 제공된 소재에 있는 사실만 쓰고, 없는 일정·가격·설정은 지어내지 마.\n"
+    "- AniList, 트렌딩, 순위/집계 사이트명, 출처 내부명은 본문·해시태그에 쓰지 마. "
+    "인지도는 '인기 있는', '화제의', '지금 주목받는'처럼 자연스러운 SNS 홍보 표현으로 써줘.\n"
     "- 본문과 해시태그만 출력하고 링크는 쓰지 마 (링크는 따로 붙일 거야).\n\n"
     "소재:\n{material}"
 )
 
 CATEGORY_HINTS = {
-    "ANIME": "화제성과 방영/공개 소식 위주로, 왜 지금 이 작품이 주목받는지 짚어줘.",
+    "ANIME": (
+        "화제·인기와 방영/공개 소식을 SNS 홍보 글로 자연스럽게 녹여줘. "
+        "집계 사이트나 트렌딩 순위는 언급하지 마."
+    ),
     "CHARACTER": "캐릭터의 매력 포인트(설정, 인기 이유)를 짚어줘.",
     "FIGURE": "소재에 가격·사이즈·발매(입고)일 정보가 있으면 자연스럽게 녹여줘.",
     "GOODS": "소재에 판매처·가격·한정 여부 정보가 있으면 자연스럽게 녹여줘.",
@@ -85,6 +90,8 @@ CATEGORY_HINTS = {
     "FESTIVAL": "소재에 행사 일정·장소 정보가 있으면 자연스럽게 녹여줘.",
 }
 DEFAULT_CATEGORY_HINT = "핵심 정보를 짚어줘."
+# Source names that leak ranking/site jargon into the public post if passed through.
+_INTERNAL_SOURCE_MARKERS = ("AniList", "트렌딩")
 
 
 class AiWriterError(RuntimeError):
@@ -93,6 +100,32 @@ class AiWriterError(RuntimeError):
 
 def api_key() -> str:
     return (os.environ.get("GEMINI_API_KEY") or "").strip()
+
+
+def _is_public_source(source: str) -> bool:
+    """Shop/media names are fine in the write prompt; ranking feeds are not."""
+    return bool(source) and not any(marker in source for marker in _INTERNAL_SOURCE_MARKERS)
+
+
+def _popularity_hint(item: dict) -> str:
+    trending = item.get("trending")
+    popularity = item.get("popularity")
+    if (isinstance(trending, int) and trending > 0) or (
+        isinstance(popularity, int) and popularity > 0
+    ):
+        return "인기 있는 작품"
+    return ""
+
+
+def _airing_hint(item: dict) -> str:
+    parts = []
+    episode = item.get("episode")
+    if isinstance(episode, int) and episode > 0:
+        parts.append(f"{episode}화")
+    airing = item.get("nextAiringAt")
+    if airing:
+        parts.append(f"다음 방영 {airing}")
+    return " · ".join(parts)
 
 
 def _material_block(items: list[dict]) -> str:
@@ -104,8 +137,14 @@ def _material_block(items: list[dict]) -> str:
         lines.append(f"{idx}. {title}")
         if summary:
             lines.append(f"   요약: {summary[:SUMMARY_CHARS]}")
-        if source:
+        if _is_public_source(source):
             lines.append(f"   출처: {source}")
+        vibe = _popularity_hint(item)
+        if vibe:
+            lines.append(f"   분위기: {vibe}")
+        airing = _airing_hint(item)
+        if airing:
+            lines.append(f"   방영: {airing}")
         # Structured product fields (price/예약 여부/사이즈/발매일 등), not just
         # whatever the scraped summary text happens to mention, so the model
         # can state reservation urgency accurately.
