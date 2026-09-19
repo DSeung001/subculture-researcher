@@ -4,7 +4,9 @@
 
 ## 자동 수집
 
-`python collect.py` (GitHub Actions 포함). 수동 전용 소스는 건너뛰고, HTML 소스는 `robots.txt`를 확인합니다.
+`python collect.py`. GitHub Actions가 매일 KST 08:00(UTC 23:00)에 실행하며 로컬에서도 돌릴 수 있습니다. 수동 전용 소스(`manual_only`/`local_only`)는 건너뛰고, HTML 소스는 `robots.txt`를 확인합니다.
+
+- 로컬 실행은 수집 후 로컬 DB 동기화와 AI 초안 생성까지 기본으로 하며(`--no-sync`, `--no-ai-draft`로 끔), `CI` 환경(Actions)에서는 둘 다 건너뜁니다.
 
 ### 상품·예약 정보 (피규어·굿즈)
 
@@ -31,7 +33,7 @@
 |---|---|
 | HOBBY Watch 피규어 | 목록 카드(기사 링크·사진) |
 | Animate Times 굿즈 | 목록 카드 (`.c-item`) |
-| 애니플러스 뉴스 | 브라우저 렌더링(JS 목록), 2페이지 |
+| 애니플러스 뉴스 | 브라우저 렌더링(JS 목록), 3페이지 |
 | PR TIMES 만화·애니 | 목록 → 상세 `og:image` |
 | McFarlane Toys 뉴스 | 목록 → 상세 `og:image` |
 | AniList 트렌딩 애니 | GraphQL API (트렌딩·인기·다음 방영일·표지) |
@@ -45,8 +47,10 @@
 
 ## 수동 수집
 
-아래 소스는 GitHub Actions/`collect.py`에서 돌리지 않고 `python collect_manual.py`로만 실행합니다.
-(브라우저 기반 수동 소스는 현재 없습니다. Playwright 프로필 수집이 다시 필요하면 여기에 적습니다.)
+아래 소스는 GitHub Actions/`collect.py`에서 돌리지 않고 `python collect_manual.py`로만 실행합니다. `sources.yaml`에서 `manual_only: true`(또는 `local_only: true`)로 표시하며, `collect.py --source`에 수동 소스를, `collect_manual.py --source`에 자동 소스를 주면 오류가 납니다. AI 초안은 `--ai-draft`를 줄 때만 만듭니다(기본 꺼짐).
+(브라우저 기반 수동 소스는 현재 없고 `local_only`를 쓰는 소스도 없습니다. Playwright 프로필 수집이 다시 필요하면 여기에 적습니다.)
+
+소스 등록 없이 하는 수동 입력도 있습니다: 인박스 「+ 콘텐츠 추가」로 URL을 직접 저장하는 방식입니다(아래 코토부키야 몰).
 
 ### YouTube 공식 채널 (RSS)
 
