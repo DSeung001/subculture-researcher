@@ -35,5 +35,5 @@ jobs:
       - name: Collect
         env:
           MYMEMORY_EMAIL: ${{ secrets.MYMEMORY_EMAIL }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python collect.py
+        # Drafts live in the local library, which the cloud runner cannot reach.
+        run: python collect.py --no-ai-draft

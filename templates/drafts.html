@@ -44,13 +44,21 @@
       </div>
       <ul class="draft-sources">
         {% for source in draft['_sources'] %}
-        <li>
-          {% if source.url %}
-          <a href="{{ source.url }}" target="_blank" rel="noopener">{{ source['_title'] }}</a>
+        <li class="draft-source">
+          {% if source['_image'] %}
+          <a class="card-thumb" href="{{ source.url or source['_image'] }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="{{ source['_image'] }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
           {% else %}
-          {{ source['_title'] }}
+          <div class="card-thumb card-thumb-empty" aria-hidden="true"><span>{{ source['_category'] or '사진 없음' }}</span></div>
           {% endif %}
-          {% if source['_used'] %}<span class="used-badge">이미 다른 글에 쓰임</span>{% endif %}
+          <div class="draft-source-text">
+            {% if source.url %}
+            <a href="{{ source.url }}" target="_blank" rel="noopener">{{ source['_title'] }}</a>
+            {% else %}
+            {{ source['_title'] }}
+            {% endif %}
+            {% if source.source %}<span class="draft-source-meta">{{ source.source }}</span>{% endif %}
+            {% if source['_used'] %}<span class="used-badge">이미 다른 글에 쓰임</span>{% endif %}
+          </div>
         </li>
         {% endfor %}
       </ul>

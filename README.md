@@ -56,7 +56,8 @@ python -m playwright install chromium
 |---|---|
 | 앱 열기 | `python app.py` |
 | 자동 수집 | `python collect.py` |
-| AI 초안 없이 자동 수집 | `python collect.py --no-ai-draft` |
+| AI 초안 없이 수집 | `python collect.py --no-ai-draft` (GitHub Actions는 항상 이 옵션) |
+| Firestore에 남은 임시글 삭제 | `python delete_firestore_drafts.py --dry-run` 후 `--dry-run` 없이 실행 (삭제 전 `.local/backups`에 JSON 백업) |
 | 클라우드 → 로컬 동기화 | `python sync_library.py` |
 | 수집 후 곧바로 동기화 | `python collect.py --sync` (`collect_manual.py`도 동일) |
 | 원격에서 사라진 로컬 항목 정리 | `python prune_library.py --dry-run` 후 `--dry-run` 없이 실행 |
@@ -75,7 +76,7 @@ Windows에서 가상환경을 활성화하지 않았다면 위 명령의 `python
 
 자동 수집(`collect.py`)은 YouTube 등 수동 전용 소스를 제외합니다. 수동 수집은 `collect_manual.py`로 YouTube RSS만 돌립니다. 라프텔은 스토어(`store.laftel.net`) 공개 HTML이 자동 수집에 포함됩니다. 일반 자동 수집은 AI 키가 있으면 Firestore 점수 순 혼합 초안도 하나 만듭니다.
 
-임시글은 세 갈래입니다. (1) 수집·`draft.py`·「AI로 글 만들기」의 Firestore 혼합 초안, (2) 동기화·작품 연결 후 `draft.py --by-work` 또는 「작품별로 글 만들기」로 피규어·애니·혼합을 같은 IP끼리 묶는 로컬 초안, (3) 인박스에서 직접 고르는 수동 초안.
+임시글은 Firestore가 아니라 **로컬 DB**(`drafts`·`draft_items`)에 저장되고, 글 화면에 재료의 사진이 함께 보입니다. 세 갈래로 만듭니다. (1) 로컬 `collect.py`·`draft.py`·「AI로 글 만들기」의 혼합 초안(동기화된 항목이 후보라 새 수집분까지 쓰려면 `collect.py --sync`), (2) 동기화·작품 연결 후 `draft.py --by-work` 또는 「작품별로 글 만들기」로 피규어·애니·혼합을 같은 IP끼리 묶는 로컬 초안, (3) 인박스에서 직접 고르는 수동 초안.
 
 GitHub Actions는 매일 08:00 KST에 자동 수집하고 혼합 초안도 만듭니다. 저장소 Secrets에 `FIREBASE_KEY`(서비스 계정 JSON 전체)를 넣고, 필요하면 `GEMINI_API_KEY`·`MYMEMORY_EMAIL`도 설정합니다.
 

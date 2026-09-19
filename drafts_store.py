@@ -1,12 +1,20 @@
-"""Temporary posts that bundle one or more contents documents."""
+"""Temporary posts that bundle one or more stored contents, kept in the local library.
+
+Sources are read from the local `items` copy. Ones that are not synced yet can be
+fetched from Firestore in one bulk read (`cloud`), and publishing writes `postedAt`
+back to the source documents there so the inbox keeps its 「미발행만 보기」 filter.
+"""
 
 from collections.abc import Callable
 from datetime import datetime, timezone
 
-from firebase_admin import firestore
-from google.cloud.firestore_v1.base_query import FieldFilter
+from sqlalchemy import delete, select
 
 from content_model import ANGLES as ALLOWED_ANGLES, content_ref
+from image_urls import http_url
+from library_models import Draft, DraftItem
+from local_library import Library
+from presentation import CATEGORY_LABELS
 
 
 MAX_SOURCES = 20
@@ -46,6 +54,10 @@ def build_body(items: list[dict], angle: str) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def _unique_ids(source_ids) -> list[str]:
     ids = []
     seen = set()
@@ -57,54 +69,55 @@ def _unique_ids(source_ids) -> list[str]:
     return ids
 
 
-def _content_ref(db, source_id: str):
-    """source_id is "CATEGORY:doc_id" — the category picks which contents collection to look in."""
-    try:
-        return content_ref(db, source_id)
-    except ValueError as exc:
-        raise DraftError(str(exc)) from exc
+def _validate_id(source_id: str) -> None:
+    """source_id is "CATEGORY:doc_id", the storage path of the Firestore document."""
+    category, separator, document_id = source_id.partition(":")
+    if not separator or not category or not document_id or "/" in source_id:
+        raise DraftError("잘못된 항목 ID입니다.")
 
 
-def _contents_by_id(db, source_ids: list[str]) -> dict[str, dict]:
-    if not source_ids:
-        return {}
-    refs = [_content_ref(db, source_id) for source_id in source_ids]
-    path_to_id = {ref.path: source_id for source_id, ref in zip(source_ids, refs)}
-    items = {}
-    # Firestore get_all may return snapshots in a different order.
-    for snapshot in db.get_all(refs):
-        if not snapshot.exists or snapshot.reference is None:
-            continue
-        source_id = path_to_id.get(snapshot.reference.path)
-        if source_id is None:
-            continue
-        item = snapshot.to_dict() or {}
-        item["_id"] = source_id
-        items[source_id] = item
-    return items
+def _fetch_missing(library: Library, cloud, source_ids: list[str]) -> None:
+    """Bring documents that were never synced into the local copy with one bulk read."""
+    refs = []
+    for source_id in source_ids:
+        try:
+            refs.append(content_ref(cloud, source_id))
+        except ValueError as exc:
+            raise DraftError(str(exc)) from exc
+    # get_all may return snapshots in any order; upsert_snapshots keys them by their own path.
+    library.upsert_snapshots([snapshot for snapshot in cloud.get_all(refs) if snapshot.exists])
 
 
-def _load_contents(db, source_ids: list[str]) -> list[dict]:
-    items = _contents_by_id(db, source_ids)
+def _load_contents(library: Library, source_ids: list[str], cloud=None) -> list[dict]:
+    for source_id in source_ids:
+        _validate_id(source_id)
+    items = library.items_by_id(source_ids)
+    missing = [source_id for source_id in source_ids if source_id not in items]
+    if missing and cloud is not None:
+        _fetch_missing(library, cloud, missing)
+        items = library.items_by_id(source_ids)
     if any(source_id not in items for source_id in source_ids):
-        raise DraftError("선택한 항목 중 없는 자료가 있습니다.")
+        raise DraftError("선택한 항목 중 없는 자료가 있습니다. 동기화 후 다시 시도해주세요.")
     return [items[source_id] for source_id in source_ids]
 
 
-def _existing_duplicate(db, source_ids: list[str], angle: str) -> bool:
+def _duplicate_exists(session, source_ids: list[str], angle: str) -> bool:
     wanted = set(source_ids)
-    query = db.collection("drafts").where(filter=FieldFilter("angle", "==", angle))
-    for snapshot in query.select(["sourceIds"]).stream():
-        data = snapshot.to_dict() or {}
-        if set(data.get("sourceIds") or []) == wanted:
-            return True
-    return False
+    grouped: dict[int, set[str]] = {}
+    rows = session.execute(
+        select(DraftItem.draft_id, DraftItem.item_id)
+        .join(Draft, Draft.id == DraftItem.draft_id)
+        .where(Draft.angle == angle)
+    )
+    for draft_id, item_id in rows:
+        grouped.setdefault(draft_id, set()).add(item_id)
+    return any(members == wanted for members in grouped.values())
 
 
 def create_draft(
-    db, source_ids, angle: str | None = None, body: str | None = None, *,
-    body_factory: Callable[[list[dict], str], str] | None = None,
-) -> str:
+    library: Library, source_ids, angle: str | None = None, body: str | None = None, *,
+    body_factory: Callable[[list[dict], str], str] | None = None, cloud=None,
+) -> int:
     """Validate once before generating an optional expensive body from fresh sources."""
     if body is not None and body_factory is not None:
         raise ValueError("body와 body_factory는 함께 지정할 수 없습니다.")
@@ -114,107 +127,136 @@ def create_draft(
     if len(ids) > MAX_SOURCES:
         raise DraftError(f"한 임시글에 재료는 {MAX_SOURCES}개까지입니다.")
 
-    items = _load_contents(db, ids)
+    items = _load_contents(library, ids, cloud)
     chosen_angle = angle if angle in ALLOWED_ANGLES else infer_angle(items)
 
-    if chosen_angle == "NEWS" and any(item.get("postedAt") for item in items):
+    if chosen_angle == "NEWS" and (
+        any(item.get("postedAt") for item in items) or library.posted_item_ids(ids)
+    ):
         raise DraftError("이미 발행에 쓰인 재료는 뉴스 임시글로 만들 수 없습니다.")
-    if _existing_duplicate(db, ids, chosen_angle):
-        raise DraftError("같은 재료와 각도의 임시글이 이미 있습니다.")
+    with library.connect() as session:
+        if _duplicate_exists(session, ids, chosen_angle):
+            raise DraftError("같은 재료와 각도의 임시글이 이미 있습니다.")
 
     if body_factory is not None:
         body = body_factory(items, chosen_angle)
 
-    now = datetime.now(timezone.utc)
-    ref = db.collection("drafts").document()
-    ref.set({
-        "sourceIds": ids,
-        "angle": chosen_angle,
-        "body": body if body is not None else build_body(items, chosen_angle),
-        "status": "DRAFT",
-        "postedAt": None,
-        "createdAt": now,
-        "updatedAt": now,
-    })
-    return ref.id
+    now = _now()
+    with library.connect() as session:
+        # Checked again in the writing transaction: the body may have taken a while to write.
+        if _duplicate_exists(session, ids, chosen_angle):
+            raise DraftError("같은 재료와 각도의 임시글이 이미 있습니다.")
+        draft = Draft(
+            angle=chosen_angle,
+            body=body if body is not None else build_body(items, chosen_angle),
+            status="DRAFT", posted_at=None, created_at=now, updated_at=now,
+        )
+        session.add(draft)
+        session.flush()
+        session.add_all(
+            DraftItem(draft_id=draft.id, item_id=source_id, position=position)
+            for position, source_id in enumerate(ids)
+        )
+        return draft.id
 
 
-def list_drafts(db, status: str = "DRAFT", limit: int = 1000) -> list[dict]:
-    snapshots = list(
-        db.collection("drafts")
-        .order_by("createdAt", direction=firestore.Query.DESCENDING)
-        .limit(limit)
-        .stream()
-    )
-    drafts = []
-    source_ids = []
-    seen = set()
-    for snapshot in snapshots:
-        data = snapshot.to_dict() or {}
-        data["_id"] = snapshot.id
-        if status in {"DRAFT", "POSTED"} and data.get("status") != status:
-            continue
-        drafts.append(data)
-        for source_id in data.get("sourceIds") or []:
-            if source_id not in seen:
-                seen.add(source_id)
-                source_ids.append(source_id)
+def _parse_time(value):
+    try:
+        return datetime.fromisoformat(value) if value else None
+    except (TypeError, ValueError):
+        return None
 
-    sources = _contents_by_id(db, source_ids)
+
+def list_drafts(library: Library, status: str = "DRAFT", limit: int = 1000) -> list[dict]:
+    query = select(Draft).order_by(Draft.created_at.desc(), Draft.id.desc()).limit(limit)
+    if status in {"DRAFT", "POSTED"}:
+        query = query.where(Draft.status == status)
+    with library.connect() as session:
+        rows = session.scalars(query).all()
+        drafts = [{
+            "_id": row.id, "angle": row.angle, "body": row.body, "status": row.status,
+            "createdAt": _parse_time(row.created_at), "postedAt": _parse_time(row.posted_at),
+        } for row in rows]
+        members = {}
+        if drafts:
+            links = session.execute(
+                select(DraftItem.draft_id, DraftItem.item_id)
+                .where(DraftItem.draft_id.in_([draft["_id"] for draft in drafts]))
+                .order_by(DraftItem.draft_id, DraftItem.position)
+            )
+            for draft_id, item_id in links:
+                members.setdefault(draft_id, []).append(item_id)
+
+    every_id = [item_id for ids in members.values() for item_id in ids]
+    sources = library.items_by_id(every_id)  # one bulk read, matched by id
+    used = library.posted_item_ids(every_id)
 
     for draft in drafts:
+        draft["sourceIds"] = members.get(draft["_id"], [])
         bundled = []
-        for source_id in draft.get("sourceIds") or []:
+        for source_id in draft["sourceIds"]:
             item = sources.get(source_id)
-            if item:
-                bundled.append({
-                    **item,
-                    "_title": display_title(item),
-                    "_used": bool(item.get("postedAt")),
-                })
-            else:
-                bundled.append({
-                    "_id": source_id,
-                    "_title": "(없는 항목)",
-                    "_used": False,
-                    "url": "",
-                })
+            if item is None:
+                bundled.append({"_id": source_id, "_title": "(없는 항목)", "_used": False,
+                                "_image": "", "_category": "", "url": ""})
+                continue
+            category = item.get("category") or "UNKNOWN"
+            bundled.append({
+                **item,
+                "_title": display_title(item),
+                # A published draft is itself the use of its sources; only pending drafts warn.
+                "_used": draft["status"] == "DRAFT" and (bool(item.get("postedAt")) or source_id in used),
+                "_image": http_url(item.get("imageUrl")) or "",
+                "_category": CATEGORY_LABELS.get(category, category),
+            })
         draft["_sources"] = bundled
     return drafts
 
 
-def save_body(db, draft_id: str, body: str) -> None:
-    ref = db.collection("drafts").document(draft_id)
-    snapshot = ref.get()
-    if not snapshot.exists:
+def _editable_draft(session, draft_id: int, action: str) -> Draft:
+    draft = session.get(Draft, draft_id)
+    if draft is None:
         raise DraftError("임시글을 찾을 수 없습니다.")
-    if (snapshot.to_dict() or {}).get("status") == "POSTED":
-        raise DraftError("발행된 글은 수정할 수 없습니다.")
-    ref.update({"body": body, "updatedAt": datetime.now(timezone.utc)})
+    if draft.status == "POSTED":
+        raise DraftError(f"발행된 글은 {action}할 수 없습니다.")
+    return draft
 
 
-def publish_draft(db, draft_id: str) -> None:
-    ref = db.collection("drafts").document(draft_id)
-    snapshot = ref.get()
-    if not snapshot.exists:
-        raise DraftError("임시글을 찾을 수 없습니다.")
-    data = snapshot.to_dict() or {}
-    if data.get("status") == "POSTED":
-        raise DraftError("이미 발행된 글입니다.")
+def save_body(library: Library, draft_id: int, body: str) -> None:
+    with library.connect() as session:
+        draft = _editable_draft(session, draft_id, "수정")
+        draft.body, draft.updated_at = body, _now()
+
+
+def publish_draft(library: Library, draft_id: int, cloud=None) -> list[str]:
+    """Mark a draft published locally, then record `postedAt` on its source documents in Firestore.
+
+    Returns warnings. A failed Firestore write never undoes the local publish.
+    """
     now = datetime.now(timezone.utc)
-    ref.update({"status": "POSTED", "postedAt": now, "updatedAt": now})
-    for source_id in data.get("sourceIds") or []:
-        content_ref = _content_ref(db, source_id)
-        content = content_ref.get()
-        if content.exists and not (content.to_dict() or {}).get("postedAt"):
-            content_ref.update({"postedAt": now})
+    with library.connect() as session:
+        draft = session.get(Draft, draft_id)
+        if draft is None:
+            raise DraftError("임시글을 찾을 수 없습니다.")
+        if draft.status == "POSTED":
+            raise DraftError("이미 발행된 글입니다.")
+        draft.status, draft.posted_at, draft.updated_at = "POSTED", now.isoformat(), now.isoformat()
+        source_ids = list(session.scalars(
+            select(DraftItem.item_id).where(DraftItem.draft_id == draft_id).order_by(DraftItem.position)))
+    if cloud is None:
+        return []
+    try:
+        refs = [content_ref(cloud, source_id) for source_id in source_ids]
+        for snapshot in cloud.get_all(refs):
+            if snapshot.exists and not (snapshot.to_dict() or {}).get("postedAt"):
+                snapshot.reference.update({"postedAt": now})
+    except Exception as exc:
+        return [f"재료의 발행 표시를 Firestore에 기록하지 못했습니다(로컬 발행은 완료): {exc}"]
+    return []
 
 
-def delete_draft(db, draft_id: str) -> None:
-    ref = db.collection("drafts").document(draft_id)
-    snapshot = ref.get()
-    if not snapshot.exists:
-        raise DraftError("임시글을 찾을 수 없습니다.")
-    if (snapshot.to_dict() or {}).get("status") == "POSTED":
-        raise DraftError("발행된 글은 삭제할 수 없습니다.")
-    ref.delete()
+def delete_draft(library: Library, draft_id: int) -> None:
+    with library.connect() as session:
+        draft = _editable_draft(session, draft_id, "삭제")
+        session.execute(delete(DraftItem).where(DraftItem.draft_id == draft.id))
+        session.delete(draft)

@@ -12,7 +12,7 @@ import app as review
 from collectors.local_browser import _extract_candidate_url
 from content_model import content_id, content_ref
 from content_store import ContentStore, doc_id
-from drafts_store import DraftError, _load_contents, create_draft, list_drafts
+from drafts_store import DraftError
 from presentation import content_score, effective_date
 
 
@@ -21,13 +21,7 @@ class WorkflowTests(unittest.TestCase):
         # Real SDK reference objects validate paths without making requests.
         self.client = Client(project="offline-tests", credentials=AnonymousCredentials())
         self.db = MagicMock()
-        self.drafts = MagicMock()
-        self.db.collection.side_effect = lambda name: (
-            self.drafts if name == "drafts" else self.client.collection(name)
-        )
-        self.duplicates = self.drafts.where.return_value.select.return_value
-        self.duplicates.stream.return_value = []
-        self.drafts.document.return_value.id = "new-draft"
+        self.db.collection.side_effect = lambda name: self.client.collection(name)
 
     def snapshot(self, source_id, data, exists=True):
         ref = content_ref(self.client, source_id)
@@ -39,8 +33,6 @@ class WorkflowTests(unittest.TestCase):
         snapshot = self.snapshot("FIGURE:abc", {"category": "GOODS"})
         self.assertEqual(content_id(snapshot), "FIGURE:abc")
         self.assertEqual(review.cursor_token(snapshot), "FIGURE:abc")
-        self.db.collection_group.return_value.limit.return_value.stream.return_value = [snapshot]
-        self.assertEqual(ai_drafts._load_candidates(self.db, "GOODS")[0]["_id"], "FIGURE:abc")
 
     def test_review_forms_use_storage_category(self):
         snapshot = self.snapshot("FIGURE:abc", {"category": "GOODS", "title": "자료", "status": "NEW"})
@@ -55,77 +47,18 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(source_id=source_id), self.assertRaises(ValueError):
                 content_ref(self.db, source_id)
 
-    def test_bulk_read_preserves_order_and_missing_is_rejected(self):
-        first = self.snapshot("FIGURE:a", {"title": "first"})
-        second = self.snapshot("GOODS:b", {"title": "second"})
-        self.db.get_all.return_value = [second, first]
-        items = _load_contents(self.db, ["FIGURE:a", "GOODS:b"])
-        self.assertEqual([item["title"] for item in items], ["first", "second"])
-        self.db.get_all.assert_called_once()
-        self.db.get_all.return_value = [second]
-        with self.assertRaises(DraftError):
-            _load_contents(self.db, ["FIGURE:a", "GOODS:b"])
-
-    def test_duplicate_skips_expensive_body_generation(self):
-        self.db.get_all.return_value = [self.snapshot("FIGURE:a", {})]
-        duplicate = Mock()
-        duplicate.to_dict.return_value = {"sourceIds": ["FIGURE:a"]}
-        self.duplicates.stream.return_value = [duplicate]
-        writer = Mock()
-        with self.assertRaisesRegex(DraftError, "이미 있습니다"):
-            create_draft(self.db, ["FIGURE:a"], angle="NEWS", body_factory=writer)
-        writer.assert_not_called()
-        self.drafts.document.assert_not_called()
-        self.assertEqual(self.drafts.where.call_args.kwargs["filter"].value, "NEWS")
-
-    def test_factory_gets_fresh_sources_and_deduplicated_ids(self):
-        self.db.get_all.return_value = [self.snapshot("FIGURE:a", {"title": "fresh"})]
-        writer = Mock(return_value="AI body")
-        self.assertEqual(create_draft(self.db, [" FIGURE:a ", "FIGURE:a"], body_factory=writer), "new-draft")
-        self.assertEqual(writer.call_args.args[0][0]["title"], "fresh")
-        self.assertEqual(writer.call_args.args[1], "NEWS")
-        saved = self.drafts.document.return_value.set.call_args.args[0]
-        self.assertEqual(saved["sourceIds"], ["FIGURE:a"])
-        self.assertEqual(saved["body"], "AI body")
-        self.db.get_all.assert_called_once()
-
-    def test_posted_news_is_rejected_before_writing_other_angles_allowed(self):
-        self.db.get_all.return_value = [self.snapshot("FIGURE:a", {"postedAt": "posted"})]
-        writer = Mock(return_value="body")
-        with self.assertRaises(DraftError):
-            create_draft(self.db, ["FIGURE:a"], angle="NEWS", body_factory=writer)
-        writer.assert_not_called()
-        create_draft(self.db, ["FIGURE:a"], angle="COMPARE", body_factory=writer)
-        writer.assert_called_once()
-
-    def test_failed_writer_does_not_save_draft(self):
-        self.db.get_all.return_value = [self.snapshot("FIGURE:a", {})]
-        with self.assertRaises(RuntimeError):
-            create_draft(self.db, ["FIGURE:a"], body_factory=Mock(side_effect=RuntimeError("failed")))
-        self.drafts.document.assert_not_called()
-
-    def test_draft_listing_shares_sources_and_keeps_missing_placeholder(self):
-        draft = Mock(id="draft")
-        draft.to_dict.return_value = {"status": "DRAFT", "sourceIds": ["FIGURE:a", "GOODS:b"]}
-        self.drafts.order_by.return_value.limit.return_value.stream.return_value = [draft, draft]
-        self.db.get_all.return_value = [self.snapshot("FIGURE:a", {"title": "present", "postedAt": "posted"})]
-        result = list_drafts(self.db)
-        self.db.get_all.assert_called_once()
-        self.assertEqual(len(self.db.get_all.call_args.args[0]), 2)
-        self.assertEqual(result[0]["_sources"][0]["_title"], "present")
-        self.assertTrue(result[0]["_sources"][0]["_used"])
-        self.assertEqual(result[1]["_sources"][1]["_title"], "(없는 항목)")
-
     def test_ai_flow_defers_writer_and_validates_size(self):
-        with patch.object(ai_drafts, "_load_candidates", return_value=[{"_id": "FIGURE:a"}]), \
-             patch.object(ai_drafts, "write_draft_body") as writer, \
-             patch.object(ai_drafts, "create_draft", return_value="draft") as create:
-            self.assertEqual(ai_drafts.create_trending_draft(self.db), "draft")
+        library = Mock()
+        library.draft_candidates.return_value = [{"_id": "FIGURE:a"}]
+        with patch.object(ai_drafts, "write_draft_body") as writer, \
+             patch.object(ai_drafts, "create_draft", return_value=7) as create:
+            self.assertEqual(ai_drafts.create_trending_draft(library), 7)
             writer.assert_not_called()
             self.assertIs(create.call_args.kwargs["body_factory"], writer)
+            self.assertIs(create.call_args.args[0], library)
         for size in (0, -1, 21, True):
             with self.subTest(size=size), self.assertRaises(DraftError):
-                ai_drafts.create_trending_draft(self.db, size=size)
+                ai_drafts.create_trending_draft(library, size=size)
 
     def test_work_drafts_skip_shared_sources_and_ignore_unusable(self):
         groups = [
@@ -157,9 +90,10 @@ class WorkflowTests(unittest.TestCase):
         ]
         library = Mock()
         library.linked_work_items.return_value = groups
+        library.posted_item_ids.return_value = set()
         with patch.object(ai_drafts, "create_draft", side_effect=["d1", "d2", "d3"]) as create, \
              patch.object(ai_drafts, "write_draft_body"):
-            results = ai_drafts.create_work_drafts(self.db, library)
+            results = ai_drafts.create_work_drafts(library)
         self.assertEqual([r[0] for r in results], ["FIGURE", "ANIME", "MIXED"])
         self.assertEqual([r[1] for r in results], ["d1", "d2", "d3"])
         calls = [call.args[1] for call in create.call_args_list]
@@ -177,10 +111,23 @@ class WorkflowTests(unittest.TestCase):
         with patch.object(collect_mod, "load_sources", return_value=[]), \
              patch.object(collect_mod, "get_db", return_value=self.db), \
              patch.object(collect_mod, "run_collection") as run, \
-             patch.object(collect_mod, "run_trending_draft", return_value="[AI 초안] ok") as draft:
+             patch.object(collect_mod, "run_local_trending_draft", return_value="[AI 초안] ok") as draft, \
+             patch.dict("os.environ", {}, clear=False):
+            import os
+            os.environ.pop("CI", None)
             collect_mod.main([])
         run.assert_called_once()
-        draft.assert_called_once_with(self.db)
+        draft.assert_called_once_with(None)  # the draft goes to the local library, not Firestore
+
+    def test_cloud_run_never_writes_a_draft(self):
+        import collect as collect_mod
+        with patch.object(collect_mod, "load_sources", return_value=[]), \
+             patch.object(collect_mod, "get_db", return_value=self.db), \
+             patch.object(collect_mod, "run_collection"), \
+             patch.object(collect_mod, "run_local_trending_draft") as draft, \
+             patch.dict("os.environ", {"CI": "true"}):
+            collect_mod.main([])
+        draft.assert_not_called()
 
     def test_manual_vs_automatic_source_filters(self):
         from sources_config import automatic_sources, is_manual_source, manual_sources

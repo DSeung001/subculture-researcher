@@ -109,6 +109,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 - `--backfill-images`는 `imageUrl`이 비어 있는 문서에만 씁니다(덮어쓰지 않음). YouTube URL은 영상 ID로 썸네일을 만들고, AniList는 미디어 ID를 50개씩 한 번에 조회하며, `fetch_detail_image` 소스는 상세 페이지를 최대 60건까지 robots.txt·요청 간격을 지키며 엽니다.
 - `prune_library.py`는 Firestore에 없는 로컬 항목 중 작품 링크·태그·제품 카테고리·정보 유형·기획 묶음이 **없는 것만** 삭제합니다(있는 항목은 목록만 출력). 삭제 전 백업(PostgreSQL은 `.local/backups`의 pg_dump, SQLite는 `.bak` 복사)에 실패하면 아무것도 지우지 않습니다.
 - 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작 시 `[로컬 동기화] 마지막 … · 미동기화 N · 로컬에만 M`을 출력합니다. 수집기가 이미 읽은 문서 ID를 쓰므로 Firestore를 더 읽지 않고, 로컬 DB가 꺼져 있어도 수집은 계속됩니다. 자동 수집(GitHub Actions)은 `CI` 환경변수로 이 확인을 건너뜁니다.
+- 임시글은 로컬 DB에만 있습니다. 스키마가 바뀌었으므로 앱·동기화를 멈추고 `docker compose run --rm tools python migrate_library.py upgrade`로 업그레이드해야 글 화면이 열립니다(백업 자동). 발행하면 재료의 `postedAt`을 Firestore에도 기록합니다.
 - Firestore 문서에 `detailCheckedAt`(상세 페이지를 마지막으로 확인한 시각) 필드가 추가됩니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
 
 ## 수집 원칙

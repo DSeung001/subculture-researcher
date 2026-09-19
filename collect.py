@@ -6,7 +6,7 @@ import os
 
 from dotenv import load_dotenv
 
-from ai_drafts import run_trending_draft
+from ai_drafts import run_local_trending_draft
 from collection_runner import MANUAL_ENTRY, run_collection, sync_local
 from content_store import ContentStore
 from firebase_client import get_db
@@ -76,7 +76,7 @@ def main(argv=None):
     parser.add_argument(
         "--no-ai-draft",
         action="store_true",
-        help="수집 후 AI 초안 생성(Gemini 호출)을 건너뜀",
+        help="수집 후 로컬 임시글 AI 초안 생성(Gemini 호출)을 건너뜀. 새 수집분까지 후보로 쓰려면 --sync와 함께 실행",
     )
     args = parser.parse_args(argv)
 
@@ -128,8 +128,9 @@ def main(argv=None):
     if db is not None and args.sync:
         sync_local(db, args.db)
 
-    if db is not None and not args.no_ai_draft:
-        print(run_trending_draft(db))
+    # Drafts live in the local library; the cloud run (CI) has none to write to.
+    if db is not None and not args.no_ai_draft and not os.environ.get("CI"):
+        print(run_local_trending_draft(args.db))
 
 
 if __name__ == "__main__":

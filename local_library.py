@@ -14,7 +14,7 @@ from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.orm import Session
 
 from library_database import DEFAULT_PATH, ensure_schema, make_engine
-from library_models import (Collection, CollectionItem, Item, ItemWork, LINK_MODELS,
+from library_models import (Collection, CollectionItem, Draft, DraftItem, Item, ItemWork, LINK_MODELS,
                             SavedFilter, SyncState, TERM_MODELS, Work, WorkAlias)
 
 from content_model import content_id
@@ -185,6 +185,7 @@ class Library:
         with self.connect() as session:
             rows = session.execute(select(Item.id, Item.source, Item.title)).all()
             curated = set(session.scalars(select(CollectionItem.item_id)))
+            curated.update(session.scalars(select(DraftItem.item_id)))  # sources of a draft
             for model in LINK_MODELS.values():
                 curated.update(session.scalars(select(model.item_id)))
         return [{"id": item_id, "source": source or "", "title": title or "", "curated": item_id in curated}
@@ -225,37 +226,95 @@ class Library:
             "curated_orphans": sum(1 for item in orphans if item["curated"]),
         }
 
+    @staticmethod
+    def _record(snapshot, now):
+        """One Firestore contents document as a local `items` row."""
+        data = snapshot.to_dict() or {}
+        deadline = data.get("preorderEndAt")
+        if isinstance(deadline, (date, datetime)):
+            deadline = deadline.isoformat()[:10]
+        try:
+            deadline = date.fromisoformat(deadline).isoformat() if deadline else None
+        except (ValueError, TypeError):
+            deadline = None
+        return dict(id=content_id(snapshot),
+                    title=data.get("titleKo") or data.get("title") or "(제목 없음)",
+                    url=data.get("url") or "", source=data.get("source") or "",
+                    payload=json.dumps(data, ensure_ascii=False, default=json_default),
+                    deadline=deadline, synced_at=now)
+
+    def _upsert_items(self, session, records):
+        if not records:
+            return
+        statement = self.insert(Item)
+        statement = statement.on_conflict_do_update(
+            index_elements=[Item.id],
+            set_={key: getattr(statement.excluded, key) for key in
+                  ("title", "url", "source", "payload", "deadline", "synced_at")})
+        session.execute(statement, records)
+
     def sync(self, cloud):
         # Read outside the local transaction. A failed remote stream leaves the
         # previous snapshot and every local relation intact. No cloud writes.
-        records = []
         now = datetime.now(timezone.utc).isoformat()
-        for snapshot in cloud.collection_group("contents").stream():
-            data = snapshot.to_dict() or {}
-            deadline = data.get("preorderEndAt")
-            if isinstance(deadline, (date, datetime)):
-                deadline = deadline.isoformat()[:10]
-            try:
-                deadline = date.fromisoformat(deadline).isoformat() if deadline else None
-            except (ValueError, TypeError):
-                deadline = None
-            records.append(dict(id=content_id(snapshot),
-                                title=data.get("titleKo") or data.get("title") or "(제목 없음)",
-                                url=data.get("url") or "", source=data.get("source") or "",
-                                payload=json.dumps(data, ensure_ascii=False, default=json_default),
-                                deadline=deadline, synced_at=now))
+        records = [self._record(snapshot, now) for snapshot in cloud.collection_group("contents").stream()]
         with self.connect() as session:
-            statement = self.insert(Item)
-            statement = statement.on_conflict_do_update(
-                index_elements=[Item.id],
-                set_={key: getattr(statement.excluded, key) for key in
-                      ("title", "url", "source", "payload", "deadline", "synced_at")})
-            if records:
-                session.execute(statement, records)
+            self._upsert_items(session, records)
             session.merge(SyncState(id=1, completed_at=now, item_count=len(records)))
         # New source rows only: additive keyword links for still-unlinked items.
         self.auto_assign_works(unclassified_only=True)
         return len(records)
+
+    def upsert_snapshots(self, snapshots):
+        """Add or refresh only the given Firestore documents (never deletes); the sync record stays as is."""
+        now = datetime.now(timezone.utc).isoformat()
+        records = [self._record(snapshot, now) for snapshot in snapshots]
+        with self.connect() as session:
+            self._upsert_items(session, records)
+        if records:
+            self.auto_assign_works(unclassified_only=True)
+        return len(records)
+
+    def items_by_id(self, item_ids):
+        """Stored documents by item id (payload plus `_id`); ids that are not stored are absent."""
+        ids = list(dict.fromkeys(item_ids))
+        if not ids:
+            return {}
+        with self.connect() as session:
+            rows = session.execute(select(Item.id, Item.payload).where(Item.id.in_(ids))).all()
+        result = {}
+        for item_id, payload in rows:
+            data = json.loads(payload)
+            data["_id"] = item_id
+            result[item_id] = data
+        return result
+
+    def posted_item_ids(self, item_ids=None):
+        """Item ids that belong to a published draft (optionally limited to `item_ids`)."""
+        query = select(DraftItem.item_id).join(Draft, Draft.id == DraftItem.draft_id).where(Draft.status == "POSTED")
+        if item_ids is not None:
+            ids = list(dict.fromkeys(item_ids))
+            if not ids:
+                return set()
+            query = query.where(DraftItem.item_id.in_(ids))
+        with self.connect() as session:
+            return set(session.scalars(query))
+
+    def draft_candidates(self, category=None):
+        """Every stored document a new draft could use: not ignored, not posted, not in a published draft."""
+        used = self.posted_item_ids()
+        with self.connect() as session:
+            rows = session.execute(select(Item.id, Item.payload)).all()
+        items = []
+        for item_id, payload in rows:
+            data = json.loads(payload)
+            if item_id in used or data.get("status") == "IGNORE" or data.get("postedAt"):
+                continue
+            if category is not None and (data.get("category") or "UNKNOWN") != category:
+                continue
+            data["_id"] = item_id
+            items.append(data)
+        return items
 
     def upsert_work(self, name, aliases=""):
         """Create a work or merge extra aliases into the existing normalized name."""

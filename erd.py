@@ -28,6 +28,7 @@ LAYOUT = {
     "items": (2, "center"),
     "collection_items": (3, "center"), "collections": (4, "center"),
     "saved_filters": (3, 4), "sync_state": (4, 4),
+    "drafts": (4, 0), "draft_items": (3, 0),
 }
 KINDS = {
     "items": "core",
@@ -36,6 +37,7 @@ KINDS = {
     "item_works": "link", "item_product_categories": "link",
     "item_information_types": "link", "item_tags": "link", "collection_items": "link",
     "collections": "plan", "saved_filters": "plan", "sync_state": "plan",
+    "drafts": "plan", "draft_items": "link",
 }
 KIND_LABELS = {
     "core": "수집 항목", "taxonomy": "분류 사전", "link": "연결(다대다)",
@@ -56,6 +58,8 @@ NOTES = {
     "collection_items": "기획 묶음의 구성 항목. 소개 순서(position)와 메모를 가집니다.",
     "saved_filters": "저장한 탐색 조건(JSON). 다른 테이블과 연결되지 않습니다.",
     "sync_state": "마지막 동기화 기록(id=1 한 행).",
+    "drafts": "임시글. 재료를 묶어 쓴 본문과 발행 상태를 로컬에만 둡니다.",
+    "draft_items": "임시글의 재료. item_id에는 외래 키가 없어 항목이 정리돼도 글이 유지됩니다.",
 }
 
 

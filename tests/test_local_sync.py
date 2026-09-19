@@ -166,7 +166,7 @@ class SyncAfterCollectionTests(unittest.TestCase):
     def run_main(self, module, argv, env=None):
         environ = {key: value for key, value in os.environ.items() if key != "CI"}
         environ.update(env or {})
-        with patch.object(module, "get_db", return_value=Mock()),                 patch.object(module, "load_sources", return_value=[]),                 patch.object(module, "run_collection") as run,                 patch.object(module, "sync_local") as sync,                 patch.object(module, "run_trending_draft", return_value="ok"),                 patch.dict("os.environ", environ, clear=True):
+        with patch.object(module, "get_db", return_value=Mock()),                 patch.object(module, "load_sources", return_value=[]),                 patch.object(module, "run_collection") as run,                 patch.object(module, "sync_local") as sync,                 patch.object(module, "run_local_trending_draft", return_value="ok"),                 patch.dict("os.environ", environ, clear=True):
             run_quiet(module.main, argv)
         return run, sync
 

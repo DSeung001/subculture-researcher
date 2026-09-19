@@ -65,6 +65,44 @@ class MigrationTests(unittest.TestCase):
         self.assertIsNone(upgrade_database(self.path))
         self.assertEqual(len(list(self.path.parent.glob("*.bak"))), 1)
 
+    def test_draft_tables_are_added_without_touching_existing_rows(self):
+        from alembic import command
+        from library_database import config
+
+        engine = make_engine(self.path, foreign_keys=False)
+        with engine.begin() as connection:  # a database still at the previous head
+            cfg = config()
+            cfg.attributes["connection"] = connection
+            command.upgrade(cfg, "0003_required_primary_keys")
+        engine.dispose()
+        with closing(sqlite3.connect(self.path)) as con:
+            self.assertFalse(con.execute("SELECT 1 FROM sqlite_master WHERE name='drafts'").fetchone())
+            con.execute("INSERT INTO items VALUES ('FIGURE:x', '굿즈', 'https://example.com/x', 'shop', '{}', NULL, '2026-09-19')")
+            con.execute("INSERT INTO works VALUES (5, '작품', '작품')")
+            con.execute("INSERT INTO item_works VALUES ('FIGURE:x', 5)")
+            con.commit()
+        with self.assertRaises(SchemaError):
+            Library(self.path)  # not upgraded implicitly
+        self.assertTrue(upgrade_database(self.path).is_file())  # backup first
+        with closing(sqlite3.connect(self.path)) as con:
+            tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertTrue({"drafts", "draft_items"} <= tables)
+            self.assertEqual(con.execute("SELECT title FROM items").fetchall(), [("굿즈",)])
+            self.assertEqual(con.execute("SELECT * FROM item_works").fetchall(), [("FIGURE:x", 5)])
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM drafts").fetchone(), (0,))
+        lib = Library(self.path)
+        with lib.connect() as session:
+            from library_models import Draft, DraftItem
+            draft = Draft(angle="NEWS", body="본문", created_at="t", updated_at="t")
+            session.add(draft)
+            session.flush()
+            session.add(DraftItem(draft_id=draft.id, item_id="FIGURE:gone"))  # no foreign key on item_id
+            self.assertEqual(draft.status, "DRAFT")
+
+    def test_postgres_chain_ends_at_the_drafts_revision(self):
+        self.assertEqual(head("postgresql"), "pg0002_drafts")
+        self.assertEqual(head(), "0004_drafts")
+
     def test_unknown_or_incomplete_schema_is_rejected_without_stamp(self):
         self.legacy()
         with closing(sqlite3.connect(self.path)) as con:

@@ -70,6 +70,16 @@ def db():
 app.config["LIBRARY_CLOUD_DB"] = db
 
 
+def local_library() -> Library:
+    """Drafts live in the local library; Firestore is only read/written for sources and publish marks."""
+    return Library(app.config.get("LIBRARY_PATH"))
+
+
+@app.errorhandler(SchemaError)
+def schema_upgrade_required(exc):
+    return render_template("library_upgrade.html", message=str(exc)), 503
+
+
 def update_content(category: str, document_id: str, **fields):
     category_collection(db(), category).document(document_id).update(fields)
 
@@ -228,7 +238,7 @@ def drafts_page():
     status = request.args.get("status", "DRAFT")
     if status not in {"ALL", "DRAFT", "POSTED"}:
         status = "DRAFT"
-    drafts = list_drafts(db(), status=status)
+    drafts = list_drafts(local_library(), status=status)
     for draft in drafts:
         created_at = draft.get("createdAt")
         posted_at = draft.get("postedAt")
@@ -251,7 +261,7 @@ def drafts_page():
 def create_draft_item():
     next_url = safe_next(request.form.get("next"))
     try:
-        create_draft(db(), request.form.getlist("source_ids"))
+        create_draft(local_library(), request.form.getlist("source_ids"), cloud=db())
     except DraftError as exc:
         flash(str(exc), "error")
         return redirect(next_url)
@@ -262,7 +272,7 @@ def create_draft_item():
 @app.post("/drafts/ai")
 def create_ai_draft_item():
     try:
-        draft_id = create_trending_draft(db())
+        draft_id = create_trending_draft(local_library())
     except (DraftError, AiWriterError) as exc:
         flash(str(exc), "error")
     else:
@@ -273,8 +283,7 @@ def create_ai_draft_item():
 @app.post("/drafts/ai/by-work")
 def create_work_ai_draft_item():
     try:
-        library = Library(app.config.get("LIBRARY_PATH"))
-        results = create_work_drafts(db(), library)
+        results = create_work_drafts(local_library())
     except SchemaError as exc:
         flash(str(exc), "error")
         return redirect(url_for("drafts_page"))
@@ -293,10 +302,10 @@ def create_work_ai_draft_item():
     return redirect(url_for("drafts_page"))
 
 
-@app.post("/drafts/<draft_id>/body")
+@app.post("/drafts/<int:draft_id>/body")
 def save_draft_body(draft_id):
     try:
-        save_body(db(), draft_id, request.form.get("body", ""))
+        save_body(local_library(), draft_id, request.form.get("body", ""))
     except DraftError as exc:
         flash(str(exc), "error")
     else:
@@ -304,21 +313,23 @@ def save_draft_body(draft_id):
     return redirect(drafts_list_url())
 
 
-@app.post("/drafts/<draft_id>/publish")
+@app.post("/drafts/<int:draft_id>/publish")
 def publish_draft_item(draft_id):
     try:
-        publish_draft(db(), draft_id)
+        warnings = publish_draft(local_library(), draft_id, cloud=db())
     except DraftError as exc:
         flash(str(exc), "error")
         return redirect(drafts_list_url())
     flash("발행함으로 표시했습니다.", "success")
+    for warning in warnings:
+        flash(warning, "error")
     return redirect(url_for("drafts_page", status="POSTED"))
 
 
-@app.post("/drafts/<draft_id>/delete")
+@app.post("/drafts/<int:draft_id>/delete")
 def delete_draft_item(draft_id):
     try:
-        delete_draft(db(), draft_id)
+        delete_draft(local_library(), draft_id)
     except DraftError as exc:
         flash(str(exc), "error")
     else:

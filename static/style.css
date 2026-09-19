@@ -705,6 +705,10 @@ body.has-draft-bar main {
   border-bottom: 1px solid var(--border);
 }
 
+.draft-source { display: flex; align-items: center; gap: 12px; }
+.draft-source .card-thumb { width: 72px; height: 72px; }
+.draft-source-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.draft-source-meta { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
 .draft-sources a { color: var(--info); text-decoration: none; }
 .draft-sources a:hover { text-decoration: underline; }
 

@@ -99,6 +99,27 @@ class SavedFilter(Base):
     filters: Mapped[str] = mapped_column(Text)
 
 
+class Draft(Base):
+    __tablename__ = "drafts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    angle: Mapped[str] = mapped_column(Text)
+    body: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, server_default=text("'DRAFT'"))
+    posted_at: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[str] = mapped_column(Text)
+    __table_args__ = (Index("drafts_by_status", "status", "created_at"),)
+
+
+class DraftItem(Base):
+    """A draft's source. item_id has no foreign key so removing an item never breaks a draft."""
+    __tablename__ = "draft_items"
+    draft_id: Mapped[int] = mapped_column(ForeignKey("drafts.id", ondelete="CASCADE"), primary_key=True)
+    item_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    position: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    __table_args__ = (Index("draft_items_by_item", "item_id"),)
+
+
 class SyncState(Base):
     __tablename__ = "sync_state"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

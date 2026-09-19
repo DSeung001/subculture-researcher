@@ -21,13 +21,12 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 ## Drafts and AI
 
-- All draft creation goes through `create_draft`. Firestore score-ranked AI drafts
-  use `create_trending_draft` (GitHub Actions / `collect.py` / default `draft.py` /
-  「AI로 글 만들기」). Local IP-grouped drafts use confirmed `item_works` links only
+- Drafts live only in the local library (`drafts`, `draft_items`), never in Firestore. All draft creation goes through `create_draft` in `drafts_store.py`. Score-ranked AI drafts
+  use `create_trending_draft` (local `collect.py` / default `draft.py` / 「AI로 글 만들기」) over the locally synced items; the cloud run (GitHub Actions) creates none. Local IP-grouped drafts use confirmed `item_works` links only
   (`draft.py --by-work` / 「작품별로 글 만들기」), including links created by keyword
   auto-assign; unmatched suggestion chips alone are never used as draft sources.
 - A draft takes 1–20 distinct sources. The same source set and post format is a duplicate regardless of order or publish state. Never reuse an already-published source for `NEWS`.
-- Fetch sources in bulk and match them by ID; never assume Firestore `get_all` returns input order.
+- Sources are read from the local `items` copy; ones not synced yet are fetched from Firestore in one bulk read and matched by ID (never assume `get_all` returns input order). Publishing marks the draft locally first, then writes `postedAt` on the source documents in Firestore; a failed Firestore write only warns. `draft_items.item_id` has no foreign key, and sources of a draft are never pruned.
 - Use the LLM only to pick candidates and write new drafts. Discuss with the user before extending it to translation, auto-classification or editing existing posts.
 
 ## Scope and operations

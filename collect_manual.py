@@ -5,7 +5,7 @@ import os
 
 from dotenv import load_dotenv
 
-from ai_drafts import run_trending_draft
+from ai_drafts import run_local_trending_draft
 from collection_runner import run_collection, sync_local
 from firebase_client import get_db
 from sources_config import is_manual_source, load_sources, manual_sources
@@ -68,7 +68,7 @@ def main(argv=None):
         sync_local(db, args.db)
 
     if db is not None and args.ai_draft:
-        print(run_trending_draft(db))
+        print(run_local_trending_draft(args.db))
 
 
 if __name__ == "__main__":
