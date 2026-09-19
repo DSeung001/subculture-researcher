@@ -64,6 +64,8 @@ def active_filters(filters, terms, collection_id=None):
 @library.get("")
 def index():
     local = store()
+    # Backfill FIGURE → 피규어 without waiting for a full cloud sync.
+    local.auto_assign_product_categories()
     filters = filters_from(request.args)
     overview = local.overview()
     saved_id = request.args.get("saved", type=int)

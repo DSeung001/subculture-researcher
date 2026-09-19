@@ -22,8 +22,8 @@ def main(argv=None):
     parser.add_argument("--dry-run", action="store_true", help="Firestore에 연결하지 않고 수집 결과 출력")
     parser.add_argument("--source", action="append", help="수집할 수동 소스 이름 (여러 번 지정 가능)")
     parser.add_argument(
-        "--sync", action="store_true",
-        help="수집 후 Firestore → 로컬 라이브러리 동기화 (실패해도 수집 결과는 유지)",
+        "--no-sync", action="store_true",
+        help="수집 후 Firestore → 로컬 라이브러리 동기화를 건너뜀 (기본은 동기화함)",
     )
     parser.add_argument(
         "--no-local-check", action="store_true",
@@ -64,7 +64,7 @@ def main(argv=None):
         local_db_path=args.db,
     )
 
-    if db is not None and args.sync:
+    if db is not None and not args.no_sync and not os.environ.get("CI"):
         sync_local(db, args.db)
 
     if db is not None and args.ai_draft:

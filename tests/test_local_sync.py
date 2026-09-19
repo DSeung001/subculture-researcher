@@ -1,4 +1,4 @@
-"""Offline checks for orphan cleanup, the sync status check and the --sync collection option."""
+"""Offline checks for orphan cleanup, the sync status check and post-collection sync."""
 
 import io
 import os
@@ -135,7 +135,7 @@ class ReportLocalSyncTests(unittest.TestCase):
             library.return_value.sync_status.return_value = self.STATUS
             _, output = run_quiet(collection_runner.report_local_sync, store)
         library.return_value.sync_status.assert_called_once_with({"FIGURE:a"})
-        for text in ("로컬 632", "클라우드 805", "미동기화 220", "로컬에만 47", "--sync", "prune_library.py"):
+        for text in ("로컬 632", "클라우드 805", "미동기화 220", "로컬에만 47", "--no-sync", "prune_library.py"):
             self.assertIn(text, output)
 
     def test_up_to_date_prints_no_hints(self):
@@ -176,16 +176,17 @@ class SyncAfterCollectionTests(unittest.TestCase):
             run_quiet(module.main, argv)
         return run, sync
 
-    def test_sync_runs_after_collection_only_with_the_flag(self):
+    def test_sync_runs_after_collection_by_default(self):
         for module in (collect, collect_manual):
             with self.subTest(module=module.__name__):
                 _, sync = self.run_main(module, ["--no-ai-draft"] if module is collect else [])
-                sync.assert_not_called()
-                _, sync = self.run_main(module, ["--sync", "--no-ai-draft"] if module is collect else ["--sync"])
                 sync.assert_called_once()
+                no_sync = ["--no-sync", "--no-ai-draft"] if module is collect else ["--no-sync"]
+                _, sync = self.run_main(module, no_sync)
+                sync.assert_not_called()
 
     def test_dry_run_never_syncs_or_checks(self):
-        run, sync = self.run_main(collect, ["--dry-run", "--sync"])
+        run, sync = self.run_main(collect, ["--dry-run"])
         sync.assert_not_called()
         self.assertFalse(run.call_args.kwargs["local_check"])
 
@@ -196,6 +197,12 @@ class SyncAfterCollectionTests(unittest.TestCase):
         self.assertFalse(run.call_args.kwargs["local_check"])
         run, _ = self.run_main(collect, ["--no-ai-draft"], env={"CI": "true"})
         self.assertFalse(run.call_args.kwargs["local_check"])
+
+    def test_ci_skips_sync(self):
+        _, sync = self.run_main(collect, ["--no-ai-draft"], env={"CI": "true"})
+        sync.assert_not_called()
+        _, sync = self.run_main(collect_manual, [], env={"CI": "true"})
+        sync.assert_not_called()
 
     def test_sync_local_failure_is_reported_not_raised(self):
         with patch("local_library.Library", side_effect=RuntimeError("db down")):

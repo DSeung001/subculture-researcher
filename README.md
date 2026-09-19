@@ -59,7 +59,7 @@ python -m playwright install chromium
 | AI 초안 없이 수집 | `python collect.py --no-ai-draft` (GitHub Actions는 항상 이 옵션) |
 | Firestore에 남은 임시글 삭제 | `python delete_firestore_drafts.py --dry-run` 후 `--dry-run` 없이 실행 (삭제 전 `.local/backups`에 JSON 백업) |
 | 클라우드 → 로컬 동기화 | `python sync_library.py` |
-| 수집 후 곧바로 동기화 | `python collect.py --sync` (`collect_manual.py`도 동일) |
+| 수집 후 동기화 건너뛰기 | `python collect.py --no-sync` (`collect_manual.py`도 동일) |
 | 원격에서 사라진 로컬 항목 정리 | `python prune_library.py --dry-run` 후 `--dry-run` 없이 실행 |
 | 수동 수집 (YouTube) | `python collect_manual.py` |
 | 수동 소스 일부만 | `python collect_manual.py --source "소스이름"` |
@@ -76,13 +76,13 @@ Windows에서 가상환경을 활성화하지 않았다면 위 명령의 `python
 
 자동 수집(`collect.py`)은 YouTube 등 수동 전용 소스를 제외합니다. 수동 수집은 `collect_manual.py`로 YouTube RSS만 돌립니다. 라프텔은 스토어(`store.laftel.net`) 공개 HTML이 자동 수집에 포함됩니다. 일반 자동 수집은 AI 키가 있으면 Firestore 점수 순 혼합 초안도 하나 만듭니다.
 
-임시글은 Firestore가 아니라 **로컬 DB**(`drafts`·`draft_items`)에 저장되고, 글 화면에 재료의 사진이 함께 보입니다. 세 갈래로 만듭니다. (1) 로컬 `collect.py`·`draft.py`·「AI로 글 만들기」의 혼합 초안(동기화된 항목이 후보라 새 수집분까지 쓰려면 `collect.py --sync`), (2) 동기화·작품 연결 후 `draft.py --by-work` 또는 「작품별로 글 만들기」로 피규어·애니·혼합을 같은 IP끼리 묶는 로컬 초안, (3) 인박스에서 직접 고르는 수동 초안.
+임시글은 Firestore가 아니라 **로컬 DB**(`drafts`·`draft_items`)에 저장되고, 글 화면에 재료의 사진이 함께 보입니다. 세 갈래로 만듭니다. (1) 로컬 `collect.py`·`draft.py`·「AI로 글 만들기」의 혼합 초안(수집 후 기본으로 로컬에 동기화되므로 새 수집분도 후보에 포함), (2) 동기화·작품 연결 후 `draft.py --by-work` 또는 「작품별로 글 만들기」로 피규어·애니·혼합을 같은 IP끼리 묶는 로컬 초안, (3) 인박스에서 직접 고르는 수동 초안.
 
 GitHub Actions는 매일 08:00 KST에 자동 수집하고 혼합 초안도 만듭니다. 저장소 Secrets에 `FIREBASE_KEY`(서비스 계정 JSON 전체)를 넣고, 필요하면 `GEMINI_API_KEY`·`MYMEMORY_EMAIL`도 설정합니다.
 
 ## 로컬 DB 관리
 
-작품·기획 화면과 `sync_library.py`는 기본적으로 Docker의 PostgreSQL을 사용합니다. 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작할 때 로컬 동기화 상태(미동기화·로컬에만 남은 항목 수)를 Firestore 추가 읽기 없이 보여 줍니다(`--no-local-check`로 끔, `CI` 환경변수가 있으면 자동으로 건너뜀). 동기화는 새 문서를 수집한 뒤에 해야 하므로 `--sync`로 수집 끝에 실행합니다. 동기화는 현재 전체 항목을 읽으며 직접 지정한 분류와 기획을 보존합니다. 기존 인박스·초안 화면은 Firestore에 연결합니다. 인박스는 기본으로 「새 항목」 중 **최근 14일** 수집분만 보여 주며, 「수집 기간」 칩에서 7일·30일·전체 기간으로 바꿉니다(데이터는 바꾸지 않습니다).
+작품·기획 화면과 `sync_library.py`는 기본적으로 Docker의 PostgreSQL을 사용합니다. 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작할 때 로컬 동기화 상태(미동기화·로컬에만 남은 항목 수)를 Firestore 추가 읽기 없이 보여 줍니다(`--no-local-check`로 끔, `CI` 환경변수가 있으면 자동으로 건너뜀). 수집이 끝나면 **기본으로** Firestore → 로컬 동기화를 돌립니다(끄려면 `--no-sync`, GitHub Actions/`CI`에서는 자동으로 건너뜀). 동기화는 현재 전체 항목을 읽으며 직접 지정한 분류와 기획을 보존합니다. 기존 인박스·초안 화면은 Firestore에 연결합니다. 인박스는 기본으로 「새 항목」 중 **최근 14일** 수집분만 보여 주며, 「수집 기간」 칩에서 7일·30일·전체 기간으로 바꿉니다(데이터는 바꾸지 않습니다).
 
 처음 한 번: `.env.example`을 참고해 `.env`에 `POSTGRES_PASSWORD`를 설정하고 DB를 시작·초기화합니다. Docker가 꺼져 있거나 비밀번호가 없으면 작품·기획 화면은 안내 페이지(503)를 보여줍니다.
 

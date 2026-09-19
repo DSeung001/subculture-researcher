@@ -55,7 +55,7 @@ def report_local_sync(store: ContentStore, db_path=None) -> None:
         f"미동기화 {status['unsynced']} · 로컬에만 {status['orphans']}"
     )
     if status["unsynced"]:
-        print("  → 수집 후 동기화: --sync 옵션 또는 python sync_library.py")
+        print("  → 수집이 끝나면 기본으로 동기화합니다. 끄려면 --no-sync, 또는 python sync_library.py")
     if status["orphans"] > status["curated_orphans"]:
         print("  → 원격에서 사라진 로컬 항목 정리: python prune_library.py --dry-run")
 

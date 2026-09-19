@@ -239,6 +239,15 @@ class LibraryRouteTests(unittest.TestCase):
         self.assertIn("연결을 추가", response.get_data(as_text=True))
         self.provider.assert_not_called()
 
+    def test_library_page_backfills_figure_product_category(self):
+        local = Library(self.path)
+        local.sync(cloud(snapshot()))
+        figure = next(t for t in local.terms()["product_categories"] if t["name"] == "피규어")
+        local.assign(["FIGURE:legacy"], "product_categories", figure["id"], remove=True)
+        self.assertEqual(local.items({"product_categories": str(figure["id"])})[1], 0)
+        self.assertEqual(self.client.get("/library").status_code, 200)
+        self.assertEqual(local.items({"product_categories": str(figure["id"])})[1], 1)
+
     def test_sync_is_explicit_and_failed_sync_is_reported(self):
         self.app.config["LIBRARY_CLOUD_DB"] = lambda: cloud(snapshot())
         response = self.client.post("/library/sync", follow_redirects=True)

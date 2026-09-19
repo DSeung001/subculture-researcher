@@ -65,8 +65,8 @@ def main(argv=None):
         help="수집 결과 캐시(AniList 등)를 무시하고 다시 수집",
     )
     parser.add_argument(
-        "--sync", action="store_true",
-        help="수집 후 Firestore → 로컬 라이브러리 동기화 (실패해도 수집 결과는 유지)",
+        "--no-sync", action="store_true",
+        help="수집 후 Firestore → 로컬 라이브러리 동기화를 건너뜀 (기본은 동기화함)",
     )
     parser.add_argument(
         "--no-local-check", action="store_true",
@@ -76,7 +76,7 @@ def main(argv=None):
     parser.add_argument(
         "--no-ai-draft",
         action="store_true",
-        help="수집 후 로컬 임시글 AI 초안 생성(Gemini 호출)을 건너뜀. 새 수집분까지 후보로 쓰려면 --sync와 함께 실행",
+        help="수집 후 로컬 임시글 AI 초안 생성(Gemini 호출)을 건너뜀",
     )
     args = parser.parse_args(argv)
 
@@ -125,7 +125,7 @@ def main(argv=None):
         local_db_path=args.db,
     )
 
-    if db is not None and args.sync:
+    if db is not None and not args.no_sync and not os.environ.get("CI"):
         sync_local(db, args.db)
 
     # Drafts live in the local library; the cloud run (CI) has none to write to.
