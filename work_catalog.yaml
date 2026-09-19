@@ -64,6 +64,7 @@ works:
       - 黄泉のツガイ
   - name: 헬모드
     aliases:
+      - 헬 모드
       - ヘルモード
   - name: 클레바테스
     aliases:
@@ -86,6 +87,7 @@ works:
   - name: 야니네코
     aliases:
       - ヤニねこ
+      - 담배 고양이
   - name: 편시골의 아저씨, 검성이 되다
     aliases:
       - 片田舎のおっさん、剣聖になる
@@ -100,6 +102,7 @@ works:
       - 骸骨騎士様
   - name: 추방된 전생 중기사
     aliases:
+      - 추방 당한 전생 중기사
       - 追放された転生重騎士
   - name: 오토메 게임 세계는 모브에게 엄격한 세계입니다
     aliases:
@@ -119,6 +122,8 @@ works:
   - name: 부족하나 악녀입니다만
     aliases:
       - ふつつかな悪女ではございますが
+      - 무능한 악녀
+      - 나는 무능한 악녀지만
   # Product / game series recurring in FIGURE·GOODS titles
   - name: To LOVE루 다크니스
     aliases:
@@ -135,6 +140,7 @@ works:
   - name: "붕괴: 스타레일"
     aliases:
       - 붕괴 스타레일
+      - 붕괴:스타레일
       - Honkai Star Rail
       - 崩壊スターレイル
       - Star Rail
@@ -213,3 +219,109 @@ works:
     aliases:
       - 学園アイドルマスター
       - Gakuen Idolmaster
+  # Gaps from unclassified product / Laftel titles
+  - name: 지박소년 하나코 군
+    aliases:
+      - 지박소년 하나코군
+      - 地縛少年花子くん
+      - Toilet-Bound Hanako-kun
+      - Hanako-kun
+  - name: 4주 애인
+    aliases:
+      - 사주 애인
+  - name: 일간알바
+    aliases:
+      - 일간 알바
+  - name: 연애제한구역
+    aliases:
+      - 연애 제한구역
+  - name: 옆자리 괴물군
+    aliases:
+      - となりの怪物くん
+      - My Little Monster
+  - name: 고깔모자의 아틀리에
+    aliases:
+      - とんがり帽子のアトリエ
+      - Witch Hat Atelier
+  - name: 마도조사
+    aliases:
+      - 魔道祖師
+      - MDZS
+      - Mo Dao Zu Shi
+  - name: 초 가구야 공주
+    aliases:
+      - 超かぐや姫
+      - 가구야 공주
+  - name: 블루 아카이브
+    aliases:
+      - Blue Archive
+      - ブルーアーカイブ
+  - name: 귀멸의 칼날
+    aliases:
+      - 鬼滅の刃
+      - Demon Slayer
+  - name: 나의 히어로 아카데미아
+    aliases:
+      - 僕のヒーローアカデミア
+      - My Hero Academia
+      - 히로아카
+      - MHA
+  - name: 문호 스트레이독스
+    aliases:
+      - 文豪ストレイドッグス
+      - Bungo Stray Dogs
+      - BSD
+  - name: 붕괴3rd
+    aliases:
+      - 崩壊3rd
+      - Honkai Impact 3rd
+      - 붕괴 3rd
+  - name: 유희왕
+    aliases:
+      - 遊戯王
+      - Yu-Gi-Oh
+      - Yu-Gi-Oh!
+      - 유희왕 듀얼 몬스터즈 GX
+  - name: 마징가 Z
+    aliases:
+      - マジンガーZ
+      - Mazinger Z
+  - name: 아카메가 벤다
+    aliases:
+      - アカメが斬る
+      - Akame ga Kill
+  - name: 러브라이브
+    aliases:
+      - Love Live
+      - ラブライブ
+      - 이키즈라이브
+      - 러브라이브 블루버드
+      - イキヅライブ
+  - name: 다크 문 달의 제단
+    aliases:
+      - Dark Moon
+  - name: 모노가타리 시리즈
+    aliases:
+      - モノガタリ
+      - 바케모노가타리
+      - 化物語
+      - 니세모노가타리
+      - 偽物語
+      - 네코모노가타리
+      - 猫物語
+      - 오와리모노가타리
+      - 終物語
+      - 츠키모노가타리
+      - 憑物語
+      - 키즈모노가타리
+      - 傷物語
+  - name: 괴수 8호
+    aliases:
+      - 怪獣8号
+      - Monster #8
+      - Monster No.8
+      - Kaiju No. 8
+  - name: 약사의 혼잣말
+    aliases:
+      - 薬屋のひとりごと
+      - The Apothecary Diaries

@@ -31,7 +31,9 @@ FILTER_KEYS = (*TAXONOMIES, "q", "unclassified", "deadline_from", "deadline_to")
 
 
 def normalized(value):
-    return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
+    # Treat colon as a word break so "붕괴:스타레일" / "붕괴: 스타레일" / "Re:제로" match.
+    text = unicodedata.normalize("NFKC", value).casefold().replace(":", " ")
+    return " ".join(text.split())
 
 
 def clean_name(value):

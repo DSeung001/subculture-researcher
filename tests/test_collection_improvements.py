@@ -436,6 +436,20 @@ class KeywordMatchTests(unittest.TestCase):
             with self.subTest(title=title):
                 self.assertIsNone(match_keyword(normalized(title), "BLEACH"))
 
+    def test_colon_variants_match_the_same_keyword(self):
+        keyword = "붕괴: 스타레일"
+        for title in (
+            "붕괴:스타레일 반디 피규어",
+            "붕괴: 스타레일 아크릴스탠드",
+            "붕괴 스타레일 굿즈",
+        ):
+            with self.subTest(title=title):
+                self.assertEqual(match_keyword(normalized(title), keyword), keyword)
+        self.assertEqual(
+            match_keyword(normalized("Re: 제로부터 시작하는 이세계 생활 4기"), "Re:제로"),
+            "Re:제로",
+        )
+
     def test_genshin_is_in_the_catalog_and_links_hoyoverse_titles(self):
         import seed_works
         with tempfile.TemporaryDirectory() as directory:
