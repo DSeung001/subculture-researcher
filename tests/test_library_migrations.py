@@ -9,9 +9,9 @@ from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy.exc import IntegrityError
 
-from library_database import SchemaError, head, make_engine, upgrade_database
-from library_models import Base
-from local_library import Library
+from subculture.library.infrastructure.database import SchemaError, head, make_engine, upgrade_database
+from subculture.library.infrastructure.models import Base
+from subculture.library.infrastructure.local_library import Library
 
 
 class MigrationTests(unittest.TestCase):
@@ -71,7 +71,7 @@ class MigrationTests(unittest.TestCase):
 
     def test_draft_tables_are_added_without_touching_existing_rows(self):
         from alembic import command
-        from library_database import config
+        from subculture.library.infrastructure.database import config
 
         engine = make_engine(self.path, foreign_keys=False)
         with engine.begin() as connection:  # a database still at the previous head
@@ -96,7 +96,7 @@ class MigrationTests(unittest.TestCase):
             self.assertEqual(con.execute("SELECT COUNT(*) FROM drafts").fetchone(), (0,))
         lib = Library(self.path)
         with lib.connect() as session:
-            from library_models import Draft, DraftItem
+            from subculture.library.infrastructure.models import Draft, DraftItem
             draft = Draft(angle="NEWS", body="본문", created_at="t", updated_at="t")
             session.add(draft)
             session.flush()
@@ -124,7 +124,7 @@ class MigrationTests(unittest.TestCase):
             con.exec_driver_sql("ALTER TABLE works ADD COLUMN temporary TEXT")
             con.exec_driver_sql("UPDATE works SET name='lost'")
             raise RuntimeError("migration failed")
-        with patch("library_database.command.upgrade", side_effect=fail):
+        with patch("subculture.library.infrastructure.database.command.upgrade", side_effect=fail):
             with self.assertRaisesRegex(RuntimeError, "migration failed"):
                 upgrade_database(self.path)
         with closing(sqlite3.connect(self.path)) as con:

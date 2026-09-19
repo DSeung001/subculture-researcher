@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-import ai_writer
+from subculture.drafts.infrastructure import ai_writer
 
 
 class AiWriterPromptTests(unittest.TestCase):

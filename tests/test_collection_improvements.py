@@ -8,19 +8,20 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import app as review
-import image_backfill
-from collectors import anilist, json_api
-from collectors.common import RobotsDenied
-from collectors.html_links import html_items
-from collectors.http import page_url
-from collectors.youtube_feed import youtube_thumbnail
-from content_store import (
-    UNTITLED_TITLE, ContentStore, delete_untitled_x_contents, doc_id,
-    is_untitled_laftel_home, is_untitled_leftover,
-)
-from local_library import Library, match_keyword, normalized
-from sources_config import load_sources
+from subculture.web import app as review
+from subculture.collection.application import image_backfill
+from subculture.collection.infrastructure.collectors import anilist, json_api
+from subculture.collection.infrastructure.collectors.common import RobotsDenied
+from subculture.collection.infrastructure.collectors.html_links import html_items
+from subculture.collection.infrastructure.collectors.http import page_url
+from subculture.collection.infrastructure.collectors.youtube_feed import youtube_thumbnail
+from subculture.shared.untitled_content import UNTITLED_TITLE, is_untitled_laftel_home, is_untitled_leftover
+from subculture.collection.infrastructure.content_store import ContentStore
+from subculture.collection.application.untitled_cleanup import delete_untitled_x_contents
+from subculture.collection.domain.content_rules import doc_id
+from subculture.library.infrastructure.local_library import Library
+from subculture.library.domain.keywords import match_keyword, normalized
+from subculture.collection.infrastructure.sources_config import load_sources
 
 SOURCES = {source["name"]: source for source in load_sources()}
 NOW = datetime.now(timezone.utc)
@@ -95,8 +96,8 @@ class DetailSkipInHtmlItemsTests(unittest.TestCase):
         def fake_get_html(url, policy, timeout=15, source=None):
             fetched.append(url)
             return self.PAGES[url], url
-        with patch("collectors.html_links.get_html", side_effect=fake_get_html), \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html), \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             return list(html_items(self.SOURCE, store)), fetched
 
     def test_known_fresh_product_skips_its_detail_page_but_stays_listed(self):
@@ -127,8 +128,8 @@ class PaginationTests(unittest.TestCase):
         def fake_get_html(url, policy, timeout=15, source=None):
             requested.append(url)
             return pages[url], url
-        with patch("collectors.html_links.get_html", side_effect=fake_get_html), \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html), \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             return list(html_items(source)), requested
 
     def test_page_url_keeps_page_one_and_replaces_the_param(self):
@@ -177,14 +178,14 @@ class PaginationTests(unittest.TestCase):
             if url != first:
                 raise RobotsDenied("page 2 disallowed")
             return '<a href="/a/1">기사 제목 하나</a>', url
-        with patch("collectors.html_links.get_html", side_effect=fake_get_html), \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html), \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             items = list(html_items(self.source(), None))
         self.assertEqual(len(items), 1)
 
     def test_first_page_disallowed_by_robots_still_raises(self):
-        with patch("collectors.html_links.get_html", side_effect=RobotsDenied("no")), \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=RobotsDenied("no")), \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             with self.assertRaises(RobotsDenied):
                 list(html_items(self.source(), None))
 
@@ -238,7 +239,7 @@ class FigureFarmTests(unittest.TestCase):
     DETAIL = "<title>x</title><meta property='og:title' content='{title}'>예약마감일 : 26년 10월 1일 39,000원"
 
     def run_items(self, store):
-        from collectors import figurefarm
+        from subculture.collection.infrastructure.collectors import figurefarm
         fetched = []
 
         def fake_get_html(url, policy, timeout=15, source=None):
@@ -267,7 +268,7 @@ class FigureFarmTests(unittest.TestCase):
 class PrTimesDefaultImageTests(unittest.TestCase):
     def test_site_wide_default_og_image_is_not_a_photo(self):
         from bs4 import BeautifulSoup
-        from collectors.images import detail_image
+        from subculture.collection.infrastructure.collectors.images import detail_image
         source = SOURCES["PR TIMES 만화·애니"]
         page = BeautifulSoup('<meta property="og:image" content="https://prtimes.jp/common/pc_v4/og.png">', "html.parser")
         self.assertIsNone(detail_image(page, "https://prtimes.jp/main/html/rd/p/1.html", source))
@@ -306,7 +307,7 @@ class AniListCacheTests(unittest.TestCase):
         self.assertEqual(written["version"], anilist.CACHE_VERSION)
 
     def test_run_collection_passes_force_refresh_to_collectors(self):
-        import collection_runner
+        from subculture.collection.application import collection_runner
         seen = []
 
         def fake(db, source, store=None):
@@ -382,7 +383,7 @@ class ImageBackfillTests(unittest.TestCase):
         self.assertEqual(post.call_args.kwargs["json"]["variables"]["ids"], [1, 2])
 
     def test_collect_cli_has_the_backfill_mode(self):
-        import collect
+        from subculture.collection.interface import collect_cli as collect
         with patch.object(collect, "get_db", return_value=Mock()), \
                 patch.object(collect, "load_sources", return_value=[]), \
                 patch.object(collect, "backfill_images") as backfill:
@@ -454,7 +455,7 @@ class KeywordMatchTests(unittest.TestCase):
         )
 
     def test_genshin_is_in_the_catalog_and_links_hoyoverse_titles(self):
-        import seed_works
+        from subculture.library.application import seed_works
         with tempfile.TemporaryDirectory() as directory:
             library = Library(Path(directory) / "library.sqlite3")
             cloud = Mock()

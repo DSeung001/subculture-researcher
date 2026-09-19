@@ -12,10 +12,10 @@ from unittest.mock import Mock, patch
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.firestore import Client
 
-import app as review
-from content_model import content_ref
-from local_library import Library, json_default
-from presentation import card_view
+from subculture.web import app as review
+from subculture.shared.content_model import content_ref
+from subculture.library.infrastructure.local_library import Library, json_default
+from subculture.shared.presentation import card_view
 
 NOW = datetime.now(timezone.utc)
 DOC = {

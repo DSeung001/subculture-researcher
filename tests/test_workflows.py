@@ -7,13 +7,14 @@ from unittest.mock import MagicMock, Mock, patch
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.firestore import Client
 
-import ai_drafts
-import app as review
-from collectors.local_browser import _extract_candidate_url
-from content_model import content_id, content_ref
-from content_store import ContentStore, doc_id, normalize_url
-from drafts_store import DraftError
-from presentation import content_score, effective_date
+from subculture.drafts.application import ai_drafts
+from subculture.web import app as review
+from subculture.collection.infrastructure.collectors.local_browser import _extract_candidate_url
+from subculture.shared.content_model import content_id, content_ref
+from subculture.collection.infrastructure.content_store import ContentStore
+from subculture.collection.domain.content_rules import doc_id, normalize_url
+from subculture.drafts.domain.rules import DraftError
+from subculture.shared.presentation import content_score, effective_date
 
 
 class WorkflowTests(unittest.TestCase):
@@ -136,7 +137,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertIsNone(by_type["MIXED"])
 
     def test_collect_still_runs_mixed_trending_draft(self):
-        import collect as collect_mod
+        from subculture.collection.interface import collect_cli as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[]), \
              patch.object(collect_mod, "get_db", return_value=self.db), \
              patch.object(collect_mod, "run_collection") as run, \
@@ -149,7 +150,7 @@ class WorkflowTests(unittest.TestCase):
         draft.assert_called_once_with(None)  # the draft goes to the local library, not Firestore
 
     def test_cloud_run_never_writes_a_draft(self):
-        import collect as collect_mod
+        from subculture.collection.interface import collect_cli as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[]), \
              patch.object(collect_mod, "get_db", return_value=self.db), \
              patch.object(collect_mod, "run_collection"), \
@@ -159,7 +160,7 @@ class WorkflowTests(unittest.TestCase):
         draft.assert_not_called()
 
     def test_manual_vs_automatic_source_filters(self):
-        from sources_config import automatic_sources, is_manual_source, manual_sources
+        from subculture.collection.infrastructure.sources_config import automatic_sources, is_manual_source, manual_sources
 
         youtube = {"name": "KADOKAWA Anime YouTube", "manual_only": True}
         browser = {"name": "예시 브라우저", "local_only": True}
@@ -172,7 +173,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(manual_sources(sources), [youtube, browser])
 
     def test_collect_rejects_manual_source_flag(self):
-        import collect as collect_mod
+        from subculture.collection.interface import collect_cli as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[
             {"name": "KADOKAWA Anime YouTube", "manual_only": True},
         ]):
@@ -180,7 +181,7 @@ class WorkflowTests(unittest.TestCase):
                 collect_mod.main(["--source", "KADOKAWA Anime YouTube"])
 
     def test_local_browser_ready_wait_uses_random_sleep(self):
-        from collectors import local_browser as lb
+        from subculture.collection.infrastructure.collectors import local_browser as lb
 
         with patch.object(lb.random, "uniform", return_value=11.5) as uniform:
             self.assertEqual(lb._ready_wait_seconds({

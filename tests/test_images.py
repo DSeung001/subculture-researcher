@@ -5,14 +5,14 @@ from unittest.mock import MagicMock, Mock, patch
 
 from bs4 import BeautifulSoup
 
-from collectors import anilist, json_api, youtube_feed
-from collectors.common import extract_product_fields
-from collectors.html_links import extract_links, html_items
-from collectors.images import card_of, detail_image, img_url
-from collectors.local_browser import _card_image
-from content_store import ContentStore
-from image_urls import clean_image_url, http_url
-from presentation import product_caption
+from subculture.collection.infrastructure.collectors import anilist, json_api, youtube_feed
+from subculture.collection.infrastructure.collectors.common import extract_product_fields
+from subculture.collection.infrastructure.collectors.html_links import extract_links, html_items
+from subculture.collection.infrastructure.collectors.images import card_of, detail_image, img_url
+from subculture.collection.infrastructure.collectors.local_browser import _card_image
+from subculture.collection.infrastructure.content_store import ContentStore
+from subculture.shared.image_urls import clean_image_url, http_url
+from subculture.shared.presentation import product_caption
 
 BASE = "https://shop.example.com/list"
 # HOBBY Watch style: the photo sits in a sibling block of the title link, same <li>.
@@ -126,8 +126,8 @@ class DetailFetchTests(unittest.TestCase):
     def run_items(self, source, pages):
         def fake_get_html(url, policy, timeout=15, source=None):
             return pages[url], url
-        with patch("collectors.html_links.get_html", side_effect=fake_get_html), \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html), \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             return list(html_items(source))
 
     def test_detail_og_image_is_stored_without_a_price(self):

@@ -10,14 +10,13 @@ from unittest.mock import MagicMock, Mock, patch
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.firestore import Client
 
-import app as review
-import delete_firestore_drafts
-from content_model import content_ref
-from drafts_store import (
-    DraftError, create_draft, delete_draft, list_drafts, publish_draft, save_body,
-)
-from library_database import SchemaError
-from local_library import Library
+from subculture.web import app as review
+from subculture.drafts.interface import delete_firestore_drafts
+from subculture.shared.content_model import content_ref
+from subculture.drafts.domain.rules import DraftError
+from subculture.drafts.application.drafts import create_draft, delete_draft, list_drafts, publish_draft, save_body
+from subculture.library.infrastructure.database import SchemaError
+from subculture.library.infrastructure.local_library import Library
 
 
 def doc(doc_id, category="FIGURE", **fields):
@@ -216,7 +215,7 @@ class LifecycleTests(DraftCase):
         already.to_dict.return_value = {"postedAt": "earlier"}
         cloud = MagicMock()
         cloud.get_all.return_value = [already, fresh]
-        with patch("drafts_store.content_ref"):
+        with patch("subculture.drafts.application.drafts.content_ref"):
             self.assertEqual(publish_draft(self.lib, draft_id, cloud=cloud), [])
         cloud.get_all.assert_called_once()
         fresh.reference.update.assert_called_once()
@@ -228,7 +227,7 @@ class LifecycleTests(DraftCase):
         draft_id = create_draft(self.lib, ["FIGURE:a"])
         cloud = MagicMock()
         cloud.get_all.side_effect = RuntimeError("offline")
-        with patch("drafts_store.content_ref"):
+        with patch("subculture.drafts.application.drafts.content_ref"):
             warnings = publish_draft(self.lib, draft_id, cloud=cloud)
         self.assertEqual(len(warnings), 1)
         self.assertIn("offline", warnings[0])

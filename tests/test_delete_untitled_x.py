@@ -7,8 +7,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from content_store import UNTITLED_TITLE, delete_untitled_x_contents, is_untitled_x_post
-from local_library import Library
+from subculture.shared.untitled_content import UNTITLED_TITLE, is_untitled_x_post
+from subculture.collection.application.untitled_cleanup import delete_untitled_x_contents
+from subculture.library.infrastructure.local_library import Library
 
 
 class UntitledXMatchTests(unittest.TestCase):
@@ -89,7 +90,7 @@ class DeleteUntitledXLocalTests(unittest.TestCase):
 
     def _insert(self, item_id, url, title, payload_title=None):
         from datetime import datetime, timezone
-        from library_models import Item
+        from subculture.library.infrastructure.models import Item
         payload = {"title": payload_title if payload_title is not None else title, "url": url}
         with self.lib.connect() as session:
             session.add(Item(

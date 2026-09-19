@@ -7,11 +7,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import library_routes
-from ai_writer import AiWriterError
-from drafts_store import list_drafts, publish_draft
-from library_models import Draft
-from local_library import Library
+from subculture.library.interface import routes as library_routes
+from subculture.drafts.infrastructure.ai_writer import AiWriterError
+from subculture.drafts.application.drafts import list_drafts, publish_draft
+from subculture.library.infrastructure.models import Draft
+from subculture.library.infrastructure.local_library import Library
 
 
 def snapshot(doc_id, title="Frieren 피규어 예약", category="FIGURE", **fields):
@@ -31,7 +31,7 @@ def cloud(*snapshots):
 
 class FlowCase(unittest.TestCase):
     def setUp(self):
-        from app import app
+        from subculture.web.app import app
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "library.sqlite3"

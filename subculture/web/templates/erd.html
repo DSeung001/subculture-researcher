@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}ERD · 서브컬처 리서처{% endblock %}
+{% block body %}
+<main class="wide">
+  <header class="page-header">
+    <div>
+      <h1>ERD</h1>
+      <p class="subtitle">로컬 큐레이션 DB의 테이블 관계도입니다. <code>library/infrastructure/models.py</code> 모델에서 그대로 만들어 지므로 스키마가 바뀌면 함께 바뀝니다.</p>
+    </div>
+  </header>
+
+  <section class="panel erd-flow" aria-label="데이터 흐름">
+    <div class="erd-flow-step"><strong>Firestore</strong><small><code>categories/{STORAGE_CATEGORY}/contents/{문서ID}</code></small></div>
+    <span class="erd-flow-arrow" aria-hidden="true">→<small>단방향 동기화</small></span>
+    <div class="erd-flow-step"><strong>items</strong><small><code>id = STORAGE_CATEGORY:문서ID</code> · 원본은 payload에 보관</small></div>
+    <span class="erd-flow-arrow" aria-hidden="true">→<small>사용자가 연결·분류</small></span>
+    <div class="erd-flow-step"><strong>작품 · 분류 · 기획</strong><small>동기화가 덮어쓰지 않는 로컬 데이터</small></div>
+  </section>
+
+  <section class="panel">
+    <div class="erd-legend">
+      {% for kind, label in erd.kinds.items() %}<span class="erd-legend-item"><i class="erd-swatch kind-{{ kind }}"></i>{{ label }}</span>{% endfor %}
+      <span class="erd-legend-item"><span class="erd-mark">1</span>부모</span>
+      <span class="erd-legend-item"><span class="erd-mark">N</span>자식(외래키 쪽)</span>
+      <span class="erd-legend-item"><b class="erd-badge pk">PK</b><b class="erd-badge fk">FK</b><b class="erd-badge uq">UQ</b></span>
+      <span class="erd-legend-item">타입 뒤 <code>?</code> = NULL 허용</span>
+    </div>
+    <div class="erd-scroll">
+      <svg class="erd" id="erd" viewBox="0 0 {{ erd.width }} {{ erd.height }}" width="{{ erd.width }}" role="img"
+           aria-label="로컬 DB 테이블 {{ erd.tables|length }}개와 관계 {{ erd.relations|length }}개">
+        <g class="erd-relations">
+          {% for r in erd.relations %}
+          <g class="erd-rel" data-tables="{{ r.child }} {{ r.parent }}">
+            <path d="{{ r.path }}"><title>{{ r.child }}.{{ r.child_column }} → {{ r.parent }}.{{ r.parent_column }} (삭제 시 {{ r.ondelete }})</title></path>
+            <text class="erd-card" x="{{ r.child_mark.x }}" y="{{ r.child_mark.y }}">N</text>
+            <text class="erd-card" x="{{ r.parent_mark.x }}" y="{{ r.parent_mark.y }}">1</text>
+          </g>
+          {% endfor %}
+        </g>
+        {% for t in erd.tables %}
+        <g class="erd-table kind-{{ t.kind }}" data-table="{{ t.name }}" transform="translate({{ t.x }} {{ t.y }})" tabindex="0">
+          <rect class="erd-box" width="{{ t.w }}" height="{{ t.h }}" rx="8"/>
+          <path class="erd-head" d="M0 8a8 8 0 0 1 8-8h{{ t.w - 16 }}a8 8 0 0 1 8 8v{{ 34 - 8 }}h-{{ t.w }}z"/>
+          <text class="erd-name" x="12" y="22">{{ t.name }}</text>
+          {% for c in t.columns %}
+          <g class="erd-col" transform="translate(0 {{ c.cy }})">
+            {% if c.pk %}<rect class="erd-badge-bg pk" x="10" y="-8" width="22" height="16" rx="4"/><text class="erd-badge-text" x="21" y="3.5">PK</text>
+            {% elif c.fk %}<rect class="erd-badge-bg fk" x="10" y="-8" width="22" height="16" rx="4"/><text class="erd-badge-text" x="21" y="3.5">FK</text>
+            {% elif c.unique %}<rect class="erd-badge-bg uq" x="10" y="-8" width="22" height="16" rx="4"/><text class="erd-badge-text" x="21" y="3.5">UQ</text>{% endif %}
+            {% if c.pk and c.fk %}<rect class="erd-badge-bg fk" x="35" y="-8" width="22" height="16" rx="4"/><text class="erd-badge-text" x="46" y="3.5">FK</text>{% endif %}
+            <text class="erd-col-name" x="{{ 62 if c.pk and c.fk else 38 }}" y="4">{{ c.name }}</text>
+            <text class="erd-col-type" x="{{ t.w - 10 }}" y="4" text-anchor="end">{{ c.type }}{{ '?' if c.nullable else '' }}</text>
+          </g>
+          {% endfor %}
+        </g>
+        {% endfor %}
+      </svg>
+    </div>
+    <p class="hint erd-hint">테이블에 마우스를 올리거나 포커스하면 연결된 관계가 강조됩니다.</p>
+  </section>
+
+  <div class="erd-details">
+    <section class="panel">
+      <h2>테이블 설명</h2>
+      <dl class="erd-notes">
+        {% for t in erd.tables %}
+        <dt><span class="erd-swatch kind-{{ t.kind }}"></span><code>{{ t.name }}</code></dt>
+        <dd>{{ t.note or '—' }}</dd>
+        {% endfor %}
+      </dl>
+    </section>
+    <section class="panel">
+      <h2>관계 {{ erd.relations|length }}개</h2>
+      <div class="table-scroll">
+        <table class="sources-table erd-relations-table">
+          <thead><tr><th>자식 (N)</th><th>부모 (1)</th><th>부모 삭제 시</th></tr></thead>
+          <tbody>
+            {% for r in erd.relations %}
+            <tr><td><code>{{ r.child }}.{{ r.child_column }}</code></td><td><code>{{ r.parent }}.{{ r.parent_column }}</code></td><td><span class="tag">{{ r.ondelete }}</span></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">연결 테이블(<code>item_*</code>, <code>collection_items</code>)은 두 외래키가 함께 기본키라서 항목과 분류·기획 사이의 다대다(M:N)를 만듭니다. 작품이 삭제돼도 수집 항목(<code>items</code>)은 남고 연결 행만 함께 지워집니다.</p>
+    </section>
+  </div>
+</main>
+<script src="{{ url_for('static', filename='erd.js') }}" defer></script>
+{% endblock %}

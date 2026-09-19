@@ -1,6 +1,6 @@
 # 데이터 수집 대상
 
-이 문서는 Subculture Researcher가 어떤 소스를 어떤 방식으로 다루는지 정리합니다. 실제 목록은 [sources.yaml](sources.yaml)이 기준이며, 앱의 「수집 목록」 화면에서도 볼 수 있습니다.
+이 문서는 Subculture Researcher가 어떤 소스를 어떤 방식으로 다루는지 정리합니다. 실제 목록은 [sources.yaml](subculture/collection/sources.yaml)이 기준이며, 앱의 「수집 목록」 화면에서도 볼 수 있습니다.
 
 ## 자동 수집
 
@@ -23,7 +23,7 @@
 - 애니메이트 코리아에는 피규어 전용 카테고리가 없어 굿즈 중심입니다.
 - 라프텔 홈의 `NEW` 배지는 그때그때 진행 중인 캠페인(예: 특정 IP)에 쏠릴 수 있습니다.
 - 마니아하우스(Cafe24)는 피규어·프라모델이 섞인 키덜트샵이고 예약 상품 약 2.8천 건, 입고 완료 상품 약 1.7만 건이라 최신순 앞부분만 봅니다. 상세의 예약금·잔금 옵션 문구가 [입고완료] 상품을 예약으로 오인시키므로 기본 정보 블록(`.xans-product-detaildesign`)만 읽습니다. 상품 URL은 다른 Cafe24 샵처럼 `product_no`로 통일합니다.
-- 코믹스아트(Cafe24)는 상세 본문에 모든 상품 공통의 「예약주문」 버튼 문구가 있어 상태가 오염되므로 상세를 열지 않고 **목록 카드 텍스트**만 읽습니다. 카드에 「예약」 단어 없이 `발매 :`·`마감 :`만 있어 신작 소스는 이를 `preorder_words`로 예약 신호로 삼고, 할인 카드는 소비자가가 먼저 나와 `price_pattern`으로 「판매가」 금액을 읽습니다. 마감일은 연도가 없어(`10월 26일`) `preorderEndAt`은 비어 있습니다. 링크가 `/category/N/display/N/`로 끝나는 SEO 경로라 `url_identity.py`가 그 꼬리를 떼고 `product_no`를 잡으며, 목록 끝의 `{$url}` 템플릿 카드는 `allow_patterns`로 걸러집니다.
+- 코믹스아트(Cafe24)는 상세 본문에 모든 상품 공통의 「예약주문」 버튼 문구가 있어 상태가 오염되므로 상세를 열지 않고 **목록 카드 텍스트**만 읽습니다. 카드에 「예약」 단어 없이 `발매 :`·`마감 :`만 있어 신작 소스는 이를 `preorder_words`로 예약 신호로 삼고, 할인 카드는 소비자가가 먼저 나와 `price_pattern`으로 「판매가」 금액을 읽습니다. 마감일은 연도가 없어(`10월 26일`) `preorderEndAt`은 비어 있습니다. 링크가 `/category/N/display/N/`로 끝나는 SEO 경로라 `subculture/collection/domain/url_identity.py`가 그 꼬리를 떼고 `product_no`를 잡으며, 목록 끝의 `{$url}` 템플릿 카드는 `allow_patterns`로 걸러집니다.
 
 ### 뉴스·화제 (작품 발굴용)
 
@@ -41,7 +41,7 @@
 
 - 제목·링크·출처·분류와 상품 메타데이터만 저장하며 원문 전체는 복제하지 않습니다.
 - 동일 URL은 `ContentStore`가 SHA-256 기반 문서 ID로 중복을 막고, 재수집 시 값(가격·상태·사진)만 갱신합니다.
-- Cafe24 등 등록된 샵은 SEO 경로와 짧은 주소를 `product_no` 쿼리 형태로 통일합니다(`url_identity.py`). 새 플랫폼은 규칙 타입을 추가합니다.
+- Cafe24 등 등록된 샵은 SEO 경로와 짧은 주소를 `product_no` 쿼리 형태로 통일합니다(`subculture/collection/domain/url_identity.py`). 새 플랫폼은 규칙 타입을 추가합니다.
 
 ## 수동 수집
 
@@ -71,7 +71,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 ## 이미지 수집
 
-글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** `imageUrl`로 저장합니다(이미지 파일은 저장하지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
+글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** `imageUrl`로 저장합니다(이미지 파일은 저장하지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `subculture/shared/image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
 
 ## 소스 설정 키 (HTML 소스)
 

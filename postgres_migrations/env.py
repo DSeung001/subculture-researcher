@@ -1,7 +1,7 @@
 from alembic import context
 
-from library_database import make_engine
-from library_models import Base
+from subculture.library.infrastructure.database import make_engine
+from subculture.library.infrastructure.models import Base
 
 
 def run(connection):

@@ -10,13 +10,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import collect
-import collect_manual
-import collection_runner
-import library_database
-import prune_library
-from content_store import ContentStore, doc_id
-from local_library import Library
+from subculture.collection.interface import collect_cli as collect
+from subculture.collection.interface import collect_manual_cli as collect_manual
+from subculture.collection.application import collection_runner
+from subculture.library.application import sync as library_sync
+from subculture.library.infrastructure import database as library_database
+from subculture.library.interface import prune_cli as prune_library
+from subculture.collection.infrastructure.content_store import ContentStore
+from subculture.collection.domain.content_rules import doc_id
+from subculture.library.infrastructure.local_library import Library
 
 
 def cloud_doc(doc_id_, category="FIGURE", title="제목", source="Shop"):
@@ -142,7 +144,7 @@ class ReportLocalSyncTests(unittest.TestCase):
     def test_prints_the_gap_and_the_next_steps(self):
         store = Mock()
         store.item_ids.return_value = {"FIGURE:a"}
-        with patch("local_library.Library") as library:
+        with patch("subculture.library.infrastructure.local_library.Library") as library:
             library.return_value.sync_status.return_value = self.STATUS
             _, output = run_quiet(collection_runner.report_local_sync, store)
         library.return_value.sync_status.assert_called_once_with({"FIGURE:a"})
@@ -151,14 +153,14 @@ class ReportLocalSyncTests(unittest.TestCase):
 
     def test_up_to_date_prints_no_hints(self):
         status = {**self.STATUS, "unsynced": 0, "orphans": 1, "curated_orphans": 1}
-        with patch("local_library.Library") as library:
+        with patch("subculture.library.infrastructure.local_library.Library") as library:
             library.return_value.sync_status.return_value = status
             _, output = run_quiet(collection_runner.report_local_sync, Mock(item_ids=lambda: set()))
         self.assertIn("미동기화 0", output)
         self.assertNotIn("→", output)
 
     def test_a_stopped_local_database_only_skips_the_check(self):
-        with patch("local_library.Library", side_effect=RuntimeError("connection refused\nsecond line")):
+        with patch("subculture.library.infrastructure.local_library.Library", side_effect=RuntimeError("connection refused\nsecond line")):
             _, output = run_quiet(collection_runner.report_local_sync, Mock())
         self.assertIn("확인 건너뜀: connection refused", output)
         self.assertNotIn("second line", output)
@@ -216,13 +218,13 @@ class SyncAfterCollectionTests(unittest.TestCase):
         sync.assert_not_called()
 
     def test_sync_local_failure_is_reported_not_raised(self):
-        with patch("local_library.Library", side_effect=RuntimeError("db down")):
-            ok, output = run_quiet(collection_runner.sync_local, Mock())
+        with patch("subculture.library.infrastructure.local_library.Library", side_effect=RuntimeError("db down")):
+            ok, output = run_quiet(library_sync.sync_local, Mock())
         self.assertFalse(ok)
         self.assertIn("수집 결과에는 영향 없음", output)
-        with patch("local_library.Library") as library:
+        with patch("subculture.library.infrastructure.local_library.Library") as library:
             library.return_value.sync.return_value = 12
-            ok, output = run_quiet(collection_runner.sync_local, Mock())
+            ok, output = run_quiet(library_sync.sync_local, Mock())
         self.assertTrue(ok)
         self.assertIn("12개", output)
 
@@ -259,7 +261,7 @@ class PostgresBackupFallbackTests(unittest.TestCase):
             if command[0] == "pg_dump":
                 raise subprocess.CalledProcessError(1, "pg_dump")  # host client older than the server
             kwargs["stdout"].write(b"PGDMP")
-        with patch.object(library_database.subprocess, "run", side_effect=fake_run),                 patch.object(library_database, "__file__", str(Path(tempfile.gettempdir()) / "x.py")):
+        with patch.object(library_database.subprocess, "run", side_effect=fake_run),                 patch.object(library_database, "LOCAL_DIR", Path(tempfile.gettempdir()) / ".local"):
             backup = library_database.backup_library(self.engine("127.0.0.1"))
             try:
                 self.assertEqual(backup.read_bytes(), b"PGDMP")
@@ -269,7 +271,7 @@ class PostgresBackupFallbackTests(unittest.TestCase):
 
     def test_remote_server_has_no_container_fallback(self):
         with patch.object(library_database.subprocess, "run",
-                          side_effect=subprocess.CalledProcessError(1, "pg_dump")) as run,                 patch.object(library_database, "__file__", str(Path(tempfile.gettempdir()) / "x.py")):
+                          side_effect=subprocess.CalledProcessError(1, "pg_dump")) as run,                 patch.object(library_database, "LOCAL_DIR", Path(tempfile.gettempdir()) / ".local"):
             with self.assertRaises(subprocess.CalledProcessError):
                 library_database.backup_library(self.engine("db.example.com"))
         self.assertEqual(run.call_count, 1)
@@ -278,7 +280,7 @@ class PostgresBackupFallbackTests(unittest.TestCase):
         def fake_run(command, **kwargs):
             if command[0] == "pg_dump":
                 raise FileNotFoundError("pg_dump")
-        with patch.object(library_database.subprocess, "run", side_effect=fake_run),                 patch.object(library_database, "__file__", str(Path(tempfile.gettempdir()) / "x.py")):
+        with patch.object(library_database.subprocess, "run", side_effect=fake_run),                 patch.object(library_database, "LOCAL_DIR", Path(tempfile.gettempdir()) / ".local"):
             with self.assertRaises(RuntimeError):
                 library_database.backup_library(self.engine("localhost"))
         leftovers = list((Path(tempfile.gettempdir()) / ".local" / "backups").glob("library-*.dump"))

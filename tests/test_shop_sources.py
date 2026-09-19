@@ -8,10 +8,10 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
-from collectors.common import extract_product_fields
-from collectors.html_links import extract_links, fetch_detail, html_items
-from content_store import add_manual_content, manual_shop
-from sources_config import automatic_sources, is_manual_source, load_sources
+from subculture.collection.infrastructure.collectors.common import extract_product_fields
+from subculture.collection.infrastructure.collectors.html_links import extract_links, fetch_detail, html_items
+from subculture.collection.application.manual_entry import add_manual_content, manual_shop
+from subculture.collection.infrastructure.sources_config import automatic_sources, is_manual_source, load_sources
 
 SOURCES = {source["name"]: source for source in load_sources()}
 LAFTEL = SOURCES["라프텔 스토어"]
@@ -112,8 +112,8 @@ COMICS_ART_LIST = """
 class LaftelStoreTests(unittest.TestCase):
     def items(self):
         # Through html_items, which also drops repeated links (a product shows up in several carousels).
-        with patch("collectors.html_links.get_html", return_value=(LAFTEL_HOME, "https://store.laftel.net/")), \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", return_value=(LAFTEL_HOME, "https://store.laftel.net/")), \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             return list(html_items(LAFTEL))
 
     def test_only_new_badged_product_links_are_collected_once(self):
@@ -134,8 +134,8 @@ class LaftelStoreTests(unittest.TestCase):
         self.assertEqual(in_stock["imageUrl"], "https://laftelstore.cafe24.com/web/product/small/202609/b.png")
 
     def test_no_detail_page_is_requested(self):
-        with patch("collectors.html_links.get_html", return_value=(LAFTEL_HOME, "https://store.laftel.net/")) as fetch, \
-                patch("collectors.html_links.RobotsPolicy"):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", return_value=(LAFTEL_HOME, "https://store.laftel.net/")) as fetch, \
+                patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
             items = list(html_items(LAFTEL))
         self.assertEqual(len(items), 2)
         self.assertEqual(fetch.call_count, 1)  # the list page only
@@ -235,7 +235,7 @@ class ManiahouseListTests(unittest.TestCase):
         source = MANIAHOUSE_IN_STOCK
         detail = f'<html><head><meta property="og:image" content="https://maniahouse.co.kr/web/product/big/a.jpg"></head><body>{MANIAHOUSE_DETAIL_IN_STOCK}</body></html>'
         item = {"url": "https://maniahouse.co.kr/product/detail.html?product_no=1", "title": "t", "_errors": []}
-        with patch("collectors.html_links.get_html", return_value=(detail, item["url"])):
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", return_value=(detail, item["url"])):
             fetch_detail(item, source, policy=None)
         self.assertEqual((item["saleStatus"], item["price"], item["shop"]), ("IN_STOCK", 178000, "마니아하우스"))
         self.assertEqual(item["imageUrl"], "https://maniahouse.co.kr/web/product/big/a.jpg")
@@ -338,7 +338,7 @@ class ManualShopTests(unittest.TestCase):
         self.assertIsNone(manual_shop("https://notlaftel.net/products/1"))
 
     def saved(self, url, category="FIGURE", image_url=""):
-        with patch("content_store.ContentStore") as store_class:
+        with patch("subculture.collection.application.manual_entry.ContentStore") as store_class:
             store_class.return_value.save.return_value = {"inserted": 1}
             add_manual_content(None, url, "코토부키야 신상", category, "NEWS", "OFFICIAL", image_url)
             return store_class.return_value.save.call_args.args[0]

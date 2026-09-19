@@ -4,8 +4,8 @@ import unittest
 
 from sqlalchemy import Column, ForeignKey, Integer, MetaData, Table, Text
 
-from erd import LAYOUT, TABLE_W, build_erd
-from library_models import Base
+from subculture.library.interface.erd import LAYOUT, TABLE_W, build_erd
+from subculture.library.infrastructure.models import Base
 
 
 def overlaps(a, b):
@@ -68,7 +68,7 @@ class ErdDataTests(unittest.TestCase):
 
 class ErdPageTests(unittest.TestCase):
     def setUp(self):
-        from app import app
+        from subculture.web.app import app
         self.client = app.test_client()
 
     def test_page_lists_every_table_and_is_linked_next_to_sources(self):

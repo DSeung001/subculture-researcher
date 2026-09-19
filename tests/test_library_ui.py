@@ -6,7 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from local_library import FILTER_KEYS, Library
+from subculture.library.domain.taxonomy import FILTER_KEYS
+from subculture.library.infrastructure.local_library import Library
 
 
 def snapshot(doc_id, title="Frieren 피규어 예약", category="FIGURE", **fields):
@@ -25,7 +26,7 @@ def cloud(*snapshots):
 
 class LibraryUiTests(unittest.TestCase):
     def setUp(self):
-        from app import app
+        from subculture.web.app import app
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "library.sqlite3"
@@ -38,7 +39,7 @@ class LibraryUiTests(unittest.TestCase):
         self.lib = Library(self.path)
 
     def test_active_filter_chips_drop_only_their_own_condition(self):
-        from library_routes import active_filters
+        from subculture.library.interface.routes import active_filters
         work = self.lib.save_term("works", "프리렌")
         filters = {**dict.fromkeys(FILTER_KEYS, ""), "works": str(work), "q": "피규어", "unclassified": "1"}
         with self.app.test_request_context():

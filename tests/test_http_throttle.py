@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from collectors import http as http_mod
+from subculture.collection.infrastructure.collectors import http as http_mod
 
 
 class RequestPacingTests(unittest.TestCase):

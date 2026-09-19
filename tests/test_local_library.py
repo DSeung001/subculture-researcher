@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from local_library import Library
+from subculture.library.infrastructure.local_library import Library
 
 
 def snapshot(doc_id="legacy", title="Frieren 피규어 예약", category="FIGURE", **fields):
@@ -131,7 +131,7 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(self.lib.items({})[1], 2)
 
     def test_only_works_and_product_categories_are_offered(self):
-        from local_library import TAXONOMIES
+        from subculture.library.domain.taxonomy import TAXONOMIES
         self.assertEqual(list(TAXONOMIES), ["works", "product_categories"])
         self.assertEqual(set(self.lib.terms()), {"works", "product_categories"})
         for table in ("tags", "information_types", "saved_filters"):
@@ -174,7 +174,7 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(self.lib.items({})[1], 55)
 
     def test_linked_work_items_uses_storage_prefix_and_skips_unlinked(self):
-        from ai_drafts import pick_work_source_ids
+        from subculture.drafts.domain.selection import pick_work_source_ids
 
         self.lib.sync(cloud(
             snapshot("fig1", title="피규어 A", category="FIGURE"),
@@ -211,7 +211,7 @@ class LibraryTests(unittest.TestCase):
 
 class LibraryRouteTests(unittest.TestCase):
     def setUp(self):
-        from app import app
+        from subculture.web.app import app
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "library.sqlite3"

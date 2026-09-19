@@ -72,13 +72,27 @@ python -m playwright install chromium
 
 Windows에서 가상환경을 활성화하지 않았다면 위 명령의 `python`을 `.\.venv\Scripts\python.exe`로 바꾸세요.
 
-앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 엽니다. **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 저장된 제목으로 작품 사전을 채우려면 `python seed_works.py`(`work_catalog.yaml`)를 실행한 뒤 분류 사전에서 키워드를 수정·자동 연결할 수 있습니다. 로컬 전용이므로 외부에 공개하지 않습니다.
+앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 엽니다. **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 저장된 제목으로 작품 사전을 채우려면 `python seed_works.py`(`subculture/library/work_catalog.yaml`)를 실행한 뒤 분류 사전에서 키워드를 수정·자동 연결할 수 있습니다. 로컬 전용이므로 외부에 공개하지 않습니다.
 
 자동 수집(`collect.py`)은 YouTube 등 수동 전용 소스를 제외합니다. 수동 수집은 `collect_manual.py`로 YouTube RSS만 돌립니다. 라프텔은 스토어(`store.laftel.net`) 공개 HTML이 자동 수집에 포함됩니다. 일반 자동 수집은 AI 키가 있으면 Firestore 점수 순 혼합 초안도 하나 만듭니다.
 
 작품·기획에서 소재를 선택하면 화면 하단에 「글 만들기」(제목·링크 목록 초안, AI 없음)와 「AI로 글 쓰기」(Gemini가 본문 작성) 버튼이 나타나며, 누르면 글 화면의 새 글로 바로 이동합니다. 임시글은 Firestore가 아니라 **로컬 DB**(`drafts`·`draft_items`)에 저장되고, 글 화면에 재료의 사진이 함께 보입니다. 세 갈래로 만듭니다. (1) 로컬 `collect.py`·`draft.py`·「AI로 글 만들기」의 혼합 초안(수집 후 기본으로 로컬에 동기화되므로 새 수집분도 후보에 포함), (2) 동기화·작품 연결 후 `draft.py --by-work` 또는 「작품별로 글 만들기」로 피규어·애니·혼합을 같은 IP끼리 묶는 로컬 초안, (3) 인박스에서 직접 고르는 수동 초안.
 
 GitHub Actions는 매일 08:00 KST에 자동 수집하고 혼합 초안도 만듭니다. 저장소 Secrets에 `FIREBASE_KEY`(서비스 계정 JSON 전체)를 넣고, 필요하면 `GEMINI_API_KEY`·`MYMEMORY_EMAIL`도 설정합니다.
+
+## 코드 구조
+
+애니·게임 작품을 중심으로 한 도메인(경계 컨텍스트)별로 `subculture/` 아래에 묶고, 각 컨텍스트를 `domain`(순수 규칙) · `application`(유스케이스) · `infrastructure`(Firestore·DB·HTTP·Gemini) · `interface`(CLI·화면) 계층으로 나눕니다. 의존 규칙은 [AGENTS.md](AGENTS.md)의 "Code layout"과 `tests/test_architecture.py`가 지킵니다.
+
+| 폴더 | 역할 |
+|---|---|
+| `subculture/collection/` | 수집: 소스 설정(`sources.yaml`), 수집기(`infrastructure/collectors`), Firestore 저장(`ContentStore`), 수집 CLI |
+| `subculture/library/` | 작품·기획: 로컬 DB 모델·`Library`, 키워드 규칙, 동기화·시드, 작품·기획 화면, ERD, 동기화·정리·마이그레이션 CLI, `work_catalog.yaml` |
+| `subculture/drafts/` | 글: 초안 규칙·저장소·유스케이스, AI 초안 선정, Gemini 작성기, 초안 CLI |
+| `subculture/shared/` | 공용 커널: 콘텐츠 어휘·문서 ID, 이미지·URL 규칙, 표시 규칙, Firebase 클라이언트, 경로 |
+| `subculture/web/` | Flask 앱(인박스·글·수집 목록·ERD), `templates/`, `static/` |
+| `migrations/`, `postgres_migrations/`, `alembic.ini` | Alembic 이력(적용된 리비전이 있어 루트에 그대로 둠) |
+| 루트 `*.py` | `app.py`, `collect.py` 등 위 명령을 그대로 쓰기 위한 얇은 실행 래퍼 |
 
 ## 로컬 DB 관리
 
