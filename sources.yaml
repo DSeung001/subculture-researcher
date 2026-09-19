@@ -43,6 +43,8 @@ sources:
     enabled: true
     respect_robots: true
     fetch_detail_image: true  # 목록에는 이미지가 없어 상세 og:image(보도자료 대표 이미지)를 쓴다
+    image_deny_patterns:
+      - '^/common/'  # 이미지 없는 보도자료의 사이트 공통 og.png
 
   # 일본 애니 공식 YouTube 채널. channel_id로 공식 Atom feed만 읽는다.
   # RSS가 간헐 404를 내므로 자동 스케줄에서 제외하고 collect_manual.py로만 실행한다.

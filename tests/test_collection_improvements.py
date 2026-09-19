@@ -261,6 +261,17 @@ class FigureFarmTests(unittest.TestCase):
         self.assertEqual(items[0]["title"], "[입고] 블루 아카이브 피규어")
 
 
+class PrTimesDefaultImageTests(unittest.TestCase):
+    def test_site_wide_default_og_image_is_not_a_photo(self):
+        from bs4 import BeautifulSoup
+        from collectors.images import detail_image
+        source = SOURCES["PR TIMES 만화·애니"]
+        page = BeautifulSoup('<meta property="og:image" content="https://prtimes.jp/common/pc_v4/og.png">', "html.parser")
+        self.assertIsNone(detail_image(page, "https://prtimes.jp/main/html/rd/p/1.html", source))
+        real = BeautifulSoup('<meta property="og:image" content="https://prcdn.freetls.fastly.net/release_image/1/a.jpg?format=jpeg">', "html.parser")
+        self.assertTrue(detail_image(real, "https://prtimes.jp/main/html/rd/p/1.html", source).endswith("a.jpg?format=jpeg"))
+
+
 class AniListCacheTests(unittest.TestCase):
     def db_with(self, **state):
         db = Mock()
