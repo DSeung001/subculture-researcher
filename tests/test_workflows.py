@@ -238,6 +238,25 @@ class WorkflowTests(unittest.TestCase):
             normalize_url("https://m.ttabbaemall.co.kr/product/detail.html?product_no=42&cate_no=1"),
             ttabbae,
         )
+        # List-page SEO links end in /category/N/display/N/; the id is the number before that tail.
+        comics = "https://comics-art.co.kr/product/detail.html?product_no=257347"
+        for url in (
+            "https://comics-art.co.kr/product/골든-헤드-피규어/257347/category/1215/display/1/",
+            "https://www.comics-art.co.kr/product/slug/257347/category/49/display/1",
+            "https://m.comics-art.co.kr/product/slug/257347/",
+            "https://comics-art.co.kr/product/detail.html?product_no=257347&cate_no=1215&display_group=1",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(normalize_url(url), comics)
+        template = "https://comics-art.co.kr/product/{$url}"
+        self.assertEqual(normalize_url(template), template)  # the unfilled skin template keeps no product_no
+        maniahouse = "https://maniahouse.co.kr/product/detail.html?product_no=25843"
+        for url in (
+            "https://maniahouse.co.kr/product/detail.html?product_no=25843&cate_no=45&display_group=1",
+            "https://www.maniahouse.co.kr/product/some-figure/25843/",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(normalize_url(url), maniahouse)
 
 
     def test_datetime_publish_date_drives_recency(self):

@@ -13,8 +13,12 @@ import re
 from dataclasses import dataclass
 from urllib.parse import parse_qs, urlunsplit
 
-# Cafe24 SEO product path: /product/{slug...}/{id}/ — not detail.html itself.
-_CAFE24_SEO_PATH = re.compile(r"^/product/(?!detail\.html)(?:[^/]+/)*(\d+)(?:/|$)")
+# Cafe24 SEO product path: /product/{slug...}/{id}/ — not detail.html itself. List pages append
+# /category/{n}/display/{n}/, so the id is the first numeric segment and only that tail may follow it
+# (a greedy match would return the display number instead).
+_CAFE24_SEO_PATH = re.compile(
+    r"^/product/(?!detail\.html)(?:[^/]+/)*?(\d+)(?:/category/\d+)?(?:/display/\d+)?/?$"
+)
 
 
 @dataclass(frozen=True)
@@ -33,6 +37,14 @@ CAFE24_SHOPS = (
     HostRule(
         frozenset({"ttabbaemall.co.kr", "www.ttabbaemall.co.kr", "m.ttabbaemall.co.kr"}),
         "ttabbaemall.co.kr",
+    ),
+    HostRule(
+        frozenset({"comics-art.co.kr", "www.comics-art.co.kr", "m.comics-art.co.kr"}),
+        "comics-art.co.kr",
+    ),
+    HostRule(
+        frozenset({"maniahouse.co.kr", "www.maniahouse.co.kr", "m.maniahouse.co.kr"}),
+        "maniahouse.co.kr",
     ),
 )
 

@@ -8,7 +8,8 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
 
-from collectors.html_links import extract_links, html_items
+from collectors.common import extract_product_fields
+from collectors.html_links import extract_links, fetch_detail, html_items
 from content_store import add_manual_content, manual_shop
 from sources_config import automatic_sources, is_manual_source, load_sources
 
@@ -18,6 +19,10 @@ ANIMATE = SOURCES["애니메이트 코리아 신상품"]
 FIGUREPRESSO = SOURCES["피규어프레소 예약상품"]
 TTABBAE_NEW_ARRIVAL = SOURCES["따빼몰 신규입고"]
 TTABBAE_NEW_PREORDER = SOURCES["따빼몰 신규예약"]
+COMICS_ART_NEW = SOURCES["코믹스아트 신작 상품"]
+COMICS_ART_IN_STOCK = SOURCES["코믹스아트 입고 완료 당일 발송"]
+MANIAHOUSE_PREORDER = SOURCES["마니아하우스 예약상품"]
+MANIAHOUSE_IN_STOCK = SOURCES["마니아하우스 입고완료"]
 
 # store.laftel.net: the whole product card is the link; only fresh items carry a NEW badge.
 LAFTEL_HOME = """
@@ -63,6 +68,44 @@ TTABBAE_LIST = """
  <li class="item"><div class="thumbnail"><a href="/product/detail.html?product_no=9055&amp;cate_no=24&amp;display_group=1"><img src="//ttabbaemall.co.kr/web/product/medium/202609/a.jpg"></a></div>
   <div class="description"><p class="name"><a href="/product/detail.html?product_no=9055&amp;cate_no=24&amp;display_group=1"><span class="title displaynone"><span>상품명</span> :</span> <span>[예약]니디걸 오버도즈 누들스토퍼 초텐짱</span></a></p></div></li>
  <li class="item"><div class="description"><p class="name"><a href="/product/detail.html?product_no=7701&amp;cate_no=24&amp;display_group=1"><span class="title displaynone"><span>상품명</span> :</span> <span>명조 미니 공명자 시리즈 봉제인형 키링 제 2탄</span></a></p></div></li>
+</ul>"""
+
+# maniahouse.co.kr list (cate_no=45/46): the image link and the name link (a.name) both point at the product.
+MANIAHOUSE_LIST = """
+<ul>
+ <li class="xans-record-"><a href="/product/detail.html?product_no=25843&cate_no=45&display_group=1" class="prdImg"><img src="//maniahouse.co.kr/web/product/medium/202609/a.jpg" alt=""/></a>
+  <a href="/product/detail.html?product_no=25843&cate_no=45&display_group=1" class="name"><span style="font-size:12px;color:#555555;">[예약판매][공식] 카보틱스 마징가Z 보스보로트 블리츠웨이 재판 3508</span></a></li>
+ <li class="xans-record-"><a href="/product/detail.html?product_no=25804&cate_no=45&display_group=1" class="name"><span>[입고완료] 넨도로이드 3013 라르크앙시엘 하이도</span></a></li>
+ <li><a href="/product/list.html?cate_no=46" class="name">입고 완료 상품</a></li>
+</ul>"""
+
+# The info block reads the same on every product; the 예약금/잔금 option text sits outside it.
+MANIAHOUSE_DETAIL_IN_STOCK = """
+<div class="detailArea"><div class="infoArea">
+ <div class="xans-product-detaildesign"><table><tr><th>상품명</th><td>[입고완료][총판] 파워레인저 메가조드 프라모델</td></tr>
+  <tr><th>판매가</th><td>178,000원</td></tr></table></div>
+ <select><option>예약금 (7일경과시 위약금으로 소멸됩니다.)</option><option>잔금결제 (예약 결제가 없는 경우 자동취소됩니다.)</option></select>
+</div></div>"""
+
+
+# comics-art.co.kr list (cate_no=1215/49): links are SEO paths with a /category/N/display/N/ tail, hidden spans
+# list prices before the visible text (소비자가 comes before 판매가 on discounted cards), and the last card is
+# the skin's unfilled {$url} template.
+COMICS_ART_LIST = """
+<ul class="prdList">
+ <li class="item"><div class="thumbnail"><div class="prdImg">
+  <div style="display:none;"><span class="price">0원</span> <span class="sale">255,000원</span></div>
+  <a href="/product/골든-헤드golden-head-17스케일-피규어/257347/category/1215/display/1/"><img src="//comics-art.co.kr/web/product/medium/202609/a.jpg"></a></div>
+  <div class="icon"><div class="option"><a href="/product/detail.html?product_no=257347&amp;cate_no=1215&amp;display_group=1"><img src="https://comics11.cafe24.com/test4/new_w.png"></a></div></div></div>
+  <div class="description"><strong class="name"><a href="/product/골든-헤드golden-head-17스케일-피규어/257347/category/1215/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>골든 헤드(GOLDEN HEAD) 1/7스케일 피규어 고블린 슬레이어2</span></a></strong>
+  <ul class="spec"><li>제조사 : 골든 헤드</li><li>판매가 : 255,000원</li><li>마감 : 10월 26일 오전</li><li>발매 : 27년 06월</li></ul></div></li>
+ <li class="item"><div class="thumbnail"><div class="prdImg">
+  <div style="display:none;"><span class="price">82,000원</span> <span class="sale">62,000원</span></div>
+  <a href="/product/당일발송-굿스마일-컴퍼니-넨도로이드-레제/112066/category/49/display/1/"><img src="//comics-art.co.kr/web/product/medium/202405/b.jpg"></a></div></div>
+  <div class="description"><strong class="name"><a href="/product/당일발송-굿스마일-컴퍼니-넨도로이드-레제/112066/category/49/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>(당일발송) 굿스마일 컴퍼니 넨도로이드 피규어 체인소 맨 레제</span></a></strong>
+  <ul class="spec"><li>제조사 : 굿스마일컴퍼니</li><li>소비자가 : 82,000원</li><li>판매가 : 62,000원</li></ul></div></li>
+ <li class="item"><div class="thumbnail"><div class="prdImg"><a href="/product/{$url}"><img src="{$image}"></a></div></div>
+  <div class="description"><strong class="name"><a href="/product/{$url}"><span>{$productName}</span></a></strong></div></li>
 </ul>"""
 
 
@@ -159,6 +202,102 @@ class TtabbaemallListTests(unittest.TestCase):
                 self.assertTrue(source["product_mode"])
                 self.assertEqual(source["shop"], "따빼몰")
                 self.assertEqual(source["category"], "GOODS")  # mixed list: not every item is a figure
+
+
+class ManiahouseListTests(unittest.TestCase):
+    def items(self, source):
+        return list(extract_links(MANIAHOUSE_LIST, source["url"], source))
+
+    def test_lists_are_the_preorder_and_arrived_categories(self):
+        self.assertEqual(MANIAHOUSE_PREORDER["url"], "https://maniahouse.co.kr/product/list.html?cate_no=45")
+        self.assertEqual(MANIAHOUSE_IN_STOCK["url"], "https://maniahouse.co.kr/product/list.html?cate_no=46")
+
+    def test_each_product_becomes_one_product_no_url_with_its_title(self):
+        for source in (MANIAHOUSE_PREORDER, MANIAHOUSE_IN_STOCK):
+            with self.subTest(source=source["name"]):
+                items = self.items(source)
+                self.assertEqual([item["url"] for item in items], [
+                    "https://maniahouse.co.kr/product/detail.html?product_no=25843",
+                    "https://maniahouse.co.kr/product/detail.html?product_no=25804",
+                ])  # cate_no/display_group dropped; the image link and category link are not items
+                self.assertEqual(items[0]["title"], "[예약판매][공식] 카보틱스 마징가Z 보스보로트 블리츠웨이 재판 3508")
+                self.assertEqual(items[1]["title"], "[입고완료] 넨도로이드 3013 라르크앙시엘 하이도")
+
+    def test_sources_are_automatic_products_from_the_shop(self):
+        for source in (MANIAHOUSE_PREORDER, MANIAHOUSE_IN_STOCK):
+            with self.subTest(source=source["name"]):
+                self.assertIn(source, automatic_sources())
+                self.assertTrue(source["respect_robots"])
+                self.assertTrue(source["product_mode"])
+                self.assertEqual(source["shop"], "마니아하우스")
+
+    def test_preorder_option_text_does_not_turn_an_arrived_product_into_a_preorder(self):
+        source = MANIAHOUSE_IN_STOCK
+        detail = f'<html><head><meta property="og:image" content="https://maniahouse.co.kr/web/product/big/a.jpg"></head><body>{MANIAHOUSE_DETAIL_IN_STOCK}</body></html>'
+        item = {"url": "https://maniahouse.co.kr/product/detail.html?product_no=1", "title": "t", "_errors": []}
+        with patch("collectors.html_links.get_html", return_value=(detail, item["url"])):
+            fetch_detail(item, source, policy=None)
+        self.assertEqual((item["saleStatus"], item["price"], item["shop"]), ("IN_STOCK", 178000, "마니아하우스"))
+        self.assertEqual(item["imageUrl"], "https://maniahouse.co.kr/web/product/big/a.jpg")
+
+
+class ComicsArtListTests(unittest.TestCase):
+    def items(self, source):
+        return list(extract_links(COMICS_ART_LIST, source["url"], source))
+
+    def test_lists_are_the_cafe24_new_release_and_same_day_shipping_categories(self):
+        self.assertEqual(COMICS_ART_NEW["url"], "https://comics-art.co.kr/product/list.html?cate_no=1215")
+        self.assertEqual(COMICS_ART_IN_STOCK["url"], "https://comics-art.co.kr/product/list.html?cate_no=49")
+
+    def test_seo_links_become_their_own_product_no_and_the_template_card_is_dropped(self):
+        for source in (COMICS_ART_NEW, COMICS_ART_IN_STOCK):
+            with self.subTest(source=source["name"]):
+                items = self.items(source)
+                self.assertEqual([item["url"] for item in items], [
+                    "https://comics-art.co.kr/product/detail.html?product_no=257347",
+                    "https://comics-art.co.kr/product/detail.html?product_no=112066",
+                ])  # not the trailing display number, and no {$url} card
+                self.assertEqual(items[0]["title"], "골든 헤드(GOLDEN HEAD) 1/7스케일 피규어 고블린 슬레이어2")
+                self.assertEqual(items[0]["imageUrl"], "https://comics-art.co.kr/web/product/medium/202609/a.jpg")
+                self.assertEqual(items[0]["shop"], "코믹스아트")
+
+    def test_price_is_the_selling_price_not_the_list_price(self):
+        discounted = self.items(COMICS_ART_IN_STOCK)[1]
+        self.assertEqual(discounted["price"], 62000)  # 소비자가 82,000원 comes first in the card
+
+    def test_new_release_cards_are_preorders_and_same_day_cards_are_in_stock(self):
+        self.assertEqual(self.items(COMICS_ART_NEW)[0]["saleStatus"], "PREORDER")  # only 발매/마감 labels, no "예약" word
+        self.assertEqual(self.items(COMICS_ART_IN_STOCK)[1]["saleStatus"], "IN_STOCK")
+
+    def test_sources_are_automatic_list_only_products(self):
+        for source in (COMICS_ART_NEW, COMICS_ART_IN_STOCK):
+            with self.subTest(source=source["name"]):
+                self.assertIn(source, automatic_sources())
+                self.assertTrue(source["respect_robots"])
+                self.assertTrue(source["list_product_mode"])
+                self.assertFalse(source.get("product_mode"))  # detail pages always carry a "예약주문" button
+                self.assertEqual(source["category"], "FIGURE")
+
+
+class ProductFieldOptionTests(unittest.TestCase):
+    TEXT = "소비자가 : 82,000원 판매가 : 62,000원 발매 : 27년 06월"
+
+    def test_defaults_are_unchanged_without_the_options(self):
+        fields = extract_product_fields({"name": "s"}, self.TEXT)
+        self.assertEqual((fields["price"], fields["saleStatus"]), (82000, "IN_STOCK"))
+
+    def test_price_pattern_picks_the_labelled_amount(self):
+        fields = extract_product_fields({"name": "s", "price_pattern": r"판매가\s*:\s*([\d,]+)\s*원"}, self.TEXT)
+        self.assertEqual(fields["price"], 62000)
+
+    def test_a_price_pattern_without_a_match_is_not_a_product(self):
+        self.assertEqual(extract_product_fields({"name": "s", "price_pattern": r"정가\s*([\d,]+)원"}, self.TEXT), {})
+
+    def test_preorder_words_add_to_the_defaults_and_sold_out_still_wins(self):
+        source = {"name": "s", "preorder_words": ["발매 :"]}
+        self.assertEqual(extract_product_fields(source, self.TEXT)["saleStatus"], "PREORDER")
+        self.assertEqual(extract_product_fields(source, self.TEXT + " 품절")["saleStatus"], "SOLD_OUT")
+        self.assertEqual(extract_product_fields({"name": "s"}, "예약 판매가 : 5,000원")["saleStatus"], "PREORDER")
 
 
 class SourceListTests(unittest.TestCase):

@@ -24,16 +24,27 @@ def extract_product_fields(source: dict, text: str, image_url: str | None = None
     한다. "예약"/"품절" 같은 키워드만으로는 판단하지 않는다 — 이벤트/티켓
     예약처럼 상품과 무관한 문맥에서도 흔히 등장해 오탐이 나기 때문에,
     가격이 실제로 붙어 있는 경우에만 상품으로 취급한다.
+
+    소스 설정으로 두 가지를 바꿀 수 있다(둘 다 없으면 기존 동작).
+    `price_pattern`: 금액을 그룹 1로 잡는 정규식. 소비자가와 판매가가 함께 있는 카드에서
+    "첫 금액"이 정가가 되는 것을 막는다. `preorder_words`: 예약 상태로 볼 문구를 더한다.
     """
-    values = [int(value.replace(",", "")) for value in PRICE_RE.findall(text)]
-    price = next((value for value in values if value >= 1000), None)
-    if price is None:
+    price = None
+    if source.get("price_pattern"):
+        match = re.search(source["price_pattern"], text)
+        if match:
+            price = int(match.group(1).replace(",", ""))
+    else:
+        values = [int(value.replace(",", "")) for value in PRICE_RE.findall(text)]
+        price = next((value for value in values if value >= 1000), None)
+    if price is None or price < 1000:
         return {}
 
     upper = text.upper()
+    preorder_words = PREORDER_WORDS + tuple(source.get("preorder_words", ()))
     if any(word.upper() in upper for word in SOLD_OUT_WORDS):
         status = "SOLD_OUT"
-    elif any(word.upper() in upper for word in PREORDER_WORDS):
+    elif any(word.upper() in upper for word in preorder_words):
         status = "PREORDER"
     else:
         status = "IN_STOCK"

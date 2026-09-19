@@ -271,6 +271,105 @@ sources:
     product_text_selector: .detailArea
     shop: 따빼몰
 
+  # 마니아하우스(키덜트 전문샵, Cafe24) 예약 상품(cate_no=45). 피규어·프라모델이 섞여 있고 목록이 최신순이라 첫 2페이지(70건)만 본다.
+  # 상세의 예약금·잔금 옵션 문구가 [입고완료] 상품을 예약으로 오인시키므로 기본 정보 블록(.xans-product-detaildesign)만 읽는다.
+  - name: 마니아하우스 예약상품
+    type: html
+    url: https://maniahouse.co.kr/product/list.html?cate_no=45
+    link_selector: 'a.name'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://maniahouse\.co\.kr/product/detail\.html\?product_no=\d+'
+    max_items: 70
+    page_param: page  # Cafe24 ?page=N (페이지당 35건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    product_mode: true
+    product_text_selector: .xans-product-detaildesign
+    shop: 마니아하우스
+
+  # 마니아하우스 입고 완료 상품(cate_no=46, 등록 1만 6천여 건). 최신순 첫 2페이지(70건)만 본다.
+  # 위 예약 소스와 겹치는 상품은 product_no URL이 같아 새 문서를 만들지 않는다.
+  - name: 마니아하우스 입고완료
+    type: html
+    url: https://maniahouse.co.kr/product/list.html?cate_no=46
+    link_selector: 'a.name'
+    region: KR
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://maniahouse\.co\.kr/product/detail\.html\?product_no=\d+'
+    max_items: 70
+    page_param: page  # Cafe24 ?page=N (페이지당 35건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    product_mode: true
+    product_text_selector: .xans-product-detaildesign
+    shop: 마니아하우스
+
+  # 코믹스아트(Cafe24 피규어샵) 신작 상품(cate_no=1215). 신작 예약이 최신순으로 나온다(페이지당 56건).
+  # 상세 페이지 본문에는 모든 상품에 "예약주문" 버튼 문구가 있어 상태가 오염되므로 목록 카드 텍스트만 쓴다.
+  # 카드에는 "예약" 단어 없이 발매·마감만 있어 그 라벨을 예약 신호로 넣는다. 마감은 연도가 없어 preorderEndAt은 비운다.
+  - name: 코믹스아트 신작 상품
+    type: html
+    url: https://comics-art.co.kr/product/list.html?cate_no=1215
+    link_selector: 'strong.name a'
+    title_selector: ':scope > span:not(.title)'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://comics-art\.co\.kr/product/detail\.html\?product_no=\d+'  # 목록 끝의 {$url} 템플릿 카드 제외
+    max_items: 100
+    page_param: page  # Cafe24 ?page=N (페이지당 56건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: '.prdImg img'
+    price_pattern: '판매가\s*:\s*([\d,]+)\s*원'  # 할인 카드에는 소비자가가 먼저 나온다
+    preorder_words:
+      - '발매 :'
+      - '마감 :'
+    shop: 코믹스아트
+
+  # 코믹스아트 입고 완료 당일 발송(cate_no=49). 제목이 (당일발송)으로 시작하는 재고 상품이다.
+  - name: 코믹스아트 입고 완료 당일 발송
+    type: html
+    url: https://comics-art.co.kr/product/list.html?cate_no=49
+    link_selector: 'strong.name a'
+    title_selector: ':scope > span:not(.title)'
+    region: KR
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://comics-art\.co\.kr/product/detail\.html\?product_no=\d+'  # 목록 끝의 {$url} 템플릿 카드 제외
+    max_items: 100
+    page_param: page  # Cafe24 ?page=N (페이지당 56건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: '.prdImg img'
+    price_pattern: '판매가\s*:\s*([\d,]+)\s*원'  # 할인 카드에는 소비자가가 먼저 나온다
+    shop: 코믹스아트
+
   # 국내 정품 피규어샵의 예약상품 목록. 장르 제한 없이 미국/일본/중국 라이선스 피규어가 섞여 있다.
   - name: 피규어프레소 예약상품
     type: html

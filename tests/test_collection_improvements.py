@@ -214,6 +214,8 @@ class PaginationTests(unittest.TestCase):
     def test_configured_listing_sources_paginate(self):
         for name, param in (("따빼몰 호요버스 굿즈", "page"), ("따빼몰 명조 굿즈", "page"),
                             ("따빼몰 신규입고", "page"), ("따빼몰 신규예약", "page"),
+                            ("코믹스아트 신작 상품", "page"), ("코믹스아트 입고 완료 당일 발송", "page"),
+                            ("마니아하우스 예약상품", "page"), ("마니아하우스 입고완료", "page"),
                             ("애니메이트 코리아 신상품", "page"), ("Animate Times 굿즈", "p"),
                             ("AGF Korea 공지사항", "gotoPage")):
             with self.subTest(name=name):
