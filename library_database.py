@@ -45,10 +45,12 @@ def config(dialect="sqlite"):
     return cfg
 
 
-def make_engine(path=None, *, foreign_keys=True):
+def make_engine(path=None, *, foreign_keys=True, connect_timeout=None):
     path = database_target(path)
     if isinstance(path, URL) or (isinstance(path, str) and "://" in path):
-        engine = create_engine(path, poolclass=NullPool)
+        # A short timeout lets optional checks give up quickly when the database is not running.
+        connect_args = {"connect_timeout": connect_timeout} if connect_timeout else {}
+        engine = create_engine(path, poolclass=NullPool, connect_args=connect_args)
         if engine.dialect.name != "postgresql":
             engine.dispose()
             raise ValueError("PostgreSQL URL 또는 레거시 SQLite 파일 경로를 사용해주세요.")
@@ -120,6 +122,25 @@ def upgrade_database(path=None):
         engine.dispose()
 
 
+def backup_library(engine) -> Path:
+    """Back up the local library before a destructive change. Raises when the backup cannot be made."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    if engine.dialect.name == "postgresql":
+        backup_dir = Path(__file__).parent / ".local" / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup = backup_dir / f"library-{stamp}.dump"
+        url = engine.url
+        env = {**os.environ, "PGHOST": url.host or "127.0.0.1", "PGPORT": str(url.port or 5432),
+               "PGUSER": url.username or "", "PGPASSWORD": url.password or "", "PGDATABASE": url.database or ""}
+        subprocess.run(["pg_dump", "--format=custom", "--file", str(backup)], env=env, check=True)
+        return backup
+    path = Path(engine.url.database)
+    backup = path.with_name(f"{path.name}.{stamp}.bak")
+    with closing(sqlite3.connect(path)) as source, closing(sqlite3.connect(backup)) as target:
+        source.backup(target)
+    return backup
+
+
 def upgrade_postgres(target):
     engine = make_engine(target)
     backup = None
@@ -131,14 +152,7 @@ def upgrade_postgres(target):
                 return None
             tables = inspect(connection).get_table_names()
             if tables:
-                backup_dir = Path(__file__).parent / ".local" / "backups"
-                backup_dir.mkdir(parents=True, exist_ok=True)
-                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-                backup = backup_dir / f"library-{stamp}.dump"
-                url = engine.url
-                env = {**os.environ, "PGHOST": url.host or "127.0.0.1", "PGPORT": str(url.port or 5432),
-                       "PGUSER": url.username or "", "PGPASSWORD": url.password or "", "PGDATABASE": url.database or ""}
-                subprocess.run(["pg_dump", "--format=custom", "--file", str(backup)], env=env, check=True)
+                backup = backup_library(engine)
             cfg = config("postgresql")
             cfg.attributes["connection"] = connection
             command.upgrade(cfg, "head")

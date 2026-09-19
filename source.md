@@ -102,9 +102,13 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 | 사진 없는 기존 문서 보완 | `python collect.py --backfill-images` |
 | 제목 없음 잔여 문서 정리(X 게시물, `laftel.net` 홈) | `python delete_untitled_x.py --dry-run` 후 `--dry-run` 없이 실행 |
 | 작품 링크 없는 항목 요약(카탈로그 보강용) | `python seed_works.py --unmatched` |
+| 원격에서 사라진 로컬 항목 정리 | `python prune_library.py --dry-run` 후 `--dry-run` 없이 실행 |
+| 수집 후 로컬 동기화 | `python collect.py --sync` (`collect_manual.py`도 동일) |
 
 - AniList 결과 캐시는 `collector_state/anilist_trending`의 `version`이 코드의 `CACHE_VERSION`과 다르면 무시됩니다. 수집 필드를 바꿀 때 이 값을 올립니다.
 - `--backfill-images`는 `imageUrl`이 비어 있는 문서에만 씁니다(덮어쓰지 않음). YouTube URL은 영상 ID로 썸네일을 만들고, AniList는 미디어 ID를 50개씩 한 번에 조회하며, `fetch_detail_image` 소스는 상세 페이지를 최대 60건까지 robots.txt·요청 간격을 지키며 엽니다.
+- `prune_library.py`는 Firestore에 없는 로컬 항목 중 작품 링크·태그·제품 카테고리·정보 유형·기획 묶음이 **없는 것만** 삭제합니다(있는 항목은 목록만 출력). 삭제 전 백업(PostgreSQL은 `.local/backups`의 pg_dump, SQLite는 `.bak` 복사)에 실패하면 아무것도 지우지 않습니다.
+- 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작 시 `[로컬 동기화] 마지막 … · 미동기화 N · 로컬에만 M`을 출력합니다. 수집기가 이미 읽은 문서 ID를 쓰므로 Firestore를 더 읽지 않고, 로컬 DB가 꺼져 있어도 수집은 계속됩니다. 자동 수집(GitHub Actions)은 `CI` 환경변수로 이 확인을 건너뜁니다.
 - Firestore 문서에 `detailCheckedAt`(상세 페이지를 마지막으로 확인한 시각) 필드가 추가됩니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
 
 ## 수집 원칙

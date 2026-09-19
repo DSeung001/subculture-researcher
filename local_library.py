@@ -92,8 +92,8 @@ def match_keyword(text, keyword):
 
 
 class Library:
-    def __init__(self, path=None):
-        self.engine = make_engine(path)
+    def __init__(self, path=None, *, connect_timeout=None):
+        self.engine = make_engine(path, connect_timeout=connect_timeout)
         self.insert = postgres_insert if self.engine.dialect.name == "postgresql" else insert
         ensure_schema(self.engine)
 
@@ -177,6 +177,52 @@ class Library:
             "matched": len(matched),
             "dry_run": dry_run,
             "items": matched,
+        }
+
+    def orphan_items(self, cloud_ids):
+        """Local items whose id is not in `cloud_ids` (removed remotely); `curated` marks local work on them."""
+        cloud_ids = set(cloud_ids)
+        with self.connect() as session:
+            rows = session.execute(select(Item.id, Item.source, Item.title)).all()
+            curated = set(session.scalars(select(CollectionItem.item_id)))
+            for model in LINK_MODELS.values():
+                curated.update(session.scalars(select(model.item_id)))
+        return [{"id": item_id, "source": source or "", "title": title or "", "curated": item_id in curated}
+                for item_id, source, title in rows if item_id not in cloud_ids]
+
+    def delete_orphans(self, cloud_ids, *, dry_run: bool = False) -> dict:
+        """Delete remote-missing items that carry no local work. Curated ones are kept and reported."""
+        cloud_ids = set(cloud_ids)
+        if not cloud_ids:
+            # An empty listing means the remote read failed or is empty; never treat everything as removed.
+            raise ValueError("클라우드 항목 목록이 비어 있어 정리하지 않습니다.")
+        orphans = self.orphan_items(cloud_ids)
+        removable = [item for item in orphans if not item["curated"]]
+        if not dry_run:
+            self.delete_items([item["id"] for item in removable])
+        return {
+            "matched": len(removable),
+            "deleted": 0 if dry_run else len(removable),
+            "dry_run": dry_run,
+            "items": removable,
+            "kept_curated": [item for item in orphans if item["curated"]],
+        }
+
+    def sync_status(self, cloud_ids) -> dict:
+        """How far the local copy is from the cloud, judged by item ids only."""
+        cloud_ids = set(cloud_ids)
+        with self.connect() as session:
+            local_ids = set(session.scalars(select(Item.id)))
+            state = session.get(SyncState, 1)
+            last_sync = state.completed_at if state else None
+        orphans = self.orphan_items(cloud_ids)
+        return {
+            "last_sync": last_sync,
+            "local_count": len(local_ids),
+            "cloud_count": len(cloud_ids),
+            "unsynced": len(cloud_ids - local_ids),
+            "orphans": len(orphans),
+            "curated_orphans": sum(1 for item in orphans if item["curated"]),
         }
 
     def sync(self, cloud):

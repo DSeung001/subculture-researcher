@@ -2,11 +2,12 @@
 
 import argparse
 import json
+import os
 
 from dotenv import load_dotenv
 
 from ai_drafts import run_trending_draft
-from collection_runner import MANUAL_ENTRY, run_collection
+from collection_runner import MANUAL_ENTRY, run_collection, sync_local
 from content_store import ContentStore
 from firebase_client import get_db
 from image_backfill import backfill_images
@@ -64,6 +65,15 @@ def main(argv=None):
         help="수집 결과 캐시(AniList 등)를 무시하고 다시 수집",
     )
     parser.add_argument(
+        "--sync", action="store_true",
+        help="수집 후 Firestore → 로컬 라이브러리 동기화 (실패해도 수집 결과는 유지)",
+    )
+    parser.add_argument(
+        "--no-local-check", action="store_true",
+        help="시작 시 로컬 동기화 상태 확인을 건너뜀 (CI 환경변수가 있으면 자동으로 건너뜀)",
+    )
+    parser.add_argument("--db", help="로컬 라이브러리 DB URL 또는 레거시 SQLite 경로")
+    parser.add_argument(
         "--no-ai-draft",
         action="store_true",
         help="수집 후 AI 초안 생성(Gemini 호출)을 건너뜀",
@@ -111,7 +121,12 @@ def main(argv=None):
         inter_source_delay=None if args.dry_run else INTER_SOURCE_DELAY,
         show_progress=True,
         force_refresh=args.force_refresh,
+        local_check=not (args.dry_run or args.no_local_check or os.environ.get("CI")),
+        local_db_path=args.db,
     )
+
+    if db is not None and args.sync:
+        sync_local(db, args.db)
 
     if db is not None and not args.no_ai_draft:
         print(run_trending_draft(db))
