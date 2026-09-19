@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 from content_store import normalize_url
 from collectors.common import save_records
-from collectors.http import USER_AGENT
+from collectors.http import pause_between_requests, request_headers
 from collectors.images import first_image
 from image_urls import clean_image_url
 
@@ -33,8 +33,9 @@ def _entry_image(entry, source: dict, base_url: str) -> str | None:
 
 
 def json_api_items(source: dict):
+    pause_between_requests(source)
     response = requests.get(
-        source["url"], headers={"User-Agent": USER_AGENT}, timeout=source.get("timeout_seconds", 15)
+        source["url"], headers=request_headers(), timeout=source.get("timeout_seconds", 15),
     )
     response.raise_for_status()
     payload = response.json()

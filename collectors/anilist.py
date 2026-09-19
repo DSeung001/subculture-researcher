@@ -4,7 +4,7 @@ import requests
 from firebase_admin import firestore
 
 from collectors.common import save_records
-from collectors.http import USER_AGENT
+from collectors.http import pause_between_requests, request_headers
 from image_urls import clean_image_url
 
 
@@ -50,10 +50,11 @@ def _title(media: dict) -> str:
 
 def anilist_items(source: dict):
     limit = max(1, min(int(source.get("max_items", 30)), 50))
+    pause_between_requests(source)
     response = requests.post(
         source.get("url") or ANILIST_API,
         json={"query": QUERY, "variables": {"page": 1, "perPage": limit}},
-        headers={"User-Agent": USER_AGENT, "Content-Type": "application/json"},
+        headers={**request_headers(), "Content-Type": "application/json"},
         timeout=source.get("timeout_seconds", 20),
     )
     response.raise_for_status()

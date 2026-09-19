@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from collectors.common import extract_product_fields
 from collectors.html_links import extract_links, extract_metrics
-from collectors.http import USER_AGENT
+from collectors.http import USER_AGENT, pause_between_requests
 from collectors.images import detail_image
 
 
@@ -84,6 +84,7 @@ def rendered_items(source: dict, policy):
                     detail_image_mode = source.get("fetch_detail_image", False)
                     if missing or product_mode or detail_image_mode:
                         try:
+                            pause_between_requests(source)
                             navigate(detail, item["url"], source.get("detail_wait_selector", "h1"))
                             detail_soup = BeautifulSoup(detail.content(), "html.parser")
                             if missing:

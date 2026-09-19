@@ -3,11 +3,14 @@ import requests
 
 from content_store import normalize_url
 from collectors.common import save_records
-from collectors.http import USER_AGENT
+from collectors.http import pause_between_requests, request_headers
 
 
 def rss_items(source: dict):
-    response = requests.get(source["url"], headers={"User-Agent": USER_AGENT}, timeout=source.get("timeout_seconds", 15))
+    pause_between_requests(source)
+    response = requests.get(
+        source["url"], headers=request_headers(), timeout=source.get("timeout_seconds", 15),
+    )
     response.raise_for_status()
     feed = feedparser.parse(response.content)
     if feed.bozo and not feed.entries:

@@ -7,7 +7,9 @@ sources:
     category: FIGURE
     content_angle: PRICE
     source_tier: MEDIA
-    max_items: 30
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     figure_only: true
     enabled: true
     respect_robots: true
@@ -20,7 +22,7 @@ sources:
     category: ANIME
     content_angle: NEWS
     source_tier: MEDIA
-    max_items: 30
+    max_items: 40
     cache_hours: 24
     enabled: true
 
@@ -35,7 +37,9 @@ sources:
     source_tier: OFFICIAL
     allow_patterns:
       - '^https://prtimes\.jp/main/html/rd/p/[0-9]+\.[0-9]+\.html$'
-    max_items: 40
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     enabled: true
     respect_robots: true
     fetch_detail_image: true  # 목록에는 이미지가 없어 상세 og:image(보도자료 대표 이미지)를 쓴다
@@ -51,7 +55,7 @@ sources:
     category: ANIME
     content_angle: NEWS
     source_tier: OFFICIAL
-    max_items: 15
+    max_items: 25
     manual_only: true
     enabled: true
 
@@ -64,7 +68,7 @@ sources:
     category: ANIME
     content_angle: NEWS
     source_tier: OFFICIAL
-    max_items: 15
+    max_items: 25
     manual_only: true
     enabled: true
 
@@ -77,7 +81,7 @@ sources:
     category: ANIME
     content_angle: NEWS
     source_tier: OFFICIAL
-    max_items: 15
+    max_items: 25
     manual_only: true
     enabled: true
 
@@ -92,7 +96,7 @@ sources:
     allow_patterns:
       - '^https://hobby\.watch\.impress\.co\.jp/docs/news/'
       - '^https://hobby\.watch\.impress\.co\.jp/docs/review/'
-    max_items: 40
+    max_items: 50
     enabled: true
     respect_robots: true
     list_image_selector: img  # li.item 안의 기사별 list.jpg
@@ -108,7 +112,7 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://www\.animatetimes\.com/news/details\.php\?id=\d+'
-    max_items: 40
+    max_items: 50
     enabled: true
     respect_robots: true
     list_image_selector: img  # .c-item 카드의 기사별 이미지
@@ -125,7 +129,7 @@ sources:
     published_selector: p
     published_format: '%Y/%m/%d'
     next_page_selector: 'button[aria-label="다음 페이지"]'
-    max_pages: 2
+    max_pages: 3
     detail_wait_selector: 'div:has(> div > button[aria-label="좋아요"]) > span'
     detail_metrics:
       likeCount: 'div:has(> div > button[aria-label="좋아요"]) > span'
@@ -136,7 +140,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://news\.aniplustv\.com/news/[0-9]+$'
-    max_items: 40
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     enabled: true
     respect_robots: true
     list_image_selector: img  # 카드(a) 안의 기사별 이미지
@@ -158,7 +164,7 @@ sources:
     category: FESTIVAL
     content_angle: NEWS
     source_tier: OFFICIAL
-    max_items: 40
+    max_items: 50
     enabled: true
 
   # 수동 전용(YouTube RSS 등)은 위 manual_only 소스. 라프텔은 store.laftel.net 공개 HTML만
@@ -176,7 +182,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://ttabbaemall\.co\.kr/product/detail\.html\?product_no=\d+'
-    max_items: 40
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     enabled: true
     respect_robots: true
     product_mode: true
@@ -195,7 +203,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://ttabbaemall\.co\.kr/product/detail\.html\?product_no=\d+'
-    max_items: 40
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     enabled: true
     respect_robots: true
     product_mode: true
@@ -213,7 +223,9 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://m\.figurepresso\.com/product/.+/\d+/'
-    max_items: 40
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     enabled: true
     respect_robots: true
     product_mode: true
@@ -232,7 +244,7 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - '^https://store\.laftel\.net/products/\d+/?$'
-    max_items: 30
+    max_items: 50
     enabled: true
     respect_robots: true
     list_product_mode: true
@@ -253,7 +265,7 @@ sources:
     source_tier: MEDIA
     allow_patterns:
       - 'goods_view\.php\?goodsNo=\d+'
-    max_items: 30
+    max_items: 50
     enabled: true
     respect_robots: true
     list_product_mode: true
@@ -271,7 +283,9 @@ sources:
     source_tier: OFFICIAL
     allow_patterns:
       - '^https://www\.mcfarlane\.com/post/'
-    max_items: 40
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
     enabled: true
     respect_robots: true
     fetch_detail_image: true  # 목록 이미지는 blur_30 저화질 미리보기라 상세 og:image(w_1000)를 쓴다

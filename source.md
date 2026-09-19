@@ -94,6 +94,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 4. X는 비공식 스크래핑하지 않습니다.
 5. 동일 URL은 SHA-256 기반 Firestore document ID로 중복 저장을 방지합니다.
 6. 사이트 구조가 바뀌어 수집 정확도가 떨어지면 해당 소스를 일시적으로 비활성화합니다.
+7. HTTP 요청은 소스 간·상세 페이지 사이에 랜덤 대기를 두고, Accept 헤더는 브라우저와 비슷하게 보냅니다(User-Agent는 수집기 식별용을 유지하고 robots.txt를 지킵니다).
 
 ## 확장 후보
 

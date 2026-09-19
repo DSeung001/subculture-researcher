@@ -14,6 +14,9 @@ from translate import enrich_translation, needs_translation
 
 load_dotenv()
 
+# Space sources out so a full automatic run is not one burst of hosts.
+INTER_SOURCE_DELAY = (5.0, 12.0)
+
 
 def backfill_translations(db) -> None:
     processed = updated = skipped = failed = 0
@@ -87,7 +90,14 @@ def main(argv=None):
         sources = automatic_sources(all_sources)
 
     db = None if args.dry_run else get_db()
-    run_collection(sources, db=db, dry_run=args.dry_run, allow_manual=False)
+    run_collection(
+        sources,
+        db=db,
+        dry_run=args.dry_run,
+        allow_manual=False,
+        inter_source_delay=None if args.dry_run else INTER_SOURCE_DELAY,
+        show_progress=True,
+    )
 
     if db is not None and not args.no_ai_draft:
         print(run_trending_draft(db))

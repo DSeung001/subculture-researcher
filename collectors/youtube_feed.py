@@ -4,7 +4,7 @@ import feedparser
 import requests
 
 from collectors.common import save_records
-from collectors.http import USER_AGENT
+from collectors.http import pause_between_requests, request_headers
 from content_store import normalize_url
 from image_urls import clean_image_url
 
@@ -33,9 +33,10 @@ def _resolve_channel_id(source: dict) -> str:
     if from_url:
         return from_url
 
+    pause_between_requests(source)
     response = requests.get(
         channel_url,
-        headers={"User-Agent": USER_AGENT},
+        headers=request_headers(),
         timeout=source.get("timeout_seconds", 15),
     )
     response.raise_for_status()
@@ -48,9 +49,10 @@ def _resolve_channel_id(source: dict) -> str:
 def youtube_feed_items(source: dict):
     channel_id = _resolve_channel_id(source)
     feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+    pause_between_requests(source)
     response = requests.get(
         feed_url,
-        headers={"User-Agent": USER_AGENT},
+        headers=request_headers(),
         timeout=source.get("timeout_seconds", 15),
     )
     response.raise_for_status()

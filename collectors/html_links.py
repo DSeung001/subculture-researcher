@@ -161,14 +161,20 @@ def html_items(source: dict):
     limit = int(source.get("max_items", 50))
     if limit <= 0:
         return
-    policy = RobotsPolicy(source.get("respect_robots", True), source.get("timeout_seconds", 15))
+    policy = RobotsPolicy(
+        source.get("respect_robots", True),
+        source.get("timeout_seconds", 15),
+        source,
+    )
     policy.check(source["url"])
     if source.get("render_js", False):
         # Static/RSS/manual paths do not import or launch Playwright.
         from collectors.rendered import rendered_items
         yield from rendered_items(source, policy)
         return
-    html, final_url = get_html(source["url"], policy, source.get("timeout_seconds", 15))
+    html, final_url = get_html(
+        source["url"], policy, source.get("timeout_seconds", 15), source,
+    )
     seen = set()
     for item in extract_links(html, final_url, source):
         if item["url"] in seen:
@@ -179,7 +185,9 @@ def html_items(source: dict):
         detail_image_mode = source.get("fetch_detail_image", False)
         if detail_selectors or product_mode or detail_image_mode:
             try:
-                detail_html, detail_url = get_html(item["url"], policy, source.get("timeout_seconds", 15))
+                detail_html, detail_url = get_html(
+                    item["url"], policy, source.get("timeout_seconds", 15), source,
+                )
                 detail_soup = BeautifulSoup(detail_html, "html.parser")
                 if detail_selectors:
                     values, errors = extract_metrics(detail_soup, detail_selectors, required=True)

@@ -99,12 +99,12 @@ def _detail_urls(listing_html: str, base_url: str, limit: int):
 def figurefarm_items(source: dict):
     limit = max(1, int(source.get("max_items", 20)))
     timeout = int(source.get("timeout_seconds", 15))
-    policy = RobotsPolicy(source.get("respect_robots", True), timeout)
+    policy = RobotsPolicy(source.get("respect_robots", True), timeout, source)
 
-    listing_html, listing_url = get_html(source["url"], policy, timeout)
+    listing_html, listing_url = get_html(source["url"], policy, timeout, source)
     for url in _detail_urls(listing_html, listing_url, limit):
         try:
-            html, final_url = get_html(url, policy, timeout)
+            html, final_url = get_html(url, policy, timeout, source)
             soup = BeautifulSoup(html, "html.parser")
             full_text = soup.get_text("\n", strip=True)
             title = _product_title(soup)

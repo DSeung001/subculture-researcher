@@ -124,7 +124,7 @@ class DomExtractionTests(unittest.TestCase):
 
 class DetailFetchTests(unittest.TestCase):
     def run_items(self, source, pages):
-        def fake_get_html(url, policy, timeout=15):
+        def fake_get_html(url, policy, timeout=15, source=None):
             return pages[url], url
         with patch("collectors.html_links.get_html", side_effect=fake_get_html), \
                 patch("collectors.html_links.RobotsPolicy"):
