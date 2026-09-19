@@ -17,6 +17,7 @@ from library_models import (Collection, CollectionItem, Item, ItemWork, LINK_MOD
                             SavedFilter, SyncState, TERM_MODELS, Work, WorkAlias)
 
 from content_model import content_id
+from content_store import UNTITLED_TITLE, is_untitled_x_post
 
 
 TAXONOMIES = {
@@ -135,6 +136,43 @@ class Library:
         model = TERM_MODELS[self.table(table)]
         with self.connect() as session:
             session.execute(delete(model).where(model.id == term_id))
+
+    def delete_items(self, item_ids):
+        """Remove local items by id. Link/collection rows cascade."""
+        ids = [item_id for item_id in item_ids if item_id]
+        if not ids:
+            return 0
+        with self.connect() as session:
+            result = session.execute(delete(Item).where(Item.id.in_(ids)))
+            return result.rowcount or 0
+
+    def untitled_x_items(self):
+        """Local rows whose URL is an X status and title is the untitled placeholder."""
+        with self.connect() as session:
+            rows = session.scalars(select(Item)).all()
+            matched = []
+            for row in rows:
+                title = row.title or ""
+                if title != UNTITLED_TITLE:
+                    try:
+                        payload = json.loads(row.payload or "{}")
+                    except (TypeError, ValueError, json.JSONDecodeError):
+                        payload = {}
+                    title = payload.get("title") or title
+                if is_untitled_x_post(row.url or "", title):
+                    matched.append({"id": row.id, "url": row.url or "", "title": title})
+            return matched
+
+    def delete_untitled_x(self, *, dry_run: bool = False) -> dict:
+        matched = self.untitled_x_items()
+        if not dry_run:
+            self.delete_items([item["id"] for item in matched])
+        return {
+            "deleted": 0 if dry_run else len(matched),
+            "matched": len(matched),
+            "dry_run": dry_run,
+            "items": matched,
+        }
 
     def sync(self, cloud):
         # Read outside the local transaction. A failed remote stream leaves the

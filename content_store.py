@@ -8,7 +8,7 @@ from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
 
 from translate import enrich_translation
-from content_model import category_collection
+from content_model import category_collection, content_id
 from image_urls import http_url
 
 
@@ -45,6 +45,48 @@ def normalize_url(url: str, base_url: str = "") -> str:
 
 def doc_id(url: str) -> str:
     return hashlib.sha256(normalize_url(url).encode("utf-8")).hexdigest()
+
+
+UNTITLED_TITLE = "(제목 없음)"
+_X_STATUS_HOSTS = {"x.com", "twitter.com", "www.x.com", "www.twitter.com"}
+
+
+def is_untitled_x_post(url: str, title: str) -> bool:
+    """True only for X/Twitter status URLs stored with the untitled placeholder."""
+    if (title or "") != UNTITLED_TITLE:
+        return False
+    try:
+        parsed = urlsplit((url or "").strip())
+    except ValueError:
+        return False
+    host = (parsed.hostname or "").lower()
+    if host not in _X_STATUS_HOSTS:
+        return False
+    return "/status/" in (parsed.path or "")
+
+
+def delete_untitled_x_contents(db, *, dry_run: bool = False) -> dict:
+    """Delete Firestore contents that are X status posts with title '(제목 없음)'."""
+    matched = []
+    for snapshot in db.collection_group("contents").stream():
+        data = snapshot.to_dict() or {}
+        url = data.get("url") or ""
+        if not is_untitled_x_post(url, data.get("title") or ""):
+            continue
+        matched.append({
+            "id": content_id(snapshot),
+            "url": url,
+            "ref": snapshot.reference,
+        })
+    if not dry_run:
+        for item in matched:
+            item["ref"].delete()
+    return {
+        "deleted": 0 if dry_run else len(matched),
+        "matched": len(matched),
+        "dry_run": dry_run,
+        "items": [{"id": item["id"], "url": item["url"]} for item in matched],
+    }
 
 
 class ContentStore:
