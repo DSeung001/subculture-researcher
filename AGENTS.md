@@ -10,7 +10,7 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 ## Data and change rules
 
-- Collection path: `sources.yaml → collectors → ContentStore → Firestore`. Add sources through existing config and shared extractors; write a dedicated collector only when those are insufficient.
+- Collection path: `sources.yaml → collectors → ContentStore → Firestore`. Automatic runs use `collect.py`; YouTube and local-browser sources use `collect_manual.py`. Add sources through existing config and shared extractors; write a dedicated collector only when those are insufficient.
 - Collectors and manual entry go through `ContentStore` for URL dedup. Share one URL index per collection run and preserve user-edited values on re-collection.
 - Use `content_model.py` for remote categories, statuses, angles, tiers and references. An item ID is `STORAGE_CATEGORY:document_id` from the stored path; never recompute it from the editable category. Keep existing document IDs and CLI/UI behavior.
 - Local curation is a one-way `Firestore → local DB` sync. It refreshes source metadata only and preserves local work links, tags, notes and collections. Items missing remotely are not deleted locally. There is no shared modified-time field, so sync currently reads everything.

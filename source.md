@@ -4,6 +4,8 @@
 
 ## 자동 수집
 
+`python collect.py` (GitHub Actions 포함). 수동 전용 소스는 건너뜁니다.
+
 ### 피규어팜 예약상품
 
 - URL: https://m.figurefarm.net/shop/big_section.php?cno1=1554
@@ -75,25 +77,30 @@
 - 상태: 목록이 `javascript:gd_btn_view(...)` 이라 HTML 링크 수집 불가 → `enabled: false`
 - 대안: 필요한 게시물 URL을 리뷰 앱에서 수동 추가로 저장
 
-## 로컬 브라우저 수집
+## 수동 수집
 
-아래 소스는 GitHub Actions에서 자동 실행하지 않고, `python collect.py --local-browser`로만 실행합니다.
-Playwright의 소스별 영속 프로필을 사용하므로 로그인 쿠키/세션을 로컬에 유지할 수 있습니다.
-로그인, MFA, Cloudflare 확인은 사용자가 열린 브라우저에서 직접 완료합니다.
+아래 소스는 GitHub Actions/`collect.py`에서 돌리지 않고 `python collect_manual.py`로만 실행합니다.
+브라우저 소스는 Playwright 영속 프로필을 쓰고, 준비 화면에서 Enter 대신 랜덤 대기(기본 25–45초) 후 현재 페이지를 수집합니다. 로그인·MFA·Cloudflare는 대기 동안 열린 브라우저에서 직접 완료합니다.
+
+### YouTube 공식 채널 (RSS)
+
+- KADOKAWA Anime / Aniplex / TOHO animation
+- 방식: `channel_id`로 공식 Atom 피드(`feeds/videos.xml`)만 읽음
+- 상태: YouTube RSS가 활성 채널에도 간헐 404를 내므로 자동에서 제외하고 수동으로만 재시도
 
 ### 라프텔 인기·신작
 
 - URL: https://laftel.net/
 - 카테고리: `ANIME`
 - 프로필: `laftel`
-- 방식: 로그인 후 인기 애니/이번주/분기/요일별 신작 화면으로 직접 이동 → Enter → 현재 화면 링크 수집
+- 방식: 로그인 후 인기 애니/이번주/분기/요일별 신작 화면으로 이동 → 랜덤 대기 → 현재 화면 링크 수집
 
 ### 라프텔 스토어
 
-- URL: https://laftel.net/
+- URL: https://store.laftel.net/
 - 카테고리: `FIGURE`
 - 프로필: `laftel` (애니 탐색과 세션 공유)
-- 방식: 스토어 피규어/예약상품 화면으로 직접 이동 → Enter → 상품 링크와 주변 텍스트 수집
+- 방식: 스토어 피규어/예약상품 화면으로 이동 → 랜덤 대기 → 상품 링크와 주변 텍스트 수집
 - 상품 필드: `entityType=PRODUCT`, `shop=Laftel`, `saleStatus`, `price`, `preorderEndAt`, `imageUrl`
 - 예약일은 화면에 YYYY년 M월 D일 형식이 있을 때 추출
 

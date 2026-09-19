@@ -1,10 +1,11 @@
 """Slow local-only Playwright collector using a persistent browser profile.
 
-This collector is intentionally interactive/headed. Authentication, MFA and bot
-challenges are completed by the user in the opened browser; the collector does
-not attempt to bypass them.
+This collector is intentionally headed. Authentication, MFA and bot challenges
+are completed by the user in the opened browser during a random ready wait;
+the collector does not attempt to bypass them.
 """
 
+import random
 import re
 import time
 from pathlib import Path
@@ -92,6 +93,28 @@ def _product_fields(source: dict, text: str, locator=None) -> dict:
     return extract_product_fields(source, text, image_url)
 
 
+def _ready_wait_seconds(source: dict) -> float:
+    lo = float(source.get("ready_wait_min_seconds", 25))
+    hi = float(source.get("ready_wait_max_seconds", 45))
+    if hi < lo:
+        lo, hi = hi, lo
+    return random.uniform(lo, hi)
+
+
+def _wait_until_ready(source: dict) -> None:
+    if not source.get("interactive_ready", False):
+        return
+    wait = _ready_wait_seconds(source)
+    print()
+    print(f"[로컬 브라우저] {source['name']}")
+    print(source.get(
+        "interactive_message",
+        "로그인/인증/원하는 화면 이동을 마친 뒤 대기하세요.",
+    ))
+    print(f"> {wait:.0f}초 후 현재 페이지에서 수집을 시작합니다.")
+    time.sleep(wait)
+
+
 def local_browser_items(source: dict):
     try:
         from playwright.sync_api import sync_playwright
@@ -137,16 +160,7 @@ def local_browser_items(source: dict):
                 )
 
             if source.get("interactive_ready", False):
-                print()
-                print(f"[로컬 브라우저] {source['name']}")
-                print(source.get(
-                    "interactive_message",
-                    "로그인/인증/원하는 화면 이동을 마친 뒤 터미널에서 Enter를 누르세요.",
-                ))
-                try:
-                    input("> 준비되면 Enter: ")
-                except EOFError:
-                    print("[로컬 브라우저] 입력을 받을 수 없어 현재 페이지에서 계속합니다.")
+                _wait_until_ready(source)
 
             for _ in range(scroll_steps):
                 page.mouse.wheel(0, int(source.get("scroll_pixels", 1400)))

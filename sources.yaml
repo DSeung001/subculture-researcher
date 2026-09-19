@@ -41,6 +41,7 @@ sources:
     product_mode: true
 
   # 일본 애니 공식 YouTube 채널. channel_id로 공식 Atom feed만 읽는다.
+  # RSS가 간헐 404를 내므로 자동 스케줄에서 제외하고 collect_manual.py로만 실행한다.
   - name: KADOKAWA Anime YouTube
     type: youtube_feed
     url: https://www.youtube.com/@KADOKAWAanime
@@ -51,6 +52,7 @@ sources:
     content_angle: NEWS
     source_tier: OFFICIAL
     max_items: 15
+    manual_only: true
     enabled: true
 
   - name: Aniplex YouTube
@@ -63,6 +65,7 @@ sources:
     content_angle: NEWS
     source_tier: OFFICIAL
     max_items: 15
+    manual_only: true
     enabled: true
 
   - name: TOHO animation YouTube
@@ -75,6 +78,7 @@ sources:
     content_angle: NEWS
     source_tier: OFFICIAL
     max_items: 15
+    manual_only: true
     enabled: true
 
   # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
@@ -192,8 +196,8 @@ sources:
     enabled: true
 
   # 아래 소스는 GitHub Actions에서 실행하지 않는다.
-  # 로컬에서 --local-browser 옵션을 줄 때만 headed Playwright + 소스별 영속 프로필로 수집한다.
-  # 로그인/MFA/Cloudflare 인증은 사용자가 열린 브라우저에서 직접 완료한 뒤 Enter를 누른다.
+  # 로컬에서 collect_manual.py로 headed Playwright + 소스별 영속 프로필로 수집한다.
+  # 로그인/MFA/Cloudflare 인증은 사용자가 열린 브라우저에서 대기 시간 동안 직접 완료한다.
 
   - name: 라프텔 인기·신작
     type: local_browser
@@ -205,7 +209,7 @@ sources:
     local_only: true
     interactive_ready: true
     browser_profile: laftel
-    interactive_message: '라프텔 로그인 후 인기 애니/이번주/분기/요일별 신작 등 원하는 목록 화면으로 이동하고 Enter를 누르세요.'
+    interactive_message: '라프텔 로그인 후 인기 애니/이번주/분기/요일별 신작 등 원하는 목록 화면으로 이동하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href]'
     allow_patterns:
       - '^https://laftel\.net/'
@@ -222,7 +226,7 @@ sources:
 
   - name: 라프텔 스토어
     type: local_browser
-    url: https://laftel.net/
+    url: https://store.laftel.net/
     region: KR
     category: FIGURE
     content_angle: PRICE
@@ -230,10 +234,10 @@ sources:
     local_only: true
     interactive_ready: true
     browser_profile: laftel
-    interactive_message: '라프텔 로그인 후 스토어의 피규어/예약상품 목록 화면으로 이동하고 Enter를 누르세요.'
+    interactive_message: '라프텔 로그인 후 스토어의 피규어/예약상품 목록 화면으로 이동하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href], [data-href], [data-url], [onclick]'
     allow_patterns:
-      - '^https://laftel\.net/'
+      - '^https://store\.laftel\.net/'
     required_text_patterns:
       - '피규어'
       - '넨도로이드'
@@ -257,7 +261,7 @@ sources:
     local_only: true
     interactive_ready: true
     browser_profile: x-animate-hongdae
-    interactive_message: 'X 로그인/인증을 직접 완료하고 animate 서울홍대점 타임라인이 보이면 Enter를 누르세요.'
+    interactive_message: 'X 로그인/인증을 직접 완료하고 animate 서울홍대점 타임라인이 보이면 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href*="/status/"]'
     allow_patterns:
       - '^https://x\.com/animate_hongdae/status/'
@@ -277,7 +281,7 @@ sources:
     local_only: true
     interactive_ready: true
     browser_profile: illustar
-    interactive_message: '공지사항/티켓/행사 정보 중 수집할 화면으로 이동한 뒤 Enter를 누르세요.'
+    interactive_message: '공지사항/티켓/행사 정보 중 수집할 화면으로 이동한 뒤 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href], [data-href], [onclick]'
     allow_patterns:
       - '^https://illustar\.imweb\.me/'
@@ -298,7 +302,7 @@ sources:
     local_only: true
     interactive_ready: true
     browser_profile: comicworld
-    interactive_message: '코믹월드 공지/행사/티켓 화면으로 이동한 뒤 Enter를 누르세요.'
+    interactive_message: '코믹월드 공지/행사/티켓 화면으로 이동한 뒤 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href], [data-href], [onclick]'
     allow_patterns:
       - '^https://comicw\.co\.kr/'
@@ -318,7 +322,7 @@ sources:
     local_only: true
     interactive_ready: true
     browser_profile: kotobukiya
-    interactive_message: 'Cloudflare 확인이 나오면 직접 완료하고 뉴스/상품 목록이 보이면 Enter를 누르세요.'
+    interactive_message: 'Cloudflare 확인이 나오면 직접 완료하고 뉴스/상품 목록이 보이면 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
     link_selector: 'a[href]'
     allow_patterns:
       - '^https://www\.kotobukiya\.co\.jp/'

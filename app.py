@@ -403,7 +403,7 @@ def delete_draft_item(draft_id):
 def _source_status(source: dict) -> str:
     if not source.get("enabled", True):
         return "DISABLED"
-    if source.get("local_only"):
+    if source.get("local_only") or source.get("manual_only"):
         return "MANUAL"
     return "ENABLED"
 

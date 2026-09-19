@@ -176,12 +176,58 @@ class WorkflowTests(unittest.TestCase):
         import collect as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[]), \
              patch.object(collect_mod, "get_db", return_value=self.db), \
-             patch.object(collect_mod, "ContentStore") as store_cls, \
+             patch.object(collect_mod, "run_collection") as run, \
              patch.object(collect_mod, "run_trending_draft", return_value="[AI 초안] ok") as draft:
-            store_cls.return_value.duplicates.return_value = []
-            store_cls.return_value.invalid_urls = []
             collect_mod.main([])
+        run.assert_called_once()
         draft.assert_called_once_with(self.db)
+
+    def test_manual_vs_automatic_source_filters(self):
+        from sources_config import automatic_sources, is_manual_source, manual_sources
+
+        youtube = {"name": "KADOKAWA Anime YouTube", "manual_only": True}
+        browser = {"name": "라프텔 인기·신작", "local_only": True}
+        auto = {"name": "피규어팜 예약상품"}
+        sources = [youtube, browser, auto]
+        self.assertTrue(is_manual_source(youtube))
+        self.assertTrue(is_manual_source(browser))
+        self.assertFalse(is_manual_source(auto))
+        self.assertEqual(automatic_sources(sources), [auto])
+        self.assertEqual(manual_sources(sources), [youtube, browser])
+
+    def test_collect_rejects_manual_source_flag(self):
+        import collect as collect_mod
+        with patch.object(collect_mod, "load_sources", return_value=[
+            {"name": "KADOKAWA Anime YouTube", "manual_only": True},
+        ]):
+            with self.assertRaises(SystemExit):
+                collect_mod.main(["--source", "KADOKAWA Anime YouTube"])
+
+    def test_local_browser_ready_wait_uses_random_sleep(self):
+        from collectors import local_browser as lb
+
+        with patch.object(lb.random, "uniform", return_value=11.5) as uniform:
+            self.assertEqual(lb._ready_wait_seconds({
+                "ready_wait_min_seconds": 10,
+                "ready_wait_max_seconds": 12,
+            }), 11.5)
+            uniform.assert_called_once_with(10.0, 12.0)
+
+        with patch.object(lb, "_ready_wait_seconds", return_value=11.0), \
+             patch.object(lb.time, "sleep") as sleep, \
+             patch("builtins.input") as stdin:
+            lb._wait_until_ready({
+                "name": "테스트 브라우저",
+                "interactive_ready": True,
+                "interactive_message": "준비하세요.",
+            })
+        sleep.assert_called_once_with(11.0)
+        stdin.assert_not_called()
+
+        with patch.object(lb.time, "sleep") as sleep, patch("builtins.input") as stdin:
+            lb._wait_until_ready({"name": "noop", "interactive_ready": False})
+        sleep.assert_not_called()
+        stdin.assert_not_called()
 
     def test_url_deduplication_stays_canonical(self):
         store = ContentStore()
@@ -190,6 +236,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(first["inserted"], 1)
         self.assertEqual(second["existing"], 1)
         self.assertEqual(doc_id("https://example.com/item#x"), doc_id("https://example.com/item"))
+
 
     def test_datetime_publish_date_drives_recency(self):
         published = datetime(2026, 1, 1, tzinfo=timezone.utc)
