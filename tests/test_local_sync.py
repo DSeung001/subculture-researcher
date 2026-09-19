@@ -220,6 +220,47 @@ class BackupTests(unittest.TestCase):
                 library_database.backup_library(engine)
 
 
+class PostgresBackupFallbackTests(unittest.TestCase):
+    def engine(self, host):
+        engine = Mock()
+        engine.dialect.name = "postgresql"
+        engine.url = SimpleNamespace(host=host, port=55432, username="u", password="p", database="d")
+        return engine
+
+    def test_local_server_version_mismatch_falls_back_to_the_container_pg_dump(self):
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append(command)
+            if command[0] == "pg_dump":
+                raise subprocess.CalledProcessError(1, "pg_dump")  # host client older than the server
+            kwargs["stdout"].write(b"PGDMP")
+        with patch.object(library_database.subprocess, "run", side_effect=fake_run),                 patch.object(library_database, "__file__", str(Path(tempfile.gettempdir()) / "x.py")):
+            backup = library_database.backup_library(self.engine("127.0.0.1"))
+            try:
+                self.assertEqual(backup.read_bytes(), b"PGDMP")
+                self.assertEqual(calls[1][:5], ["docker", "compose", "exec", "-T", "db"])
+            finally:
+                backup.unlink(missing_ok=True)
+
+    def test_remote_server_has_no_container_fallback(self):
+        with patch.object(library_database.subprocess, "run",
+                          side_effect=subprocess.CalledProcessError(1, "pg_dump")) as run,                 patch.object(library_database, "__file__", str(Path(tempfile.gettempdir()) / "x.py")):
+            with self.assertRaises(subprocess.CalledProcessError):
+                library_database.backup_library(self.engine("db.example.com"))
+        self.assertEqual(run.call_count, 1)
+
+    def test_an_empty_container_dump_is_a_failure_and_leaves_no_file(self):
+        def fake_run(command, **kwargs):
+            if command[0] == "pg_dump":
+                raise FileNotFoundError("pg_dump")
+        with patch.object(library_database.subprocess, "run", side_effect=fake_run),                 patch.object(library_database, "__file__", str(Path(tempfile.gettempdir()) / "x.py")):
+            with self.assertRaises(RuntimeError):
+                library_database.backup_library(self.engine("localhost"))
+        leftovers = list((Path(tempfile.gettempdir()) / ".local" / "backups").glob("library-*.dump"))
+        self.assertEqual([p for p in leftovers if p.stat().st_size == 0], [])
+
+
 class PruneCliTests(LibraryCase):
     def cloud_db(self, *names):
         db = Mock()

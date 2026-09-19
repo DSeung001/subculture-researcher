@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 
 DEFAULT_PATH = Path(__file__).parent / ".local" / "library.sqlite3"
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
 class SchemaError(RuntimeError):
@@ -132,7 +133,25 @@ def backup_library(engine) -> Path:
         url = engine.url
         env = {**os.environ, "PGHOST": url.host or "127.0.0.1", "PGPORT": str(url.port or 5432),
                "PGUSER": url.username or "", "PGPASSWORD": url.password or "", "PGDATABASE": url.database or ""}
-        subprocess.run(["pg_dump", "--format=custom", "--file", str(backup)], env=env, check=True)
+        try:
+            subprocess.run(["pg_dump", "--format=custom", "--file", str(backup)], env=env, check=True)
+            return backup
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            backup.unlink(missing_ok=True)
+            if (url.host or "127.0.0.1") not in LOCAL_HOSTS:
+                raise
+        # No client, or one older than the server (pg_dump refuses that): dump with the
+        # compose database container's own pg_dump instead.
+        try:
+            with backup.open("wb") as out:
+                subprocess.run(["docker", "compose", "exec", "-T", "db", "pg_dump", "--format=custom",
+                                "-U", url.username or "", "-d", url.database or ""],
+                               stdout=out, cwd=Path(__file__).parent, check=True)
+            if backup.stat().st_size == 0:
+                raise RuntimeError("백업 파일이 비어 있습니다.")
+        except BaseException:
+            backup.unlink(missing_ok=True)
+            raise
         return backup
     path = Path(engine.url.database)
     backup = path.with_name(f"{path.name}.{stamp}.bak")
