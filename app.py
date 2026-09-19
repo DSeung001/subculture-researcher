@@ -238,7 +238,8 @@ def drafts_page():
     status = request.args.get("status", "DRAFT")
     if status not in {"ALL", "DRAFT", "POSTED"}:
         status = "DRAFT"
-    drafts = list_drafts(local_library(), status=status)
+    library = local_library()
+    drafts = list_drafts(library, status=status)
     for draft in drafts:
         created_at = draft.get("createdAt")
         posted_at = draft.get("postedAt")
@@ -247,6 +248,10 @@ def drafts_page():
         angle = draft.get("angle") or "NEWS"
         draft["_angle_label"] = ANGLE_LABELS.get(angle, angle)
         draft["_status_label"] = DRAFT_STATUS_LABELS.get(draft.get("status"), draft.get("status"))
+    work_options = [
+        {"id": group["work_id"], "name": group["work_name"]}
+        for group in library.linked_work_items()
+    ]
     return render_template(
         "drafts.html",
         drafts=drafts,
@@ -254,6 +259,7 @@ def drafts_page():
         draft_statuses=DRAFT_STATUSES,
         draft_status_labels=DRAFT_STATUS_LABELS,
         list_status=status,
+        work_options=work_options,
     )
 
 
@@ -282,8 +288,12 @@ def create_ai_draft_item():
 
 @app.post("/drafts/ai/by-work")
 def create_work_ai_draft_item():
+    work_id = request.form.get("work_id", type=int)
+    if work_id is None:
+        flash("작품을 선택해주세요.", "error")
+        return redirect(url_for("drafts_page"))
     try:
-        results = create_work_drafts(local_library())
+        results = create_work_drafts(local_library(), work_id=work_id)
     except SchemaError as exc:
         flash(str(exc), "error")
         return redirect(url_for("drafts_page"))
@@ -298,7 +308,7 @@ def create_work_ai_draft_item():
     elif errors:
         flash(errors[0], "error")
     else:
-        flash("작품이 연결된 새 재료가 없습니다. 작품·기획에서 연결한 뒤 다시 시도해주세요.", "info")
+        flash("이 작품에 연결된 새 재료가 없습니다. 작품·기획에서 연결한 뒤 다시 시도해주세요.", "info")
     return redirect(url_for("drafts_page"))
 
 

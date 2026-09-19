@@ -128,3 +128,15 @@ if (draftForm) {
   });
   syncDraftBar();
 }
+
+const aiBusy = document.getElementById("ai-draft-busy");
+document.querySelectorAll("form.ai-draft-form").forEach((form) => {
+  form.addEventListener("submit", () => {
+    if (!form.checkValidity()) return;
+    if (aiBusy) aiBusy.hidden = false;
+    document.body.classList.add("ai-draft-busy-open");
+    form.querySelectorAll("button").forEach((button) => {
+      button.disabled = true;
+    });
+  });
+});

@@ -15,6 +15,7 @@ from sources_config import automatic_sources, is_manual_source, load_sources
 SOURCES = {source["name"]: source for source in load_sources()}
 LAFTEL = SOURCES["라프텔 스토어"]
 ANIMATE = SOURCES["애니메이트 코리아 신상품"]
+FIGUREPRESSO = SOURCES["피규어프레소 예약상품"]
 
 # store.laftel.net: the whole product card is the link; only fresh items carry a NEW badge.
 LAFTEL_HOME = """
@@ -43,6 +44,14 @@ ANIMATE_LIST = """
  <li class="goodsitem1"><div class="item_cont"><div class="item_icon_box">품절</div><div class="item_photo_box"><a href="../goods/goods_view.php?goodsNo=1000055265"><img src="https://cdn.example.com/a.jpg"></a></div>
   <div class="item_info_cont"><div class="item_tit_box"><a href="../goods/goods_view.php?goodsNo=1000055265"><strong class="item_name">【굿즈-클리어파일】 블루 아카이브 클리어파일 하나코(수영복)</strong></a></div>
   <div class="item_money_box"><strong class="item_price"><span>6,000 원 </span></strong></div></div></div></li>
+</ul>"""
+
+# m.figurepresso.com: Cafe24 list mixes SEO paths and short detail.html?product_no= links.
+FIGUREPRESSO_LIST = """
+<ul>
+ <li class="item"><a href="/product/look-up-hatsune/79738/">룩업 하츠네 미쿠</a></li>
+ <li class="item"><a href="/product/detail.html?product_no=80001&cate_no=24">아크릴 스탠드</a></li>
+ <li class="item"><a href="/product/preorder.html?cate_no=24">예약 목록</a></li>
 </ul>"""
 
 
@@ -97,6 +106,19 @@ class AnimateNewArrivalTests(unittest.TestCase):
         self.assertEqual(keyholder["imageUrl"], "http://animate.godohosting.com/Goods/6977039600751.jpg")
         self.assertEqual(clear_file["saleStatus"], "SOLD_OUT")  # "품절" badge sits in the card, outside the link
         self.assertEqual(clear_file["imageUrl"], "https://cdn.example.com/a.jpg")
+
+
+class FigurePressoTests(unittest.TestCase):
+    def items(self):
+        base = "https://m.figurepresso.com/product/preorder.html?cate_no=24"
+        return list(extract_links(FIGUREPRESSO_LIST, base, FIGUREPRESSO))
+
+    def test_seo_and_short_links_become_one_product_no_url_each(self):
+        urls = [item["url"] for item in self.items()]
+        self.assertEqual(urls, [
+            "https://m.figurepresso.com/product/detail.html?product_no=79738",
+            "https://m.figurepresso.com/product/detail.html?product_no=80001",
+        ])
 
 
 class SourceListTests(unittest.TestCase):

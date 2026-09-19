@@ -723,6 +723,81 @@ body.has-draft-bar main {
   font-weight: 600;
 }
 
+.draft-ai-actions {
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.draft-work-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+
+.draft-work-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.draft-work-pick select {
+  min-width: 200px;
+  max-width: min(360px, 100%);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+
+.ai-draft-busy {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 24, 32, 0.45);
+}
+
+.ai-draft-busy[hidden] {
+  display: none;
+}
+
+body.ai-draft-busy-open {
+  overflow: hidden;
+}
+
+.ai-draft-busy-card {
+  max-width: 360px;
+  padding: 24px 28px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.ai-draft-busy-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ai-draft-busy-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .note-form { margin-top: 12px; }
 
 .draft-actions {

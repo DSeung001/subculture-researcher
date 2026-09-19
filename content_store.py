@@ -10,6 +10,7 @@ from google.api_core.exceptions import AlreadyExists
 from translate import enrich_translation
 from content_model import category_collection, content_id
 from image_urls import http_url
+from url_identity import canonicalize
 
 
 TRACKING_PARAMS = {
@@ -45,7 +46,9 @@ def normalize_url(url: str, base_url: str = "") -> str:
         part for part in parsed.query.split("&")
         if unquote_plus(part.split("=", 1)[0]).lower() not in TRACKING_PARAMS
     )
-    return urlunsplit((parsed.scheme, parsed.netloc.lower(), parsed.path, query, ""))
+    cleaned = urlunsplit((parsed.scheme, parsed.netloc.lower(), parsed.path, query, ""))
+    # Host-specific short forms (e.g. Cafe24 product_no) so SEO and detail URLs share an id.
+    return canonicalize(urlsplit(cleaned)) or cleaned
 
 
 def doc_id(url: str) -> str:

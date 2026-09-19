@@ -233,7 +233,7 @@ sources:
     content_angle: PRICE
     source_tier: MEDIA
     allow_patterns:
-      - '^https://m\.figurepresso\.com/product/.+/\d+/'
+      - '^https://m\.figurepresso\.com/product/detail\.html\?product_no=\d+$'
     max_items: 50
     request_delay_min_seconds: 2.0
     request_delay_max_seconds: 4.5

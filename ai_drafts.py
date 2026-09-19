@@ -142,14 +142,19 @@ def pick_work_source_ids(
     return ranked[0][1]
 
 
-def create_work_drafts(library: Library, size: int = DRAFT_SIZE) -> list[tuple[str, int | None, str | None]]:
+def create_work_drafts(
+    library: Library, size: int = DRAFT_SIZE, work_id: int | None = None,
+) -> list[tuple[str, int | None, str | None]]:
     """Create up to one FIGURE, ANIME, and MIXED draft from local work links.
 
+    When `work_id` is set, only that work's linked items are considered.
     Returns a list of `(draft_type, draft_id_or_None, error_or_None)`. Source
     ids are not shared across the three drafts in one run, and sources of a
     published draft are left out. Bodies are written by `create_draft` after selection.
     """
     groups = library.linked_work_items()
+    if work_id is not None:
+        groups = [g for g in groups if g["work_id"] == work_id]
     used: set[str] = set(library.posted_item_ids())
     results = []
     for draft_type in WORK_DRAFT_TYPES:

@@ -303,6 +303,27 @@ class DraftsPageTests(DraftCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(len(list_drafts(self.lib)), 1)
 
+    def test_page_lists_linked_works_for_by_work_drafts(self):
+        work = self.lib.save_term("works", "프리렌")
+        self.lib.assign(["FIGURE:a"], "works", work)
+        html = self.get().get_data(as_text=True)
+        self.assertIn('name="work_id"', html)
+        self.assertIn(f'value="{work}"', html)
+        self.assertIn("프리렌", html)
+        self.assertIn("ai-draft-form", html)
+        self.assertIn("ai-draft-busy", html)
+
+    def test_by_work_route_requires_work_id_and_passes_it_through(self):
+        with patch.dict(review.app.config, {"LIBRARY_PATH": str(self.path)}):
+            client = review.app.test_client()
+            missing = client.post("/drafts/ai/by-work", follow_redirects=True)
+            self.assertIn("작품을 선택", missing.get_data(as_text=True))
+            with patch.object(review, "create_work_drafts", return_value=[("FIGURE", 1, None)]) as create:
+                ok = client.post("/drafts/ai/by-work", data={"work_id": "7"}, follow_redirects=True)
+            create.assert_called_once()
+            self.assertEqual(create.call_args.kwargs["work_id"], 7)
+            self.assertIn("작품별 글 1개", ok.get_data(as_text=True))
+
 
 class DeleteFirestoreDraftsTests(unittest.TestCase):
     def snapshots(self, *statuses):

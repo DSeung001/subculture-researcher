@@ -11,7 +11,7 @@ import ai_drafts
 import app as review
 from collectors.local_browser import _extract_candidate_url
 from content_model import content_id, content_ref
-from content_store import ContentStore, doc_id
+from content_store import ContentStore, doc_id, normalize_url
 from drafts_store import DraftError
 from presentation import content_score, effective_date
 
@@ -106,6 +106,35 @@ class WorkflowTests(unittest.TestCase):
         mixed_cats = {sid.partition(":")[0] for sid in calls[2]}
         self.assertGreaterEqual(len(mixed_cats), 2)
 
+    def test_work_drafts_can_target_one_work(self):
+        groups = [
+            {
+                "work_id": 1,
+                "work_name": "피규어 작품",
+                "items": [
+                    {"id": "FIGURE:a", "storage_category": "FIGURE", "data": {"title": "fig"}},
+                ],
+            },
+            {
+                "work_id": 2,
+                "work_name": "애니 작품",
+                "items": [
+                    {"id": "ANIME:c", "storage_category": "ANIME", "data": {"title": "anime"}},
+                ],
+            },
+        ]
+        library = Mock()
+        library.linked_work_items.return_value = groups
+        library.posted_item_ids.return_value = set()
+        with patch.object(ai_drafts, "create_draft", side_effect=["d1"]) as create, \
+             patch.object(ai_drafts, "write_draft_body"):
+            results = ai_drafts.create_work_drafts(library, work_id=2)
+        self.assertEqual(create.call_args_list[0].args[1], ["ANIME:c"])
+        by_type = {draft_type: draft_id for draft_type, draft_id, _ in results}
+        self.assertEqual(by_type["ANIME"], "d1")
+        self.assertIsNone(by_type["FIGURE"])
+        self.assertIsNone(by_type["MIXED"])
+
     def test_collect_still_runs_mixed_trending_draft(self):
         import collect as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[]), \
@@ -183,6 +212,32 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(first["inserted"], 1)
         self.assertEqual(second["existing"], 1)
         self.assertEqual(doc_id("https://example.com/item#x"), doc_id("https://example.com/item"))
+
+    def test_cafe24_product_urls_collapse_to_product_no(self):
+        short = "https://m.figurepresso.com/product/detail.html?product_no=79738"
+        variants = [
+            short,
+            "https://m.figurepresso.com/product/detail.html?product_no=79738&cate_no=24",
+            "https://m.figurepresso.com/product/some-slug/79738/",
+            "https://www.figurepresso.com/product/a/b/79738",
+            "https://figurepresso.com/product/detail.html?product_no=79738&utm_source=x",
+        ]
+        for url in variants:
+            with self.subTest(url=url):
+                self.assertEqual(normalize_url(url), short)
+                self.assertEqual(doc_id(url), doc_id(short))
+        # List / category pages have no product_no and must stay unchanged.
+        listing = "https://m.figurepresso.com/product/preorder.html?cate_no=24"
+        self.assertEqual(normalize_url(listing), listing)
+        ttabbae = "https://ttabbaemall.co.kr/product/detail.html?product_no=42"
+        self.assertEqual(
+            normalize_url("https://www.ttabbaemall.co.kr/product/hoyoverse-goods/42/"),
+            ttabbae,
+        )
+        self.assertEqual(
+            normalize_url("https://m.ttabbaemall.co.kr/product/detail.html?product_no=42&cate_no=1"),
+            ttabbae,
+        )
 
 
     def test_datetime_publish_date_drives_recency(self):
