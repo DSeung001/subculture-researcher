@@ -377,9 +377,10 @@ def manual_add():
     category = request.form.get("category", "UNKNOWN")
     angle = request.form.get("angle", "NEWS")
     source_tier = request.form.get("source_tier", "MEDIA")
+    image_url = request.form.get("image_url", "")
 
     try:
-        created = add_manual_content(db(), url, title, category, angle, source_tier)
+        created = add_manual_content(db(), url, title, category, angle, source_tier, image_url)
     except ValueError as exc:
         flash(str(exc), "error")
     else:

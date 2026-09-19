@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from content_store import METRICS, normalize_url
 from collectors.common import extract_product_fields, save_records
 from collectors.http import RobotsPolicy, get_html
-from collectors.images import detail_image, list_image
+from collectors.images import card_of, detail_image, list_image
 
 
 RELATIVE_KOREAN_PATTERN = re.compile(r"^(\d+)\s*(초|분|시간|일|주|개월|년)\s*전$")
@@ -88,6 +88,21 @@ def visible_text(soup: BeautifulSoup) -> str:
     return soup.get_text("\n", strip=True)
 
 
+def list_product_fields(anchor, source: dict, base_url: str, image_url: str | None) -> dict:
+    """Price and sale status read from the list card itself, so no detail request is needed.
+
+    The link's own text is used when it already carries the price (whole card is the
+    link); otherwise the item's card — the widest ancestor holding only this item's link.
+    """
+    fields = extract_product_fields(source, " ".join(anchor.get_text(" ", strip=True).split()), image_url)
+    if fields:
+        return fields
+    card = card_of(anchor, source.get("link_selector", "a[href]"), base_url)
+    if card is None:
+        return {}
+    return extract_product_fields(source, " ".join(card.get_text(" ", strip=True).split()), image_url)
+
+
 def extract_links(html: str, base_url: str, source: dict):
     soup = BeautifulSoup(html, "html.parser")
     for anchor in soup.select(source.get("link_selector", "a[href]")):
@@ -108,12 +123,19 @@ def extract_links(html: str, base_url: str, source: dict):
         if title_node is None:
             continue
         title = " ".join(title_node.get_text(" ", strip=True).split())
+        if source.get("title_strip_pattern"):
+            # Card anchors often carry price/badge text after the name.
+            title = re.sub(source["title_strip_pattern"], "", title).strip()
         if len(title) < int(source.get("min_title_length", 4)):
+            continue
+        if any(re.search(pattern, title) for pattern in source.get("title_deny_patterns", [])):
             continue
         item = {"url": url, "title": title, "publishedAt": None, "_errors": []}
         image = list_image(anchor, source, base_url)
         if image:
             item["imageUrl"] = image
+        if source.get("list_product_mode"):
+            item.update(list_product_fields(anchor, source, base_url, item.get("imageUrl")))
         if source.get("published_selector"):
             date_node = anchor.select_one(source["published_selector"])
             if date_node is not None:

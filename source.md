@@ -1,81 +1,41 @@
 # 데이터 수집 대상
 
-이 문서는 Subculture Researcher에서 어떤 소스를 어떤 방식으로 다루는지 정리합니다.
+이 문서는 Subculture Researcher가 어떤 소스를 어떤 방식으로 다루는지 정리합니다. 실제 목록은 [sources.yaml](sources.yaml)이 기준이며, 앱의 「수집 목록」 화면에서도 볼 수 있습니다.
 
 ## 자동 수집
 
-`python collect.py` (GitHub Actions 포함). 수동 전용 소스는 건너뜁니다.
+`python collect.py` (GitHub Actions 포함). 수동 전용 소스는 건너뛰고, HTML 소스는 `robots.txt`를 확인합니다.
 
-### 피규어팜 예약상품
+### 상품·예약 정보 (피규어·굿즈)
 
-- URL: https://m.figurefarm.net/shop/big_section.php?cno1=1554
-- 지역: 한국
-- 티어: `MEDIA`
-- 목적: 피규어 예약상품, 가격, 예약마감일, 입고예정, 제조사 수집
-- 방식: 공개 목록 → 상세 페이지 메타데이터 수집
-- 기본 카테고리: `FIGURE`
-- 기본 포맷: `PRICE`
-- 저장 필드: `entityType=PRODUCT`, `shop=FigureFarm`, `saleStatus`, `price`, `preorderEndAt`, `releaseWindowText`, `manufacturer`
+| 소스 | 방식 | 저장 필드 |
+|---|---|---|
+| 피규어팜 예약상품 | 목록 → 상세 페이지 | 가격, 예약마감일, 입고예정, 제조사, 사진 |
+| 피규어프레소 예약상품 | 목록 → 상세 페이지 | 가격, 예약 상태, 사진 |
+| 따빼몰 호요버스·명조 굿즈 | 목록 → 상세 페이지 | 가격, 예약 상태·마감일, 사진 |
+| **라프텔 스토어** 신상품 | 홈의 `NEW` 배지 상품 카드 | 상품명(IP명 포함), 가격, 예약/입고 상태, 사진 |
+| **애니메이트 코리아 신상품** | 신상품 목록(`cateCd=008`) 카드 | 상품명, 가격, 품절 여부, 사진 (국내·일본 서적은 제외) |
 
-### HOBBY Watch 피규어
+- 라프텔 스토어와 애니메이트 코리아 신상품은 로그인이 필요 없는 공개 HTML이며 `robots.txt`가 허용합니다. **목록 카드 텍스트에서 값을 읽기 때문에 상세 페이지를 요청하지 않고**, 그래서 예약마감일은 수집하지 않습니다(라프텔은 상세 페이지에만 있음).
+- 애니메이트 코리아에는 피규어 전용 카테고리가 없어 굿즈 중심입니다.
+- 라프텔 홈의 `NEW` 배지는 그때그때 진행 중인 캠페인(예: 특정 IP)에 쏠릴 수 있습니다.
 
-- URL: https://hobby.watch.impress.co.jp/category/figure/
-- 지역: 일본
-- 티어: `MEDIA`
-- 목적: 피규어 신제품, 예약, 발매, 리뷰 후보 수집
-- 방식: HTML 목록 링크 수집
-- 기본 카테고리: `FIGURE`
-- 기본 포맷: `NEWS`
+### 뉴스·화제 (작품 발굴용)
 
-### Good Smile Company 뉴스
+| 소스 | 방식 |
+|---|---|
+| HOBBY Watch 피규어 | 목록 카드(기사 링크·사진) |
+| Animate Times 굿즈 | 목록 카드 (`.c-item`) |
+| 애니플러스 뉴스 | 브라우저 렌더링(JS 목록), 2페이지 |
+| PR TIMES 만화·애니 | 목록 → 상세 `og:image` |
+| McFarlane Toys 뉴스 | 목록 → 상세 `og:image` |
+| AniList 트렌딩 애니 | GraphQL API (트렌딩·인기·다음 방영일·표지) |
+| AGF Korea 공지사항 | 공개 JSON API (공지 본문 이미지) |
 
-- URL: https://www.goodsmile.com/en/news
-- 지역: 일본
-- 티어: `OFFICIAL`
-- 목적: 제조사 공식 신제품/예약/발매 공지 수집
-- 방식: HTML 목록 링크 수집
-- 기본 카테고리: `FIGURE`
-- 기본 포맷: `NEWS`
+### 저장 규칙 (공통)
 
-### Animate Times 굿즈
-
-- URL: https://www.animatetimes.com/goods/
-- 지역: 일본
-- 티어: `MEDIA`
-- 목적: 굿즈·피규어·페어 등 일본 미디어 허브 후보 수집
-- 방식: HTML 목록 링크 수집 (`.c-item` 본문 카드만)
-- 기본 카테고리: `GOODS`
-- 기본 포맷: `NEWS`
-
-### 애니플러스 뉴스
-
-- URL: https://news.aniplustv.com/
-- 지역: 한국
-- 티어: `MEDIA`
-- 목적: 국내 애니메이션/서브컬처 화제 후보 수집
-- 방식: HTML 목록 링크 수집
-- 기본 카테고리: `ANIME`
-- 기본 포맷: `NEWS`
-
-## 설정만 두고 비활성
-
-### Kotobukiya 뉴스
-
-- URL: https://www.kotobukiya.co.jp/en/news/
-- 지역: 일본
-- 티어: `OFFICIAL`
-- 목적: 제조사 공식 공지
-- 상태: Cloudflare가 단순 HTTP를 막아 `enabled: false`
-- 재활성 조건: 브라우저 렌더링 수집이 안정적으로 통과할 때
-
-### 애니메이트 코리아 페어·이벤트
-
-- URL: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
-- 지역: 한국
-- 티어: `MEDIA`
-- 목적: 국내 페어·이벤트·입고성 소식
-- 상태: 목록이 `javascript:gd_btn_view(...)` 이라 HTML 링크 수집 불가 → `enabled: false`
-- 대안: 필요한 게시물 URL을 리뷰 앱에서 수동 추가로 저장
+- 제목·링크·출처·분류와 상품 메타데이터만 저장하며 원문 전체는 복제하지 않습니다.
+- 동일 URL은 `ContentStore`가 SHA-256 기반 문서 ID로 중복을 막고, 재수집 시 값(가격·상태·사진)만 갱신합니다.
 
 ## 수동 수집
 
@@ -85,7 +45,7 @@
 ### YouTube 공식 채널 (RSS)
 
 - KADOKAWA Anime / Aniplex / TOHO animation
-- 방식: `channel_id`로 공식 Atom 피드(`feeds/videos.xml`)만 읽음
+- 방식: `channel_id`로 공식 Atom 피드(`feeds/videos.xml`)만 읽음, 영상 썸네일 저장
 - 상태: YouTube RSS가 활성 채널에도 간헐 404를 내므로 자동에서 제외하고 수동으로만 재시도
 
 ### 라프텔 인기·신작
@@ -93,75 +53,50 @@
 - URL: https://laftel.net/
 - 카테고리: `ANIME`
 - 프로필: `laftel`
-- 방식: 로그인 후 인기 애니/이번주/분기/요일별 신작 화면으로 이동 → 랜덤 대기 → 현재 화면 링크 수집
+- 방식: 로그인 후 인기 애니/이번주/분기/요일별 신작 화면으로 이동 → 랜덤 대기 → 현재 화면 링크·포스터 수집
 
-### 라프텔 스토어
+## 자동 수집을 하지 않는 곳
 
-- URL: https://store.laftel.net/
-- 카테고리: `FIGURE`
-- 프로필: `laftel` (애니 탐색과 세션 공유)
-- 방식: 스토어 피규어/예약상품 화면으로 이동 → 랜덤 대기 → 상품 링크와 주변 텍스트 수집
-- 상품 필드: `entityType=PRODUCT`, `shop=Laftel`, `saleStatus`, `price`, `preorderEndAt`, `imageUrl`
-- 예약일은 화면에 YYYY년 M월 D일 형식이 있을 때 추출
+### 코토부키야 몰 (네이버 브랜드스토어)
 
-### animate 서울홍대점
+- URL: https://brand.naver.com/kotobukiyamall
+- `brand.naver.com`의 `robots.txt`가 모든 봇에 `Disallow: /`이고 일반 요청에는 HTTP 429를 반환하므로 **자동 수집 대상이 아닙니다.**
+- 대신 인박스의 「+ 콘텐츠 추가」에서 상품 URL을 직접 저장합니다. 카테고리를 「피규어」로 고르면 상품(`entityType=PRODUCT`, `shop=코토부키야 몰(네이버)`)으로 저장되고, 「이미지 URL」에 상품 사진 주소를 붙여 넣을 수 있습니다.
 
-- URL: https://x.com/animate_hongdae
-- 카테고리: `GOODS`
-- 프로필: `x-animate-hongdae`
-- 방식: X 로그인/인증을 직접 완료한 뒤 공식 계정의 게시물 링크를 천천히 수집
+### 제외한 소스
 
-### 애니메이트 코리아 페어·이벤트
-
-- URL: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
-- 카테고리: `FESTIVAL`
-- 프로필: `animate-korea`
-- 방식: JS 네비게이션 화면을 로컬 브라우저로 연 뒤 이벤트/페어 링크 수집
-
-### 일러스타 페스
-
-- URL: https://illustar.imweb.me/
-- 카테고리: `FESTIVAL`
-- 프로필: `illustar`
-- 방식: 공지/티켓/행사 화면으로 이동 후 현재 페이지의 공식 링크 수집
-
-### 코믹월드
-
-- URL: https://comicw.co.kr/
-- 카테고리: `FESTIVAL`
-- 프로필: `comicworld`
-- 방식: 공지/행사/티켓 화면으로 이동 후 현재 페이지 링크 수집
-
-### Kotobukiya 뉴스
-
-- URL: https://www.kotobukiya.co.jp/en/news/
-- 카테고리: `FIGURE`
-- 프로필: `kotobukiya`
-- 방식: Cloudflare 확인이 필요한 경우 사용자가 직접 완료한 후 공식 뉴스/상품 링크 수집
-
-AGF Korea는 현재 공개 JSON API가 있어 `FESTIVAL` 자동 수집을 유지하며, 로컬 브라우저 대상으로 중복 등록하지 않습니다.
+Good Smile 뉴스(배송·점검 공지뿐), 애니메이트 코리아 페어·이벤트, 일러스타 페스, 코믹월드, Kotobukiya 뉴스(로컬 브라우저), animate 서울홍대점(X)은 신상품·예약 정보를 얻지 못하거나 수집 원칙에 어긋나 제거했습니다.
+Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어려워 붙이지 않았습니다(사유는 `sources.yaml` 하단 주석).
 
 ## 이미지 수집
 
 글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** `imageUrl`로 저장합니다(이미지 파일은 저장하지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
 
+## 소스 설정 키 (HTML 소스)
+
 | 설정 키 | 의미 |
 |---|---|
-| `list_image_selector` | 목록 카드 안의 이미지 셀렉터(예: `img`). 카드는 "다른 기사 링크가 나오기 직전까지의 상위 요소"로 자동 판별 |
-| `fetch_detail_image: true` | 상세 페이지를 열어 `og:image`(→ `twitter:image`)를 사용. 목록에 이미지가 없을 때만 사용 |
+| `link_selector` | 기사·상품 링크 셀렉터. `:-soup-contains("NEW")`처럼 링크 텍스트 조건도 쓸 수 있음 |
+| `allow_patterns` / `deny_patterns` | 링크 URL 허용·제외 정규식 |
+| `title_selector` | 링크 안에서 제목이 있는 요소 |
+| `title_strip_pattern` | 제목 뒤에 붙은 가격·배지 텍스트를 지우는 정규식 |
+| `title_deny_patterns` | 제목이 이 정규식과 맞으면 항목 제외(예: 서적) |
+| `product_mode: true` | 상세 페이지를 열어 가격·예약 상태·마감일 추출 (한국 쇼핑몰용) |
+| `list_product_mode: true` | 상세 요청 없이 **목록 카드 텍스트**에서 가격·예약 상태 추출 |
+| `list_image_selector` | 목록 카드 안의 이미지 셀렉터. 카드는 "다른 상품 링크가 나오기 직전까지의 상위 요소"로 자동 판별 |
+| `fetch_detail_image: true` | 상세 페이지를 열어 `og:image`(→ `twitter:image`) 사용. 목록에 이미지가 없을 때만 |
 | `image_selector` | 상세 페이지에서 `og:image` 대신 쓸 이미지 셀렉터 |
 | `image_deny_patterns` | 소스별로 추가 배제할 이미지 경로 정규식(예: 저화질 미리보기 `blur_\d+`) |
 | `image_field` / `image_html_field` | JSON API 소스: 이미지 URL 필드 / 본문 HTML 필드(첫 `<img>` 사용) |
 
-소스별 이미지 위치: HOBBY Watch·Animate Times·애니플러스는 목록 카드, PR TIMES·McFarlane은 상세 `og:image`, 따빼몰·피규어프레소·피규어팜은 상세 `og:image`(상품 대표 사진), AniList는 `coverImage`, YouTube는 영상 썸네일, AGF는 공지 본문 이미지입니다. Good Smile 뉴스는 상세 이미지가 배송·공지용 텍스트 그래픽이라 수집하지 않습니다.
-이미 저장된 항목은 다음 수집 때 같은 URL의 `imageUrl`이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
+이미 저장된 항목은 다음 수집 때 같은 URL의 값(사진 포함)이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
 
 ## 수집 원칙
 
-1. 자동 수집 전에 해당 사이트의 `robots.txt`를 확인합니다.
+1. 자동 수집 전에 해당 사이트의 `robots.txt`를 확인합니다. 자동 수집을 금지하는 사이트(예: 네이버 브랜드스토어)는 소스로 등록하지 않습니다.
 2. `robots.txt` 확인에 실패하면 자동 수집을 건너뜁니다.
-3. 원문 전체를 복제하지 않고 제목, URL, 출처, 분류에 필요한 최소 메타데이터만 저장합니다.
-4. X는 MVP에서 비공식 스크래핑하지 않습니다.
+3. 원문 전체를 복제하지 않고 제목, URL, 출처, 분류, 상품 메타데이터와 이미지 링크만 저장합니다.
+4. X는 비공식 스크래핑하지 않습니다.
 5. 동일 URL은 SHA-256 기반 Firestore document ID로 중복 저장을 방지합니다.
 6. 사이트 구조가 바뀌어 수집 정확도가 떨어지면 해당 소스를 일시적으로 비활성화합니다.
 
@@ -170,9 +105,6 @@ AGF Korea는 현재 공개 JSON API가 있어 `FESTIVAL` 자동 수집을 유지
 향후 필요성이 확인되면 아래를 추가할 수 있습니다.
 
 - 공식 RSS 피드가 있는 소스
-- YouTube Data API 기반 피규어/애니 콘텐츠 수집
 - 제조사별 신제품 페이지 (FREEing, Alter 등)
-- Kotobukiya / 애니메이트 코리아 자동 수집 재활성
-- 쇼핑몰 예약 시작/마감 정보
-- 수집된 기사와 X 게시 성과 연결
+- 라프텔 스토어 IP 페이지(`/ip/{id}`)·애니메이트 코리아 예약상품(`cateCd=010`), 예약마감일 수집
 - 키워드/IP/제조사 자동 분류

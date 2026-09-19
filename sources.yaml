@@ -97,21 +97,6 @@ sources:
     respect_robots: true
     list_image_selector: img  # li.item 안의 기사별 list.jpg
 
-  # 제조사 공식 뉴스. 신제품/예약/출시 공지를 원천 데이터로 사용한다.
-  - name: Good Smile Company 뉴스
-    type: html
-    url: https://www.goodsmile.com/en/news
-    region: JP
-    category: FIGURE
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    allow_patterns:
-      - '^https://www\.goodsmile\.com/en/news/'
-    max_items: 40
-    enabled: true
-    respect_robots: true
-    # 이미지는 수집하지 않는다: 상세 og:image가 배송·공지용 텍스트 그래픽(/notice/)이라 제품 사진이 아니다.
-
   # 일본 굿즈/피규어 미디어 허브. 본문 카드(.c-item)만 모아 사이드 랭킹을 제외한다.
   - name: Animate Times 굿즈
     type: html
@@ -155,26 +140,6 @@ sources:
     enabled: true
     respect_robots: true
     list_image_selector: img  # 카드(a) 안의 기사별 이미지
-
-  # 로그인/JS 이동이 필요한 국내 페어·이벤트. 로컬 Playwright 프로필로만 수집한다.
-  - name: 애니메이트 코리아 페어·이벤트
-    type: local_browser
-    url: https://www.animate-onlineshop.co.kr/board/list.php?bdId=event
-    region: KR
-    category: FESTIVAL
-    content_angle: NEWS
-    source_tier: MEDIA
-    local_only: true
-    interactive_ready: true
-    browser_profile: animate-korea
-    link_selector: 'a, [onclick], [data-href], [data-url]'
-    allow_patterns:
-      - '^https://www\.animate-onlineshop\.co\.kr/board/'
-    max_items: 30
-    scroll_steps: 2
-    scroll_delay_seconds: 2
-    item_delay_seconds: 0.5
-    enabled: true
 
   # AGF(Anime Game Festival) Korea 공식 공지사항 = 국내 대표 서브컬처 페스티벌 소식.
   # 목록이 React 클라이언트 라우팅이라 HTML 링크 추출이 불가능해
@@ -224,114 +189,6 @@ sources:
     scroll_steps: 4
     scroll_delay_seconds: 3
     item_delay_seconds: 0.8
-    enabled: true
-
-  - name: 라프텔 스토어
-    type: local_browser
-    url: https://store.laftel.net/
-    region: KR
-    category: FIGURE
-    content_angle: PRICE
-    source_tier: MEDIA
-    local_only: true
-    interactive_ready: true
-    browser_profile: laftel
-    interactive_message: '라프텔 로그인 후 스토어의 피규어/예약상품 목록 화면으로 이동하세요. 대기 후 현재 페이지에서 수집합니다.'
-    link_selector: 'a[href], [data-href], [data-url], [onclick]'
-    allow_patterns:
-      - '^https://store\.laftel\.net/'
-    required_text_patterns:
-      - '피규어'
-      - '넨도로이드'
-      - '예약'
-      - '원'
-    product_mode: true
-    shop: Laftel
-    max_items: 30
-    scroll_steps: 6
-    scroll_delay_seconds: 3
-    item_delay_seconds: 1
-    enabled: true
-
-  - name: animate 서울홍대점
-    type: local_browser
-    url: https://x.com/animate_hongdae
-    region: KR
-    category: GOODS
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    local_only: true
-    interactive_ready: true
-    browser_profile: x-animate-hongdae
-    interactive_message: 'X 로그인/인증을 직접 완료하고 animate 서울홍대점 타임라인이 보이면 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
-    link_selector: 'a[href*="/status/"]'
-    allow_patterns:
-      - '^https://x\.com/animate_hongdae/status/'
-    max_items: 25
-    scroll_steps: 6
-    scroll_delay_seconds: 3
-    item_delay_seconds: 0.8
-    enabled: true
-
-  - name: 일러스타 페스
-    type: local_browser
-    url: https://illustar.imweb.me/
-    region: KR
-    category: FESTIVAL
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    local_only: true
-    interactive_ready: true
-    browser_profile: illustar
-    interactive_message: '공지사항/티켓/행사 정보 중 수집할 화면으로 이동한 뒤 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
-    link_selector: 'a[href], [data-href], [onclick]'
-    allow_patterns:
-      - '^https://illustar\.imweb\.me/'
-      - '^https://illustar\.net/'
-    max_items: 30
-    scroll_steps: 3
-    scroll_delay_seconds: 2
-    item_delay_seconds: 0.5
-    enabled: true
-
-  - name: 코믹월드
-    type: local_browser
-    url: https://comicw.co.kr/
-    region: KR
-    category: FESTIVAL
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    local_only: true
-    interactive_ready: true
-    browser_profile: comicworld
-    interactive_message: '코믹월드 공지/행사/티켓 화면으로 이동한 뒤 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
-    link_selector: 'a[href], [data-href], [onclick]'
-    allow_patterns:
-      - '^https://comicw\.co\.kr/'
-    max_items: 30
-    scroll_steps: 3
-    scroll_delay_seconds: 2
-    item_delay_seconds: 0.5
-    enabled: true
-
-  - name: Kotobukiya 뉴스
-    type: local_browser
-    url: https://www.kotobukiya.co.jp/en/news/
-    region: JP
-    category: FIGURE
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    local_only: true
-    interactive_ready: true
-    browser_profile: kotobukiya
-    interactive_message: 'Cloudflare 확인이 나오면 직접 완료하고 뉴스/상품 목록이 보이면 대기하세요. 대기 후 현재 페이지에서 수집합니다.'
-    link_selector: 'a[href]'
-    allow_patterns:
-      - '^https://www\.kotobukiya\.co\.jp/'
-    max_items: 30
-    scroll_steps: 3
-    scroll_delay_seconds: 3
-    item_delay_seconds: 0.7
     enabled: true
 
   # 국내 리셀러의 호요버스(원신/스타레일/젠레스존제로) 공식 라이선스 굿즈. 예약마감/가격이 목록에 노출된다.
@@ -388,6 +245,47 @@ sources:
     respect_robots: true
     product_mode: true
     shop: 피규어프레소
+
+  # 라프텔 스토어 신상품(NEW 배지). 로그인 없이 공개 HTML이며 robots.txt가 허용한다.
+  # 목록 카드 텍스트에서 가격·예약 상태를 읽어 상세 요청은 하지 않는다(예약마감일은 상세에만 있어 수집하지 않음).
+  - name: 라프텔 스토어
+    type: html
+    url: https://store.laftel.net/
+    link_selector: 'a[href^="/products/"]:-soup-contains("NEW")'
+    title_strip_pattern: '\s[\d,]+원.*$'
+    region: KR
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://store\.laftel\.net/products/\d+/?$'
+    max_items: 30
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: img
+    shop: Laftel
+
+  # 애니메이트 코리아 온라인샵 신상품(cateCd=008). 피규어 전용 카테고리는 없고 굿즈 중심이며 서적은 제외한다.
+  - name: 애니메이트 코리아 신상품
+    type: html
+    url: https://www.animate-onlineshop.co.kr/goods/goods_list.php?cateCd=008
+    link_selector: '.item_tit_box a[href*="goods_view.php?goodsNo="]'
+    title_selector: .item_name
+    title_deny_patterns:
+      - '^【(국내|일본)서적'
+    region: KR
+    category: GOODS
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - 'goods_view\.php\?goodsNo=\d+'
+    max_items: 30
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: '.item_photo_box img'
+    shop: 애니메이트 코리아
 
   # 미국 공식 피규어 브랜드 뉴스. Sideshow는 Queue-it 대기실(사실상 항상 리다이렉트)로
   # 막혀 있어 자동 수집이 불가능해 McFarlane Toys 공식 뉴스로 대체했다.
