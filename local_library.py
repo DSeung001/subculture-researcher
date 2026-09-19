@@ -263,6 +263,7 @@ class Library:
             session.merge(SyncState(id=1, completed_at=now, item_count=len(records)))
         # New source rows only: additive keyword links for still-unlinked items.
         self.auto_assign_works(unclassified_only=True)
+        self.auto_assign_product_categories()
         return len(records)
 
     def upsert_snapshots(self, snapshots):
@@ -273,6 +274,7 @@ class Library:
             self._upsert_items(session, records)
         if records:
             self.auto_assign_works(unclassified_only=True)
+            self.auto_assign_product_categories()
         return len(records)
 
     def items_by_id(self, item_ids):
@@ -387,6 +389,32 @@ class Library:
             before = session.scalar(select(func.count()).select_from(ItemWork)) or 0
             session.execute(self.insert(ItemWork).on_conflict_do_nothing(), pairs)
             after = session.scalar(select(func.count()).select_from(ItemWork)) or 0
+            return after - before
+
+    def auto_assign_product_categories(self):
+        """Link FIGURE: items to the seeded '피규어' product category when they have none.
+
+        Additive only: items that already have any product_categories link are skipped.
+        Returns the number of new links inserted.
+        """
+        model = TERM_MODELS["product_categories"]
+        link = LINK_MODELS["product_categories"]
+        with self.connect() as session:
+            term = session.scalar(select(model).where(model.name == "피규어"))
+            if term is None:
+                return 0
+            rows = session.execute(
+                select(Item.id).where(
+                    Item.id.like("FIGURE:%"),
+                    ~exists().where(link.item_id == Item.id),
+                )
+            ).all()
+            if not rows:
+                return 0
+            pairs = [{"item_id": item_id, "term_id": term.id} for (item_id,) in rows]
+            before = session.scalar(select(func.count()).select_from(link)) or 0
+            session.execute(self.insert(link).on_conflict_do_nothing(), pairs)
+            after = session.scalar(select(func.count()).select_from(link)) or 0
             return after - before
 
     def assign(self, item_ids, table, term_id, remove=False):

@@ -40,6 +40,12 @@ class LibraryCase(unittest.TestCase):
         self.path = Path(self.temp.name) / "library.sqlite3"
         self.lib = Library(self.path)
         self.lib.sync(cloud(*(cloud_doc(name) for name in ("a", "b", "c", "d", "e"))))
+        # Sync auto-links FIGURE → 피규어; strip it from items that should stay
+        # uncurated so prune tests still cover the no-local-work path.
+        figure = next(t for t in self.lib.terms()["product_categories"] if t["name"] == "피규어")
+        self.lib.assign(
+            ["FIGURE:b", "FIGURE:c", "FIGURE:e"], "product_categories", figure["id"], remove=True,
+        )
         # a: tagged, d: in a collection, b/e: no local work, c: still in the cloud
         tag = self.lib.save_term("tags", "관심")
         self.lib.assign(["FIGURE:a"], "tags", tag)

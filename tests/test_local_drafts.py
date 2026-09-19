@@ -251,6 +251,9 @@ class CandidateTests(DraftCase):
 
     def test_draft_sources_are_never_pruned_as_orphans(self):
         create_draft(self.lib, ["FIGURE:a"])
+        # Sync linked FIGURE:d → 피규어; clear it so this row is a plain orphan.
+        figure = next(t for t in self.lib.terms()["product_categories"] if t["name"] == "피규어")
+        self.lib.assign(["FIGURE:d"], "product_categories", figure["id"], remove=True)
         by_id = {item["id"]: item["curated"] for item in self.lib.orphan_items({"FIGURE:b"})}
         self.assertTrue(by_id["FIGURE:a"])  # a source of a draft
         self.assertFalse(by_id["FIGURE:d"])

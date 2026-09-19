@@ -133,6 +133,27 @@ class LibraryTests(unittest.TestCase):
         saved = self.lib.overview()["saved_filters"][0]
         self.assertEqual(json.loads(saved["filters"]), {"q": "피규어"})
 
+    def test_product_category_figure_filter_after_sync(self):
+        figure_term = next(t for t in self.lib.terms()["product_categories"] if t["name"] == "피규어")
+        other = next(t for t in self.lib.terms()["product_categories"] if t["name"] == "아크릴 굿즈")
+        self.lib.sync(cloud(snapshot("acrylic", title="이미 분류", category="FIGURE")))
+        # Replace the sync-time 피규어 link with a different product category.
+        self.lib.assign(["FIGURE:acrylic"], "product_categories", figure_term["id"], remove=True)
+        self.lib.assign(["FIGURE:acrylic"], "product_categories", other["id"])
+        self.lib.sync(cloud(
+            snapshot("fig", title="피규어 A", category="FIGURE"),
+            snapshot("anime", title="애니", category="ANIME"),
+            snapshot("goods", title="굿즈", category="GOODS"),
+            snapshot("acrylic", title="이미 분류", category="FIGURE"),
+        ))
+        rows, total = self.lib.items({"product_categories": str(figure_term["id"])})
+        ids = {row["id"] for row in rows}
+        self.assertEqual(total, 1)
+        self.assertEqual(ids, {"FIGURE:fig"})
+        acrylic_rows, _ = self.lib.items({"product_categories": str(other["id"])})
+        self.assertEqual([row["id"] for row in acrylic_rows], ["FIGURE:acrylic"])
+        self.assertNotIn("피규어", [t["name"] for t in acrylic_rows[0]["terms"]["product_categories"]])
+
     def test_invalid_bulk_assignment_rolls_back(self):
         self.lib.sync(cloud(snapshot()))
         work = self.lib.save_term("works", "작품")
