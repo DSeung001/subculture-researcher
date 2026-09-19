@@ -161,35 +161,8 @@ sources:
     max_items: 40
     enabled: true
 
-  # 아래 소스는 GitHub Actions에서 실행하지 않는다.
-  # 로컬에서 collect_manual.py로 headed Playwright + 소스별 영속 프로필로 수집한다.
-  # 로그인/MFA/Cloudflare 인증은 사용자가 열린 브라우저에서 대기 시간 동안 직접 완료한다.
-
-  - name: 라프텔 인기·신작
-    type: local_browser
-    url: https://laftel.net/
-    region: KR
-    category: ANIME
-    content_angle: NEWS
-    source_tier: MEDIA
-    local_only: true
-    interactive_ready: true
-    browser_profile: laftel
-    interactive_message: '라프텔 로그인 후 인기 애니/이번주/분기/요일별 신작 등 원하는 목록 화면으로 이동하세요. 대기 후 현재 페이지에서 수집합니다.'
-    link_selector: 'a[href]'
-    list_image_selector: img  # 작품 카드의 포스터
-    allow_patterns:
-      - '^https://laftel\.net/'
-    deny_patterns:
-      - '/login'
-      - '/setting'
-      - '/profile'
-      - '/payment'
-    max_items: 30
-    scroll_steps: 4
-    scroll_delay_seconds: 3
-    item_delay_seconds: 0.8
-    enabled: true
+  # 수동 전용(YouTube RSS 등)은 위 manual_only 소스. 라프텔은 store.laftel.net 공개 HTML만
+  # 자동 수집한다(아래 「라프텔 스토어」). laftel.net 인기·신작 브라우저 수집은 쓰지 않는다.
 
   # 국내 리셀러의 호요버스(원신/스타레일/젠레스존제로) 공식 라이선스 굿즈. 예약마감/가격이 목록에 노출된다.
   - name: 따빼몰 호요버스 굿즈

@@ -102,7 +102,7 @@ class AnimateNewArrivalTests(unittest.TestCase):
 class SourceListTests(unittest.TestCase):
     REMOVED = {
         "Good Smile Company 뉴스", "애니메이트 코리아 페어·이벤트", "animate 서울홍대점",
-        "일러스타 페스", "코믹월드", "Kotobukiya 뉴스",
+        "일러스타 페스", "코믹월드", "Kotobukiya 뉴스", "라프텔 인기·신작",
     }
 
     def test_unsuitable_sources_are_gone_and_names_are_unique(self):
@@ -122,7 +122,10 @@ class SourceListTests(unittest.TestCase):
             self.assertFalse(is_manual_source(source))
             self.assertTrue(source["respect_robots"])
             self.assertIn(source, automatic_sources())
-        self.assertEqual(SOURCES["라프텔 인기·신작"]["type"], "local_browser")  # kept as-is
+        # Laftel is store HTML only; no laftel.net local_browser source.
+        self.assertTrue(all(
+            (urlsplit(s["url"]).hostname or "") != "laftel.net" for s in load_sources()
+        ))
 
 
 class ManualShopTests(unittest.TestCase):

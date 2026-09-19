@@ -186,7 +186,7 @@ class WorkflowTests(unittest.TestCase):
         from sources_config import automatic_sources, is_manual_source, manual_sources
 
         youtube = {"name": "KADOKAWA Anime YouTube", "manual_only": True}
-        browser = {"name": "라프텔 인기·신작", "local_only": True}
+        browser = {"name": "예시 브라우저", "local_only": True}
         auto = {"name": "피규어팜 예약상품"}
         sources = [youtube, browser, auto]
         self.assertTrue(is_manual_source(youtube))

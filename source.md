@@ -40,7 +40,7 @@
 ## 수동 수집
 
 아래 소스는 GitHub Actions/`collect.py`에서 돌리지 않고 `python collect_manual.py`로만 실행합니다.
-브라우저 소스는 Playwright 영속 프로필을 쓰고, 준비 화면에서 Enter 대신 랜덤 대기(기본 25–45초) 후 현재 페이지를 수집합니다. 로그인·MFA·Cloudflare는 대기 동안 열린 브라우저에서 직접 완료합니다.
+(브라우저 기반 수동 소스는 현재 없습니다. Playwright 프로필 수집이 다시 필요하면 여기에 적습니다.)
 
 ### YouTube 공식 채널 (RSS)
 
@@ -48,12 +48,7 @@
 - 방식: `channel_id`로 공식 Atom 피드(`feeds/videos.xml`)만 읽음, 영상 썸네일 저장
 - 상태: YouTube RSS가 활성 채널에도 간헐 404를 내므로 자동에서 제외하고 수동으로만 재시도
 
-### 라프텔 인기·신작
-
-- URL: https://laftel.net/
-- 카테고리: `ANIME`
-- 프로필: `laftel`
-- 방식: 로그인 후 인기 애니/이번주/분기/요일별 신작 화면으로 이동 → 랜덤 대기 → 현재 화면 링크·포스터 수집
+라프텔은 **스토어**(`store.laftel.net`)만 자동 HTML로 수집합니다. `laftel.net` 인기·신작 브라우저 수집은 쓰지 않습니다.
 
 ## 자동 수집을 하지 않는 곳
 
@@ -65,7 +60,7 @@
 
 ### 제외한 소스
 
-Good Smile 뉴스(배송·점검 공지뿐), 애니메이트 코리아 페어·이벤트, 일러스타 페스, 코믹월드, Kotobukiya 뉴스(로컬 브라우저), animate 서울홍대점(X)은 신상품·예약 정보를 얻지 못하거나 수집 원칙에 어긋나 제거했습니다.
+Good Smile 뉴스(배송·점검 공지뿐), 애니메이트 코리아 페어·이벤트, 일러스타 페스, 코믹월드, Kotobukiya 뉴스(로컬 브라우저), animate 서울홍대점(X), 라프텔 인기·신작(브라우저)은 신상품·예약 정보를 얻지 못하거나 스토어 HTML로 대체되어 제거했습니다.
 Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어려워 붙이지 않았습니다(사유는 `sources.yaml` 하단 주석).
 
 ## 이미지 수집
