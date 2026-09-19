@@ -13,8 +13,8 @@ from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.orm import Session
 
 from library_database import DEFAULT_PATH, ensure_schema, make_engine
-from library_models import (Collection, CollectionItem, Item, LINK_MODELS,
-                            SavedFilter, SyncState, TERM_MODELS, WorkAlias)
+from library_models import (Collection, CollectionItem, Item, ItemWork, LINK_MODELS,
+                            SavedFilter, SyncState, TERM_MODELS, Work, WorkAlias)
 
 from content_model import content_id
 
@@ -143,6 +143,33 @@ class Library:
             else:
                 session.execute(self.insert(link).on_conflict_do_nothing(),
                                 [{"item_id": item_id, "term_id": term_id} for item_id in ids])
+
+    def linked_work_items(self) -> list[dict]:
+        """Confirmed work→item groups for IP draft selection (aliases excluded).
+
+        Storage category comes from the item id prefix (`FIGURE:…`), not the
+        editable payload category. Collab items appear under every linked work.
+        """
+        with self.connect() as session:
+            rows = session.execute(
+                select(Work.id, Work.name, Item.id, Item.payload, Item.deadline)
+                .join(ItemWork, ItemWork.term_id == Work.id)
+                .join(Item, Item.id == ItemWork.item_id)
+                .order_by(Work.id, Item.id)
+            ).all()
+        groups: dict[int, dict] = {}
+        for work_id, work_name, item_id, payload, deadline in rows:
+            group = groups.setdefault(
+                work_id, {"work_id": work_id, "work_name": work_name, "items": []}
+            )
+            category, _, _ = item_id.partition(":")
+            group["items"].append({
+                "id": item_id,
+                "storage_category": category or "UNKNOWN",
+                "deadline": deadline,
+                "data": json.loads(payload),
+            })
+        return list(groups.values())
 
     def items(self, filters, page=1, collection_id=None):
         query = select(Item)

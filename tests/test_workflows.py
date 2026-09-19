@@ -127,6 +127,62 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(size=size), self.assertRaises(DraftError):
                 ai_drafts.create_trending_draft(self.db, size=size)
 
+    def test_work_drafts_skip_shared_sources_and_ignore_unusable(self):
+        groups = [
+            {
+                "work_id": 1,
+                "work_name": "피규어 작품",
+                "items": [
+                    {"id": "FIGURE:a", "storage_category": "FIGURE", "data": {"title": "fig"}},
+                    {"id": "FIGURE:b", "storage_category": "FIGURE", "data": {"title": "fig2"}},
+                    {"id": "FIGURE:ignored", "storage_category": "FIGURE", "data": {"status": "IGNORE"}},
+                    {"id": "FIGURE:posted", "storage_category": "FIGURE", "data": {"postedAt": "x"}},
+                ],
+            },
+            {
+                "work_id": 2,
+                "work_name": "애니 작품",
+                "items": [
+                    {"id": "ANIME:c", "storage_category": "ANIME", "data": {"title": "anime"}},
+                ],
+            },
+            {
+                "work_id": 3,
+                "work_name": "혼합 작품",
+                "items": [
+                    {"id": "FIGURE:e", "storage_category": "FIGURE", "data": {"title": "fig3"}},
+                    {"id": "GOODS:d", "storage_category": "GOODS", "data": {"title": "goods"}},
+                ],
+            },
+        ]
+        library = Mock()
+        library.linked_work_items.return_value = groups
+        with patch.object(ai_drafts, "create_draft", side_effect=["d1", "d2", "d3"]) as create, \
+             patch.object(ai_drafts, "write_draft_body"):
+            results = ai_drafts.create_work_drafts(self.db, library)
+        self.assertEqual([r[0] for r in results], ["FIGURE", "ANIME", "MIXED"])
+        self.assertEqual([r[1] for r in results], ["d1", "d2", "d3"])
+        calls = [call.args[1] for call in create.call_args_list]
+        self.assertTrue(all(sid.startswith("FIGURE:") for sid in calls[0]))
+        self.assertNotIn("FIGURE:ignored", calls[0])
+        self.assertNotIn("FIGURE:posted", calls[0])
+        self.assertEqual(calls[1], ["ANIME:c"])
+        used = set(calls[0]) | set(calls[1])
+        self.assertTrue(set(calls[2]).isdisjoint(used))
+        mixed_cats = {sid.partition(":")[0] for sid in calls[2]}
+        self.assertGreaterEqual(len(mixed_cats), 2)
+
+    def test_collect_still_runs_mixed_trending_draft(self):
+        import collect as collect_mod
+        with patch.object(collect_mod, "load_sources", return_value=[]), \
+             patch.object(collect_mod, "get_db", return_value=self.db), \
+             patch.object(collect_mod, "ContentStore") as store_cls, \
+             patch.object(collect_mod, "run_trending_draft", return_value="[AI 초안] ok") as draft:
+            store_cls.return_value.duplicates.return_value = []
+            store_cls.return_value.invalid_urls = []
+            collect_mod.main([])
+        draft.assert_called_once_with(self.db)
+
     def test_url_deduplication_stays_canonical(self):
         store = ContentStore()
         first = store.save({"url": "https://example.com/item?utm_source=x#detail", "category": "FIGURE"})

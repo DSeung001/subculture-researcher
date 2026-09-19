@@ -9,6 +9,8 @@ from content_model import content_id
 CANDIDATE_LIMIT = 300
 SELECTION_POOL_SIZE = 15
 DRAFT_SIZE = 3
+WORK_DRAFT_TYPES = ("FIGURE", "ANIME", "MIXED")
+WORK_DRAFT_LABELS = {"FIGURE": "피규어", "ANIME": "애니", "MIXED": "혼합"}
 
 
 def _load_candidates(db, category: str | None = None) -> list[dict]:
@@ -65,3 +67,133 @@ def run_trending_draft(db, category: str | None = None) -> str:
     if draft_id:
         return f"[AI 초안] 임시글 생성: {draft_id}"
     return "[AI 초안] 후보 항목 없음, 건너뜀"
+
+
+def _item_usable(item: dict) -> bool:
+    data = item.get("data") or {}
+    return data.get("status") != "IGNORE" and not data.get("postedAt")
+
+
+def _score_linked_item(item: dict) -> float:
+    return content_score(item.get("data") or {})
+
+
+def _diversify_mixed(items: list[dict], size: int) -> list[dict]:
+    """Prefer covering at least two storage categories within `size` slots."""
+    if len(items) <= size:
+        return items
+    picked = []
+    seen_cats = set()
+    remaining = list(items)
+    # First pass: one best item per category until size or categories run out.
+    for item in list(remaining):
+        cat = item["storage_category"]
+        if cat in seen_cats:
+            continue
+        picked.append(item)
+        seen_cats.add(cat)
+        remaining.remove(item)
+        if len(picked) >= size:
+            return picked
+    for item in remaining:
+        if len(picked) >= size:
+            break
+        picked.append(item)
+    return picked
+
+
+def pick_work_source_ids(
+    groups: list[dict],
+    draft_type: str,
+    size: int = DRAFT_SIZE,
+    exclude_ids: set[str] | None = None,
+) -> list[str]:
+    """Pick source ids for one IP draft type from confirmed work groups.
+
+    Storage category is the item-id prefix. Unlinked items are never present
+    in `groups`. Returns [] when no suitable work remains.
+    """
+    if draft_type not in WORK_DRAFT_TYPES:
+        raise ValueError(f"지원하지 않는 작품 초안 유형: {draft_type}")
+    if not isinstance(size, int) or isinstance(size, bool) or not 1 <= size <= MAX_SOURCES:
+        raise DraftError(f"초안 재료 수는 1~{MAX_SOURCES}개여야 합니다.")
+    exclude = exclude_ids or set()
+    ranked = []
+
+    for group in groups:
+        usable = [
+            item for item in group.get("items") or []
+            if item["id"] not in exclude and _item_usable(item)
+        ]
+        if draft_type in ("FIGURE", "ANIME"):
+            usable = [item for item in usable if item["storage_category"] == draft_type]
+            if not usable:
+                continue
+            usable.sort(key=_score_linked_item, reverse=True)
+            chosen = usable[:size]
+        else:
+            if len({item["storage_category"] for item in usable}) < 2:
+                continue
+            usable.sort(key=_score_linked_item, reverse=True)
+            chosen = _diversify_mixed(usable, size)
+            if len({item["storage_category"] for item in chosen}) < 2:
+                continue
+        score = max(_score_linked_item(item) for item in chosen)
+        ranked.append((score, [item["id"] for item in chosen]))
+
+    if not ranked:
+        return []
+    ranked.sort(key=lambda entry: entry[0], reverse=True)
+    return ranked[0][1]
+
+
+def create_work_drafts(db, library, size: int = DRAFT_SIZE) -> list[tuple[str, str | None, str | None]]:
+    """Create up to one FIGURE, ANIME, and MIXED draft from local work links.
+
+    Returns a list of `(draft_type, draft_id_or_None, error_or_None)`. Source
+    ids are not shared across the three drafts in one run. Bodies are written
+    via Firestore `create_draft` after selection.
+    """
+    groups = library.linked_work_items()
+    used: set[str] = set()
+    results = []
+    for draft_type in WORK_DRAFT_TYPES:
+        try:
+            source_ids = pick_work_source_ids(groups, draft_type, size=size, exclude_ids=used)
+        except DraftError as exc:
+            results.append((draft_type, None, str(exc)))
+            continue
+        if not source_ids:
+            results.append((draft_type, None, None))
+            continue
+        try:
+            draft_id = create_draft(db, source_ids, body_factory=write_draft_body)
+        except DraftError as exc:
+            results.append((draft_type, None, str(exc)))
+            continue
+        except AiWriterError as exc:
+            results.append((draft_type, None, str(exc)))
+            # Daily quota / hard API failure: stop further Gemini calls.
+            break
+        used.update(source_ids)
+        results.append((draft_type, draft_id, None))
+    # Fill skipped types after an early AiWriterError break.
+    seen = {draft_type for draft_type, _, _ in results}
+    for draft_type in WORK_DRAFT_TYPES:
+        if draft_type not in seen:
+            results.append((draft_type, None, None))
+    return results
+
+
+def run_work_drafts(db, library) -> str:
+    """CLI wrapper that prints one status line per FIGURE/ANIME/MIXED attempt."""
+    lines = []
+    for draft_type, draft_id, error in create_work_drafts(db, library):
+        label = WORK_DRAFT_LABELS[draft_type]
+        if error:
+            lines.append(f"[작품 초안·{label}] 건너뜀: {error}")
+        elif draft_id:
+            lines.append(f"[작품 초안·{label}] 임시글 생성: {draft_id}")
+        else:
+            lines.append(f"[작품 초안·{label}] 후보 항목 없음, 건너뜀")
+    return "\n".join(lines)

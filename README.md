@@ -61,14 +61,17 @@ python -m playwright install chromium
 | 로컬 브라우저 수집 | `python collect.py --local-browser --source "소스이름"` |
 | 모든 로컬 소스 수집 | `python collect.py --all-local` |
 | AI 초안 작성 | `python draft.py` |
+| 작품별 AI 초안 | `python draft.py --by-work` |
 
 Windows에서 가상환경을 활성화하지 않았다면 위 명령의 `python`을 `.\.venv\Scripts\python.exe`로 바꾸세요.
 
 앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 엽니다. **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 로컬 전용이므로 외부에 공개하지 않습니다.
 
-자동 수집은 로컬 브라우저 전용 소스를 제외합니다. 브라우저 수집에서는 직접 로그인·화면 이동을 마친 뒤 터미널에서 Enter를 누릅니다. 일반 수집은 AI 키가 있으면 초안도 생성합니다.
+자동 수집은 로컬 브라우저 전용 소스를 제외합니다. 브라우저 수집에서는 직접 로그인·화면 이동을 마친 뒤 터미널에서 Enter를 누릅니다. 일반 수집은 AI 키가 있으면 Firestore 점수 순 혼합 초안도 하나 만듭니다.
 
-GitHub Actions는 수·토 08:00 KST에 자동 수집합니다. 저장소 Secrets에 `FIREBASE_KEY`(서비스 계정 JSON 전체)를 넣고, 필요하면 `GEMINI_API_KEY`·`MYMEMORY_EMAIL`도 설정합니다.
+임시글은 세 갈래입니다. (1) 수집·`draft.py`·「AI로 글 만들기」의 Firestore 혼합 초안, (2) 동기화·작품 연결 후 `draft.py --by-work` 또는 「작품별로 글 만들기」로 피규어·애니·혼합을 같은 IP끼리 묶는 로컬 초안, (3) 인박스에서 직접 고르는 수동 초안.
+
+GitHub Actions는 매일 08:00 KST에 자동 수집하고 혼합 초안도 만듭니다. 저장소 Secrets에 `FIREBASE_KEY`(서비스 계정 JSON 전체)를 넣고, 필요하면 `GEMINI_API_KEY`·`MYMEMORY_EMAIL`도 설정합니다.
 
 ## 로컬 DB 관리
 

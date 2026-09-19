@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from firebase_admin import firestore
 from flask import Flask, flash, redirect, render_template, request, url_for
 
-from ai_drafts import create_trending_draft
+from ai_drafts import create_trending_draft, create_work_drafts
 from ai_writer import AiWriterError
 from firebase_client import get_db
 from content_store import add_manual_content
@@ -21,6 +21,8 @@ from drafts_store import (
     publish_draft,
     save_body,
 )
+from library_database import SchemaError
+from local_library import Library
 from sources_config import load_sources
 
 load_dotenv()
@@ -339,6 +341,29 @@ def create_ai_draft_item():
         flash(str(exc), "error")
     else:
         flash("글을 만들었습니다." if draft_id else "AI로 쓸 만한 새 재료가 없습니다.", "success" if draft_id else "info")
+    return redirect(url_for("drafts_page"))
+
+
+@app.post("/drafts/ai/by-work")
+def create_work_ai_draft_item():
+    try:
+        library = Library(app.config.get("LIBRARY_PATH"))
+        results = create_work_drafts(db(), library)
+    except SchemaError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("drafts_page"))
+    except AiWriterError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("drafts_page"))
+
+    created = sum(1 for _, draft_id, error in results if draft_id and not error)
+    errors = [error for _, _, error in results if error]
+    if created:
+        flash(f"작품별 글 {created}개를 만들었습니다.", "success")
+    elif errors:
+        flash(errors[0], "error")
+    else:
+        flash("작품이 연결된 새 재료가 없습니다. 작품·기획에서 연결한 뒤 다시 시도해주세요.", "info")
     return redirect(url_for("drafts_page"))
 
 

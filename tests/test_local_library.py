@@ -115,6 +115,41 @@ class LibraryTests(unittest.TestCase):
         self.lib.sync(cloud())
         self.assertEqual(self.lib.items({})[1], 55)
 
+    def test_linked_work_items_uses_storage_prefix_and_skips_unlinked(self):
+        from ai_drafts import pick_work_source_ids
+
+        self.lib.sync(cloud(
+            snapshot("fig1", title="피규어 A", category="FIGURE"),
+            snapshot("fig2", title="피규어 B", category="FIGURE"),
+            snapshot("anime1", title="방영 소식", category="ANIME"),
+            snapshot("goods1", title="굿즈", category="GOODS"),
+            snapshot("orphan", title="미연결", category="FIGURE"),
+        ))
+        work = self.lib.save_term("works", "프리렌")
+        self.lib.assign(
+            ["FIGURE:fig1", "FIGURE:fig2", "ANIME:anime1", "GOODS:goods1"], "works", work
+        )
+        groups = self.lib.linked_work_items()
+        self.assertEqual(len(groups), 1)
+        ids = {item["id"] for item in groups[0]["items"]}
+        self.assertEqual(ids, {"FIGURE:fig1", "FIGURE:fig2", "ANIME:anime1", "GOODS:goods1"})
+        self.assertNotIn("FIGURE:orphan", ids)
+
+        figure_ids = pick_work_source_ids(groups, "FIGURE", size=3)
+        self.assertTrue(all(item_id.startswith("FIGURE:") for item_id in figure_ids))
+        self.assertNotIn("ANIME:anime1", figure_ids)
+
+        anime_ids = pick_work_source_ids(groups, "ANIME", size=3)
+        self.assertEqual(anime_ids, ["ANIME:anime1"])
+
+        mixed_ids = pick_work_source_ids(groups, "MIXED", size=3)
+        cats = {item_id.partition(":")[0] for item_id in mixed_ids}
+        self.assertGreaterEqual(len(cats), 2)
+
+        remaining_figure = pick_work_source_ids(groups, "FIGURE", exclude_ids=set(figure_ids))
+        self.assertEqual(remaining_figure, [])
+
+
 
 class LibraryRouteTests(unittest.TestCase):
     def setUp(self):
