@@ -16,6 +16,8 @@ SOURCES = {source["name"]: source for source in load_sources()}
 LAFTEL = SOURCES["라프텔 스토어"]
 ANIMATE = SOURCES["애니메이트 코리아 신상품"]
 FIGUREPRESSO = SOURCES["피규어프레소 예약상품"]
+TTABBAE_NEW_ARRIVAL = SOURCES["따빼몰 신규입고"]
+TTABBAE_NEW_PREORDER = SOURCES["따빼몰 신규예약"]
 
 # store.laftel.net: the whole product card is the link; only fresh items carry a NEW badge.
 LAFTEL_HOME = """
@@ -52,6 +54,15 @@ FIGUREPRESSO_LIST = """
  <li class="item"><a href="/product/look-up-hatsune/79738/">룩업 하츠네 미쿠</a></li>
  <li class="item"><a href="/product/detail.html?product_no=80001&cate_no=24">아크릴 스탠드</a></li>
  <li class="item"><a href="/product/preorder.html?cate_no=24">예약 목록</a></li>
+</ul>"""
+
+# ttabbaemall.co.kr list (cate_no=23/24): the thumbnail link and the name link both point at the product,
+# but only p.name a is collected. The title is the last span in it, after a hidden "상품명 :" label.
+TTABBAE_LIST = """
+<ul>
+ <li class="item"><div class="thumbnail"><a href="/product/detail.html?product_no=9055&amp;cate_no=24&amp;display_group=1"><img src="//ttabbaemall.co.kr/web/product/medium/202609/a.jpg"></a></div>
+  <div class="description"><p class="name"><a href="/product/detail.html?product_no=9055&amp;cate_no=24&amp;display_group=1"><span class="title displaynone"><span>상품명</span> :</span> <span>[예약]니디걸 오버도즈 누들스토퍼 초텐짱</span></a></p></div></li>
+ <li class="item"><div class="description"><p class="name"><a href="/product/detail.html?product_no=7701&amp;cate_no=24&amp;display_group=1"><span class="title displaynone"><span>상품명</span> :</span> <span>명조 미니 공명자 시리즈 봉제인형 키링 제 2탄</span></a></p></div></li>
 </ul>"""
 
 
@@ -119,6 +130,35 @@ class FigurePressoTests(unittest.TestCase):
             "https://m.figurepresso.com/product/detail.html?product_no=79738",
             "https://m.figurepresso.com/product/detail.html?product_no=80001",
         ])
+
+
+class TtabbaemallListTests(unittest.TestCase):
+    def items(self, source):
+        return list(extract_links(TTABBAE_LIST, source["url"], source))
+
+    def test_lists_are_the_cafe24_new_arrival_and_new_preorder_categories(self):
+        self.assertEqual(TTABBAE_NEW_ARRIVAL["url"], "https://ttabbaemall.co.kr/product/list.html?cate_no=23")
+        self.assertEqual(TTABBAE_NEW_PREORDER["url"], "https://ttabbaemall.co.kr/product/list.html?cate_no=24")
+
+    def test_each_product_becomes_one_product_no_url_with_its_title(self):
+        for source in (TTABBAE_NEW_ARRIVAL, TTABBAE_NEW_PREORDER):
+            with self.subTest(source=source["name"]):
+                items = self.items(source)
+                self.assertEqual([item["url"] for item in items], [
+                    "https://ttabbaemall.co.kr/product/detail.html?product_no=9055",
+                    "https://ttabbaemall.co.kr/product/detail.html?product_no=7701",
+                ])  # cate_no/display_group dropped; the thumbnail link is not a second item
+                self.assertEqual(items[0]["title"], "[예약]니디걸 오버도즈 누들스토퍼 초텐짱")
+                self.assertEqual(items[1]["title"], "명조 미니 공명자 시리즈 봉제인형 키링 제 2탄")
+
+    def test_sources_are_automatic_products_from_the_shop(self):
+        for source in (TTABBAE_NEW_ARRIVAL, TTABBAE_NEW_PREORDER):
+            with self.subTest(source=source["name"]):
+                self.assertIn(source, automatic_sources())
+                self.assertTrue(source["respect_robots"])
+                self.assertTrue(source["product_mode"])
+                self.assertEqual(source["shop"], "따빼몰")
+                self.assertEqual(source["category"], "GOODS")  # mixed list: not every item is a figure
 
 
 class SourceListTests(unittest.TestCase):
