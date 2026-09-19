@@ -7,6 +7,24 @@ taxonomy?.addEventListener("change", () => {
     option.disabled = option.hidden = option.dataset.table !== taxonomy.value;
   }
 });
-document.getElementById("library-select-all")?.addEventListener("change", (event) => {
-  document.querySelectorAll(".library-item-select").forEach((box) => { box.checked = event.target.checked; });
+
+const selectAll = document.getElementById("library-select-all");
+const selectedCount = document.getElementById("library-selected-count");
+const itemBoxes = () => [...document.querySelectorAll(".library-item-select")];
+const updateSelection = () => {
+  const boxes = itemBoxes();
+  const checked = boxes.filter((box) => box.checked).length;
+  if (selectedCount) selectedCount.textContent = checked ? `${checked}개 선택됨` : "선택 없음";
+  if (selectAll) {
+    selectAll.checked = boxes.length > 0 && checked === boxes.length;
+    selectAll.indeterminate = checked > 0 && checked < boxes.length;
+  }
+};
+selectAll?.addEventListener("change", (event) => {
+  itemBoxes().forEach((box) => { box.checked = event.target.checked; });
+  updateSelection();
 });
+document.addEventListener("change", (event) => {
+  if (event.target.classList?.contains("library-item-select")) updateSelection();
+});
+updateSelection();

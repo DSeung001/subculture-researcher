@@ -62,10 +62,11 @@ python -m playwright install chromium
 | 수동 소스 일부만 | `python collect_manual.py --source "소스이름"` |
 | AI 초안 작성 | `python draft.py` |
 | 작품별 AI 초안 | `python draft.py --by-work` |
+| 작품 사전 시드·자동 연결 | `python seed_works.py` |
 
 Windows에서 가상환경을 활성화하지 않았다면 위 명령의 `python`을 `.\.venv\Scripts\python.exe`로 바꾸세요.
 
-앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 엽니다. **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 로컬 전용이므로 외부에 공개하지 않습니다.
+앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 엽니다. **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 저장된 제목으로 작품 사전을 채우려면 `python seed_works.py`(`work_catalog.yaml`)를 실행한 뒤 분류 사전에서 키워드를 수정·자동 연결할 수 있습니다. 로컬 전용이므로 외부에 공개하지 않습니다.
 
 자동 수집(`collect.py`)은 YouTube·로컬 브라우저 등 수동 전용 소스를 제외합니다. 수동 수집은 `collect_manual.py`로 돌리며, 브라우저 소스는 Enter 대신 랜덤 대기(기본 25–45초) 동안 로그인·화면 이동을 마친 뒤 현재 페이지를 수집합니다. 일반 자동 수집은 AI 키가 있으면 Firestore 점수 순 혼합 초안도 하나 만듭니다.
 

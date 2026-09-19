@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ work.name }} · 작품 편집{% endblock %}
+{% block body %}
+<main class="wide library-shell">
+  <header class="page-header">
+    <div>
+      <h1>작품 편집</h1>
+      <p class="subtitle">이름과 매칭 키워드를 고치면 제목 자동 연결에 바로 쓰입니다. 기존 연결은 지우지 않고 추가만 합니다.</p>
+    </div>
+    <div class="page-actions">
+      <a class="btn" href="{{ url_for('library.index', works=work.id) }}">이 작품 소재</a>
+      <a class="btn" href="{{ url_for('library.settings') }}">분류 사전</a>
+    </div>
+  </header>
+  {% include "_flash.html" %}
+  <div class="work-layout">
+    <section class="library-panel">
+      <h2>{{ work.name }}</h2>
+      <form method="post" action="{{ url_for('library.work_save', work_id=work.id) }}" class="stacked-form">
+        <label>작품 이름<input name="name" value="{{ work.name }}" required maxlength="200"></label>
+        <label>매칭 키워드 (줄마다 하나)<textarea name="aliases" rows="8" placeholder="프리렌&#10;Frieren&#10;葬送のフリーレン">{{ work.aliases|join('\n') }}</textarea></label>
+        <p class="hint">제목·titleKo에 키워드가 들어가면 연결됩니다. 짧은 영문(2자 미만)과 단어 경계 없는 ASCII 부분일치는 제외합니다.</p>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">저장</button>
+          <button class="btn" name="action" value="auto_assign" type="submit">이 작품 키워드로 자동 연결</button>
+          <button class="btn btn-danger" name="action" value="delete" type="submit" data-confirm="이 작품과 모든 항목의 연결을 삭제할까요? 수집 항목은 유지됩니다.">작품 삭제</button>
+        </div>
+      </form>
+    </section>
+    <section class="library-panel">
+      <h2>연결된 소재 {{ total }}개</h2>
+      {% for item in items %}
+      <article class="term-item">
+        <div class="grow">
+          <strong>{% if item.url.startswith('https://') or item.url.startswith('http://') %}<a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.title }}</a>{% else %}{{ item.title }}{% endif %}</strong>
+          <div class="item-meta"><span class="tag">{{ item.source or '출처 없음' }}</span></div>
+        </div>
+        <form method="post" action="{{ url_for('library.work_save', work_id=work.id) }}">
+          <input type="hidden" name="action" value="unlink">
+          <input type="hidden" name="item_id" value="{{ item.id }}">
+          <button class="btn btn-sm" type="submit">연결 해제</button>
+        </form>
+      </article>
+      {% else %}
+      <div class="empty-state"><p>아직 연결된 소재가 없습니다. 키워드를 저장한 뒤 「자동 연결」을 눌러보세요.</p></div>
+      {% endfor %}
+      {% if total > 50 %}
+      <nav class="pager" aria-label="페이지 이동">
+        {% if page > 1 %}<a class="btn" href="{{ page_url(page - 1) }}">이전</a>{% endif %}
+        <span>{{ page }} 페이지</span>
+        {% if page * 50 < total %}<a class="btn" href="{{ page_url(page + 1) }}">다음</a>{% endif %}
+      </nav>
+      {% endif %}
+    </section>
+  </div>
+</main>
+{% endblock %}

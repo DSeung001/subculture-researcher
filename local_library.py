@@ -45,6 +45,46 @@ def json_default(value):
     raise TypeError(f"Unsupported source value: {type(value).__name__}")
 
 
+def item_title_text(data):
+    """Normalized title string used for work keyword matching."""
+    return normalized(" ".join(str(data.get(k) or "") for k in ("title", "titleKo")))
+
+
+def work_keywords(work):
+    """Display keywords: canonical name plus aliases (comma- or newline-separated)."""
+    aliases = work.get("aliases") or ""
+    if isinstance(aliases, list):
+        parts = aliases
+    else:
+        parts = re.split(r"[,\n]", aliases)
+    names = []
+    seen = set()
+    for raw in [work.get("name") or "", *parts]:
+        name = (raw or "").strip()
+        if not name:
+            continue
+        key = normalized(name)
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+    return names
+
+
+def match_keyword(text, keyword):
+    """Return the matched keyword if it appears in normalized title text, else None."""
+    alias = normalized(keyword)
+    # Short aliases are noisy; ASCII aliases require word boundaries.
+    if len(alias) < 2:
+        return None
+    pattern = re.escape(alias)
+    if alias.isascii():
+        pattern = r"(?<!\w)" + pattern + r"(?!\w)"
+    if re.search(pattern, text):
+        return keyword.strip()
+    return None
+
+
 class Library:
     def __init__(self, path=None):
         self.engine = make_engine(path)
@@ -124,7 +164,82 @@ class Library:
             if records:
                 session.execute(statement, records)
             session.merge(SyncState(id=1, completed_at=now, item_count=len(records)))
+        # New source rows only: additive keyword links for still-unlinked items.
+        self.auto_assign_works(unclassified_only=True)
         return len(records)
+
+    def upsert_work(self, name, aliases=""):
+        """Create a work or merge extra aliases into the existing normalized name."""
+        name = clean_name(name)
+        names = [clean_name(s) for s in re.split(r"[,\n]", aliases) if s.strip()]
+        with self.connect() as session:
+            term = session.scalar(select(Work).where(Work.normalized == normalized(name)))
+            if term is None:
+                term = Work(name=name, normalized=normalized(name))
+                session.add(term)
+                session.flush()
+            existing = set(session.scalars(
+                select(WorkAlias.normalized).where(WorkAlias.work_id == term.id)))
+            existing.add(term.normalized)
+            for alias in names:
+                key = normalized(alias)
+                if key in existing:
+                    continue
+                session.execute(self.insert(WorkAlias).values(
+                    work_id=term.id, name=alias, normalized=key).on_conflict_do_nothing())
+                existing.add(key)
+            return term.id
+
+    def work(self, work_id):
+        with self.connect() as session:
+            term = session.get(Work, work_id)
+            if term is None:
+                raise ValueError("작품을 찾을 수 없습니다.")
+            aliases = [row.name for row in session.scalars(
+                select(WorkAlias).where(WorkAlias.work_id == work_id).order_by(WorkAlias.name))]
+            linked = session.scalar(select(func.count()).select_from(ItemWork).where(
+                ItemWork.term_id == work_id)) or 0
+            return {"id": term.id, "name": term.name, "aliases": aliases, "linked_count": linked}
+
+    def auto_assign_works(self, work_id=None, unclassified_only=False):
+        """Add item_works links when title keywords match. Never removes links.
+
+        Returns the number of new (item, work) pairs inserted.
+        """
+        works = self.terms()["works"]
+        if work_id is not None:
+            works = [w for w in works if w["id"] == work_id]
+            if not works:
+                raise ValueError("작품을 찾을 수 없습니다.")
+        compiled = []
+        for work in works:
+            keywords = work_keywords(work)
+            if keywords:
+                compiled.append((work["id"], keywords))
+        if not compiled:
+            return 0
+        with self.connect() as session:
+            query = select(Item.id, Item.payload)
+            if unclassified_only:
+                query = query.where(~exists().where(ItemWork.item_id == Item.id))
+            if work_id is not None:
+                # Still scan all items; on_conflict skips already-linked pairs.
+                pass
+            rows = session.execute(query).all()
+            pairs = []
+            for item_id, payload in rows:
+                text = item_title_text(json.loads(payload))
+                for wid, keywords in compiled:
+                    for keyword in keywords:
+                        if match_keyword(text, keyword):
+                            pairs.append({"item_id": item_id, "term_id": wid})
+                            break
+            if not pairs:
+                return 0
+            before = session.scalar(select(func.count()).select_from(ItemWork)) or 0
+            session.execute(self.insert(ItemWork).on_conflict_do_nothing(), pairs)
+            after = session.scalar(select(func.count()).select_from(ItemWork)) or 0
+            return after - before
 
     def assign(self, item_ids, table, term_id, remove=False):
         table = self.table(table)
@@ -175,7 +290,11 @@ class Library:
         query = select(Item)
         for table, link in LINK_MODELS.items():
             if filters.get(table):
-                query = query.where(exists().where(link.item_id == Item.id, link.term_id == filters[table]))
+                try:
+                    term_id = int(filters[table])
+                except (TypeError, ValueError):
+                    raise ValueError("잘못된 분류입니다.") from None
+                query = query.where(exists().where(link.item_id == Item.id, link.term_id == term_id))
         if filters.get("unclassified"):
             link = LINK_MODELS["works"]
             query = query.where(~exists().where(link.item_id == Item.id))
@@ -218,19 +337,14 @@ class Library:
         for item in items:
             if item["terms"]["works"]:
                 continue
-            text = normalized(" ".join(str(item["data"].get(k) or "") for k in ("title", "titleKo")))
+            text = item_title_text(item["data"])
             found = []
             for work in works:
-                for alias in [work["name"], *work["aliases"].split(", ")]:
-                    alias = normalized(alias)
-                    # Short aliases are noisy; ASCII aliases require word boundaries.
-                    if len(alias) < 2:
-                        continue
-                    pattern = re.escape(alias)
-                    if alias.isascii():
-                        pattern = r"(?<!\w)" + pattern + r"(?!\w)"
-                    if re.search(pattern, text):
-                        found.append({"id": work["id"], "name": work["name"], "matched": alias})
+                for keyword in work_keywords(work):
+                    matched = match_keyword(text, keyword)
+                    if matched:
+                        found.append({"id": work["id"], "name": work["name"],
+                                      "matched": normalized(matched)})
                         break
             result[item["id"]] = found
         return result

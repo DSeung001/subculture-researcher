@@ -1,6 +1,8 @@
 """Local-only curation routes; Firebase is contacted only on explicit sync."""
 
 import json
+from datetime import date
+
 from sqlalchemy.exc import IntegrityError
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
@@ -11,6 +13,16 @@ from library_database import SchemaError
 
 library = Blueprint("library", __name__, url_prefix="/library")
 
+PAGE_SIZE = 50  # matches Library.items()
+# saleStatus -> (label, badge class already used on the sources page)
+SALE_STATUS = {
+    "PREORDER": ("예약중", "status-manual"),
+    "IN_STOCK": ("판매중", "status-enabled"),
+    "SOLD_OUT": ("품절", "status-disabled"),
+    "UNKNOWN": ("상태 미확인", "status-disabled"),
+}
+FILTER_LABELS = {"q": "검색", "deadline_from": "마감 시작", "deadline_to": "마감 끝"}
+
 
 def store():
     return Library(current_app.config.get("LIBRARY_PATH"))
@@ -18,6 +30,28 @@ def store():
 
 def filters_from(values):
     return {k: values.get(k, "").strip() for k in FILTER_KEYS}
+
+
+def active_filters(filters, terms, collection_id=None):
+    """Chips for the applied filters; each link drops only that one filter."""
+    def without(key):
+        rest = {k: v for k, v in filters.items() if v and k != key}
+        return url_for("library.index", **rest, collection=collection_id)
+
+    chips = []
+    for key in FILTER_KEYS:
+        value = filters.get(key)
+        if not value:
+            continue
+        if key in TAXONOMIES:
+            name = next((t["name"] for t in terms[key] if str(t["id"]) == value), f"#{value}")
+            label, shown = TAXONOMIES[key], name
+        elif key == "unclassified":
+            label, shown = "작품", "미분류만"
+        else:
+            label, shown = FILTER_LABELS[key], value
+        chips.append({"label": label, "value": shown, "remove_url": without(key)})
+    return chips
 
 
 @library.get("")
@@ -46,6 +80,8 @@ def index():
         "library.html", items=items, total=total, terms=terms, taxonomies=TAXONOMIES,
         filters=filters, page=page, collection=collection, **overview,
         suggestions=local.suggestions(items, terms["works"]),
+        active=active_filters(filters, terms, collection_id), today=date.today().isoformat(),
+        pages=max(1, -(-total // PAGE_SIZE)), sale_status=SALE_STATUS,
         page_url=lambda p: url_for("library.index", **filters, page=p, collection=collection_id),
     )
 
@@ -65,6 +101,52 @@ def sync():
 @library.get("/settings")
 def settings():
     return render_template("library_settings.html", terms=store().terms(), taxonomies=TAXONOMIES)
+
+
+@library.get("/works/<int:work_id>")
+def work_edit(work_id):
+    local = store()
+    work = local.work(work_id)
+    try:
+        items, total = local.items({"works": work_id}, page=max(1, request.args.get("page", 1, type=int)))
+    except ValueError:
+        flash("작품을 찾을 수 없습니다.", "error")
+        return redirect(url_for("library.settings"))
+    return render_template(
+        "library_work.html", work=work, items=items, total=total,
+        page=max(1, request.args.get("page", 1, type=int)),
+        page_url=lambda p: url_for("library.work_edit", work_id=work_id, page=p),
+    )
+
+
+@library.post("/works/<int:work_id>")
+def work_save(work_id):
+    local = store()
+    action = request.form.get("action")
+    if action == "delete":
+        local.delete_term("works", work_id)
+        flash("작품과 해당 연결을 삭제했습니다. 수집 항목은 유지됩니다.", "success")
+        return redirect(url_for("library.settings"))
+    if action == "auto_assign":
+        linked = local.auto_assign_works(work_id=work_id)
+        flash(f"키워드로 {linked}개 연결을 추가했습니다.", "success")
+        return redirect(url_for("library.work_edit", work_id=work_id))
+    if action == "unlink":
+        item_id = request.form.get("item_id")
+        if item_id:
+            local.assign([item_id], "works", work_id, remove=True)
+            flash("작품 연결을 해제했습니다.", "success")
+        return redirect(url_for("library.work_edit", work_id=work_id))
+    local.save_term("works", request.form.get("name", ""), work_id, request.form.get("aliases", ""))
+    flash("작품 정보를 저장했습니다.", "success")
+    return redirect(url_for("library.work_edit", work_id=work_id))
+
+
+@library.post("/works/auto-assign")
+def works_auto_assign():
+    linked = store().auto_assign_works()
+    flash(f"전체 작품 키워드로 {linked}개 연결을 추가했습니다.", "success")
+    return redirect(url_for("library.settings"))
 
 
 @library.post("/terms/<table>")
@@ -138,7 +220,12 @@ def filter_save():
 def invalid_input(exc):
     message = "같은 이름이 이미 있거나 선택한 항목이 없습니다." if isinstance(exc, IntegrityError) else str(exc)
     flash(message, "error")
-    if request.endpoint == "library.term":
+    if request.endpoint in {"library.term", "library.works_auto_assign"}:
+        return redirect(url_for("library.settings"))
+    if request.endpoint in {"library.work_edit", "library.work_save"}:
+        work_id = request.view_args.get("work_id") if request.view_args else None
+        if work_id:
+            return redirect(url_for("library.work_edit", work_id=work_id))
         return redirect(url_for("library.settings"))
     return back()
 

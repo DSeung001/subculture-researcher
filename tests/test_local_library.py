@@ -76,8 +76,10 @@ class LibraryTests(unittest.TestCase):
 
     def test_aliases_suggest_but_never_auto_assign(self):
         self.lib.sync(cloud(snapshot(), snapshot("2", title="artwork"), snapshot("3", title="ＦＲＩＥＲＥＮ 굿즈")))
+        # Clear links created by sync-time auto_assign so suggestions stay visible.
         work = self.lib.save_term("works", "장송의 프리렌", aliases="Frieren")
         self.lib.save_term("works", "짧은 이름", aliases="art")
+        self.lib.assign(["FIGURE:legacy", "FIGURE:3"], "works", work, remove=True)
         rows, total = self.lib.items({"unclassified": "1"})
         suggestions = self.lib.suggestions(rows, self.lib.terms()["works"])
         self.assertEqual(total, 3)
@@ -85,6 +87,36 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(suggestions["FIGURE:3"][0]["id"], work)
         self.assertEqual(suggestions["FIGURE:2"], [])
         self.assertEqual(self.lib.items({"works": work})[1], 0)
+
+    def test_auto_assign_works_is_additive_and_safe(self):
+        self.lib.sync(cloud(
+            snapshot("a", title="Frieren figure"),
+            snapshot("b", title="artwork print"),
+            snapshot("c", title="프리렌 × 슬라임 콜라보"),
+            snapshot("d", title="무관한 상품"),
+        ))
+        frieren = self.lib.save_term("works", "장송의 프리렌", aliases="Frieren\n프리렌")
+        slime = self.lib.save_term("works", "슬라임", aliases="슬라임")
+        self.lib.save_term("works", "짧은", aliases="art")
+        # Unlink anything sync already matched, then run explicit auto-assign.
+        for work_id in (frieren, slime):
+            rows, _ = self.lib.items({"works": work_id})
+            if rows:
+                self.lib.assign([r["id"] for r in rows], "works", work_id, remove=True)
+        linked = self.lib.auto_assign_works()
+        self.assertGreaterEqual(linked, 3)
+        self.assertEqual(self.lib.items({"works": frieren})[1], 2)  # a, c
+        self.assertEqual(self.lib.items({"works": str(frieren)})[1], 2)  # query-string style
+        self.assertEqual(self.lib.items({"works": slime})[1], 1)  # c collab
+        self.assertEqual(self.lib.items({"unclassified": "1"})[1], 2)  # b, d
+        collab = self.lib.items({})[0]
+        collab = next(r for r in collab if r["id"] == "FIGURE:c")
+        self.assertEqual({t["id"] for t in collab["terms"]["works"]}, {frieren, slime})
+        # Second run adds nothing; existing links stay.
+        self.assertEqual(self.lib.auto_assign_works(), 0)
+        self.lib.save_term("works", "장송의 프리렌", frieren, "Frieren\n프리렌\n葬送のフリーレン")
+        self.lib.sync(cloud(snapshot("e", title="葬送のフリーレン 굿즈")))
+        self.assertEqual(self.lib.items({"works": frieren})[1], 3)
 
     def test_filters_members_and_saved_filter(self):
         self.lib.sync(cloud(snapshot(), snapshot("2", preorderEndAt=None)))
@@ -176,6 +208,14 @@ class LibraryRouteTests(unittest.TestCase):
         response = self.client.get(f"/library?works={work}")
         self.assertEqual(response.status_code, 200)
         self.assertIn("1개 소재", response.get_data(as_text=True))
+        response = self.client.get(f"/library/works/{work}")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("작품 편집", response.get_data(as_text=True))
+        response = self.client.post(f"/library/works/{work}", data={
+            "name": "장송의 프리렌", "aliases": "Frieren\n프리렌"}, follow_redirects=True)
+        self.assertIn("장송의 프리렌", response.get_data(as_text=True))
+        response = self.client.post(f"/library/works/{work}", data={"action": "auto_assign"}, follow_redirects=True)
+        self.assertIn("연결을 추가", response.get_data(as_text=True))
         self.provider.assert_not_called()
 
     def test_sync_is_explicit_and_failed_sync_is_reported(self):

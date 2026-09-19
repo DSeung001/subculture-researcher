@@ -1,0 +1,210 @@
+# Local work/IP dictionary seeded from stored titles (AniList + recurring product series).
+# aliases are matching keywords (Korean / Japanese / English / common short forms).
+# Edit further in the web UI: /library/works/<id>
+works:
+  - name: 장송의 프리렌
+    aliases:
+      - 프리렌
+      - Frieren
+      - 葬送のフリーレン
+      - フリーレン
+  - name: Re:제로부터 시작하는 이세계 생활
+    aliases:
+      - Re:제로
+      - 리제로
+      - Re:Zero
+      - Re:ゼロから始める異世界生活
+      - Re:ゼロ
+  - name: 무직전생
+    aliases:
+      - 無職転生
+      - Mushoku Tensei
+  - name: 전생했더니 슬라임이었던 건에 대하여
+    aliases:
+      - 슬라임
+      - 転生したらスライムだった件
+      - Tensura
+  - name: ONE PIECE
+    aliases:
+      - 원피스
+      - One Piece
+  - name: BLEACH
+    aliases:
+      - 블리치
+      - Bleach
+      - ブリーチ
+  - name: BLACK TORCH
+    aliases:
+      - Black Torch
+  - name: 도굴왕
+    aliases:
+      - Tomb Raider King
+  - name: 유녀전기
+    aliases:
+      - 幼女戦記
+      - Youjo Senki
+  - name: 그랑블루
+    aliases:
+      - ぐらんぶる
+      - Grand Blue
+  - name: 시간대리인
+    aliases:
+      - 时光代理人
+      - Link Click
+  - name: 부치기레 영애
+    aliases:
+      - ブチ切れ令嬢は報復を誓いました
+      - 부쿠레슈티
+  - name: 100명의 여자친구
+    aliases:
+      - 君のことが大大大大大好きな100人の彼女
+      - The 100 Girlfriends
+  - name: 황천의 츠가이
+    aliases:
+      - 黄泉のツガイ
+  - name: 헬모드
+    aliases:
+      - ヘルモード
+  - name: 클레바테스
+    aliases:
+      - クレバテス
+  - name: 투명한 밤에 달리는 너와
+    aliases:
+      - 透明な夜に駆ける君と
+  - name: 영민 0명 스타트
+    aliases:
+      - 領民0人スタートの辺境領主様
+  - name: 네가 죽을 때까지 사랑하고 싶어
+    aliases:
+      - きみが死ぬまで恋をしたい
+  - name: 대아리였습니다
+    aliases:
+      - 対ありでした
+  - name: 재녀의 시중
+    aliases:
+      - 才女のお世話
+  - name: 야니네코
+    aliases:
+      - ヤニねこ
+  - name: 편시골의 아저씨, 검성이 되다
+    aliases:
+      - 片田舎のおっさん、剣聖になる
+  - name: 이십세기 전기목록
+    aliases:
+      - 二十世紀電氣目録
+  - name: 신님 학교의 낙제생
+    aliases:
+      - 神さま学校の落ちこぼれ
+  - name: 해골기사님
+    aliases:
+      - 骸骨騎士様
+  - name: 추방된 전생 중기사
+    aliases:
+      - 追放された転生重騎士
+  - name: 오토메 게임 세계는 모브에게 엄격한 세계입니다
+    aliases:
+      - 乙女ゲー世界はモブに厳しい世界です
+  - name: 레이와의 다라 씨
+    aliases:
+      - 令和のダラさん
+  - name: 사요나라 라라
+    aliases:
+      - さよならララ
+  - name: 정반대인 너와 나
+    aliases:
+      - 正反対な君と僕
+  - name: 슈퍼 뒤에서 담배를 피는 두 사람
+    aliases:
+      - スーパーの裏でヤニ吸うふたり
+  - name: 부족하나 악녀입니다만
+    aliases:
+      - ふつつかな悪女ではございますが
+  # Product / game series recurring in FIGURE·GOODS titles
+  - name: To LOVE루 다크니스
+    aliases:
+      - 투러브 트러블 다크니스
+      - 투러브 트러블
+      - To LOVEる
+      - To LOVE
+      - とらぶる
+  - name: "붕괴: 스타레일"
+    aliases:
+      - 붕괴 스타레일
+      - Honkai Star Rail
+      - 崩壊スターレイル
+      - Star Rail
+  - name: 명조
+    aliases:
+      - Wuthering Waves
+      - 鳴潮
+  - name: 젠레스 존 제로
+    aliases:
+      - Zenless Zone Zero
+      - ZZZ
+  - name: 동방 프로젝트
+    aliases:
+      - Touhou
+      - 東方
+  - name: 우마무스메 프리티 더비
+    aliases:
+      - 우마무스메
+      - Uma Musume
+      - ウマ娘
+  - name: "BanG Dream!"
+    aliases:
+      - 뱅드림
+      - バンドリ
+      - Girls Band Party
+  - name: 보컬로이드
+    aliases:
+      - 하츠네 미쿠
+      - Hatsune Miku
+      - 初音ミク
+      - Vocaloid
+  - name: 체인소맨
+    aliases:
+      - Chainsaw Man
+      - チェンソーマン
+  - name: 블루록
+    aliases:
+      - Blue Lock
+      - ブルーロック
+  - name: "승리의 여신: 니케"
+    aliases:
+      - 승리의 여신 니케
+      - Goddess of Victory Nikke
+      - NIKKE
+  - name: NEEDY GIRL OVERDOSE
+    aliases:
+      - 니디 걸 오버도즈
+      - Needy Girl Overdose
+  - name: 브라운더스트 2
+    aliases:
+      - Brown Dust 2
+      - ブラウンダスト2
+  - name: 페르소나 4
+    aliases:
+      - Persona 4
+      - ペルソナ4
+  - name: 주술회전
+    aliases:
+      - Jujutsu Kaisen
+      - 呪術廻戦
+  - name: 고블린 슬레이어
+    aliases:
+      - Goblin Slayer
+      - ゴブリンスレイヤー
+  - name: High School DxD
+    aliases:
+      - "하이 스쿨 D×D"
+      - 하이 스쿨 DxD
+      - "ハイスクールD×D"
+  - name: FINAL FANTASY
+    aliases:
+      - 파이널 판타지
+      - Final Fantasy
+      - ファイナルファンタジー
+  - name: 학원 아이돌마스터
+    aliases:
+      - 学園アイドルマスター
+      - Gakuen Idolmaster

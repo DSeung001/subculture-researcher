@@ -1,27 +1,58 @@
 {% extends "base.html" %}
 {% block title %}분류 사전 · 서브컬처 리서처{% endblock %}
 {% block body %}
-<main class="library-shell">
-  <header class="library-header"><div><h1>분류 사전</h1><p>작품 이름과 별칭을 등록하면 미분류 항목에서 연결 후보를 추천합니다.</p></div><a class="btn" href="{{ url_for('library.index') }}">작품·기획으로</a></header>
-  {% for kind, message in get_flashed_messages(with_categories=true) %}<p class="library-message {{ kind }}" role="status">{{ message }}</p>{% endfor %}
+<main class="wide library-shell">
+  <header class="page-header">
+    <div>
+      <h1>분류 사전</h1>
+      <p class="subtitle">작품은 상세 편집에서 키워드를 관리하고, 제목 키워드로 자동 연결할 수 있습니다.</p>
+    </div>
+    <div class="page-actions">
+      <form method="post" action="{{ url_for('library.works_auto_assign') }}"><button class="btn" type="submit">전체 키워드 자동 연결</button></form>
+      <a class="btn" href="{{ url_for('library.index') }}">작품·기획으로</a>
+    </div>
+  </header>
+  {% include "_flash.html" %}
   {% for table, label in taxonomies.items() %}
   <section class="library-panel">
-    <h2>{{ label }}</h2>
-    {% if table == 'works' %}<p>별칭은 쉼표 또는 줄바꿈으로 구분합니다. 같은 별칭이 여러 작품에 있으면 모두 후보로 표시됩니다. 추천은 자동 확정되지 않습니다.</p>{% endif %}
-    <form method="post" action="{{ url_for('library.term', table=table) }}" class="library-row">
-      <label>새 {{ label }}<input name="name" required maxlength="200" placeholder="{{ '예: 장송의 프리렌' if table == 'works' else '이름' }}"></label>
-      {% if table == 'works' %}<label class="grow">별칭<input name="aliases" placeholder="프리렌, Frieren, 葬送のフリーレン"></label>{% endif %}
-      <button class="btn" type="submit">추가</button>
-    </form>
+    <h2>{{ label }} <span class="library-muted">{{ terms[table]|length }}개</span></h2>
+    {% if table == 'works' %}
+    <p class="hint">키워드는 쉼표 또는 줄바꿈으로 구분합니다. 같은 키워드가 여러 작품에 있으면 모두 연결될 수 있습니다(콜라보).</p>
+    <div class="term-add">
+      <form method="post" action="{{ url_for('library.term', table=table) }}" class="library-row">
+        <label>새 {{ label }}<input name="name" required maxlength="200" placeholder="예: 장송의 프리렌"></label>
+        <label class="grow">키워드<input name="aliases" placeholder="프리렌, Frieren, 葬送のフリーレン"></label>
+        <button class="btn btn-primary" type="submit">추가</button>
+      </form>
+    </div>
     {% for term in terms[table] %}
-    <form method="post" action="{{ url_for('library.term', table=table) }}" class="library-row">
-      <input type="hidden" name="id" value="{{ term.id }}">
-      <label>이름<input name="name" value="{{ term.name }}" required maxlength="200"></label>
-      {% if table == 'works' %}<label class="grow">별칭<input name="aliases" value="{{ term.aliases }}"></label>{% endif %}
-      <button class="btn" type="submit">수정</button>
-      <button class="btn" name="action" value="delete" type="submit" data-confirm="이 분류와 모든 항목의 연결을 삭제할까요? 수집 항목은 유지됩니다.">삭제</button>
-    </form>
-    {% else %}<p>등록된 {{ label }}가 없습니다.</p>{% endfor %}
+    <div class="term-item">
+      <div class="grow"><strong>{{ term.name }}</strong>{% if term.aliases %}<div class="library-muted">{{ term.aliases }}</div>{% endif %}</div>
+      <a class="btn btn-sm" href="{{ url_for('library.work_edit', work_id=term.id) }}">편집</a>
+      <form method="post" action="{{ url_for('library.term', table=table) }}">
+        <input type="hidden" name="id" value="{{ term.id }}">
+        <button class="btn btn-sm" name="action" value="delete" type="submit" data-confirm="이 작품과 모든 항목의 연결을 삭제할까요? 수집 항목은 유지됩니다.">삭제</button>
+      </form>
+    </div>
+    {% else %}<div class="empty-state"><p>등록된 {{ label }}가 없습니다. <code>python seed_works.py</code>로 카탈로그를 넣을 수 있습니다.</p></div>{% endfor %}
+    {% else %}
+    <div class="term-add">
+      <form method="post" action="{{ url_for('library.term', table=table) }}" class="library-row">
+        <label class="grow">새 {{ label }}<input name="name" required maxlength="200" placeholder="이름"></label>
+        <button class="btn btn-primary" type="submit">추가</button>
+      </form>
+    </div>
+    {% for term in terms[table] %}
+    <div class="term-item">
+      <form method="post" action="{{ url_for('library.term', table=table) }}" class="term-edit">
+        <input type="hidden" name="id" value="{{ term.id }}">
+        <input name="name" value="{{ term.name }}" required maxlength="200" aria-label="{{ term.name }} 이름">
+        <button class="btn btn-sm" type="submit">수정</button>
+        <button class="btn btn-sm" name="action" value="delete" type="submit" data-confirm="이 분류와 모든 항목의 연결을 삭제할까요? 수집 항목은 유지됩니다.">삭제</button>
+      </form>
+    </div>
+    {% else %}<div class="empty-state"><p>등록된 {{ label }}가 없습니다.</p></div>{% endfor %}
+    {% endif %}
   </section>
   {% endfor %}
 </main>

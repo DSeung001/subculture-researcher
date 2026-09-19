@@ -5,7 +5,8 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 ## Product model
 
 - The organizing unit is the **work / IP** (anime, games). Collect product, pre-order and event info per work and plan intro posts around it. Product category, information type, tag and timing are secondary facets.
-- Works, aliases and each facet live in separate tables. A collab item links to several works; unclassified items are allowed. Alias matches are suggestions only; the user confirms them.
+- Works, aliases and each facet live in separate tables. A collab item links to several works; unclassified items are allowed.
+- Keyword matches (work name + aliases against `title`/`titleKo`) can auto-add `item_works` links via `auto_assign_works` / sync / the web 「자동 연결」 buttons. Matching is additive only and never removes user unlinks of a different work. Unmatched items stay unclassified; the list UI may still show suggestion chips for unclassified rows.
 - Do not decide that two listings are the same product or merge products across shops. Keep one item per source; support saved filters and hand-edited planning collections instead.
 
 ## Data and change rules
@@ -23,7 +24,8 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 - All draft creation goes through `create_draft`. Firestore score-ranked AI drafts
   use `create_trending_draft` (GitHub Actions / `collect.py` / default `draft.py` /
   「AI로 글 만들기」). Local IP-grouped drafts use confirmed `item_works` links only
-  (`draft.py --by-work` / 「작품별로 글 만들기」); alias suggestions are never auto-used.
+  (`draft.py --by-work` / 「작품별로 글 만들기」), including links created by keyword
+  auto-assign; unmatched suggestion chips alone are never used as draft sources.
 - A draft takes 1–20 distinct sources. The same source set and post format is a duplicate regardless of order or publish state. Never reuse an already-published source for `NEWS`.
 - Fetch sources in bulk and match them by ID; never assume Firestore `get_all` returns input order.
 - Use the LLM only to pick candidates and write new drafts. Discuss with the user before extending it to translation, auto-classification or editing existing posts.

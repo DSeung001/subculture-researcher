@@ -9,6 +9,7 @@ from ai_drafts import create_trending_draft, create_work_drafts
 from ai_writer import AiWriterError
 from firebase_client import get_db
 from content_store import add_manual_content
+from erd import build_erd
 from content_model import (
     ANGLES, CATEGORIES, SOURCE_TIERS, STATUSES,
     category_collection, content_id, content_ref,
@@ -425,6 +426,12 @@ def sources_page():
         region_labels=REGION_LABELS,
         tier_labels=TIER_LABELS,
     )
+
+
+@app.get("/erd")
+def erd_page():
+    # Static schema view: no DB connection, so it works even before Docker is up.
+    return render_template("erd.html", erd=build_erd())
 
 
 @app.post("/items/<category>/<item_id>/status")
