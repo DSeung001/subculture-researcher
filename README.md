@@ -72,7 +72,7 @@ python -m playwright install chromium
 
 Windows에서 가상환경을 활성화하지 않았다면 위 명령의 `python`을 `.\.venv\Scripts\python.exe`로 바꾸세요.
 
-앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 엽니다. **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 저장된 제목으로 작품 사전을 채우려면 `python seed_works.py`(`subculture/library/work_catalog.yaml`)를 실행한 뒤 분류 사전에서 키워드를 수정·자동 연결할 수 있습니다. 로컬 전용이므로 외부에 공개하지 않습니다.
+앱은 [http://127.0.0.1:5001](http://127.0.0.1:5001)에서 열며 첫 화면은 작품·기획입니다(인박스는 `/inbox`). **작품·기획 → 클라우드에서 동기화 → 분류 사전** 순서로 시작하고, 항목을 선택해 작품 연결이나 기획 담기를 합니다. 저장된 제목으로 작품 사전을 채우려면 `python seed_works.py`(`subculture/library/work_catalog.yaml`)를 실행한 뒤 분류 사전에서 키워드를 수정·자동 연결할 수 있습니다. 로컬 전용이므로 외부에 공개하지 않습니다.
 
 자동 수집(`collect.py`)은 수동 전용 소스를 제외합니다. 수동 수집은 `collect_manual.py`로 네이버 스토어(코토부키야·메가하우스 몰)를 돌립니다. 애니메이션 본편을 올리는 YouTube 채널은 소스로 두지 않습니다. 네이버 스토어는 `local_browser` 소스로, 창을 띄운 **시크릿(프로필을 남기지 않는) Playwright 브라우저**에서 사용자가 캡차·인증을 직접 처리한 뒤 목록만 읽습니다(`python -m playwright install chromium` 필요). 라프텔은 스토어(`store.laftel.net`) 공개 HTML이 자동 수집에 포함됩니다. 일반 자동 수집은 AI 키가 있으면 Firestore 점수 순 혼합 초안도 하나 만듭니다.
 

@@ -134,6 +134,12 @@ def fetch_contents_page(after_token: str, category: str, days: str = "ALL"):
 
 
 @app.get("/")
+def home():
+    """The app opens on 작품·기획; the inbox lives at /inbox."""
+    return redirect(url_for("library.index"))
+
+
+@app.get("/inbox")
 def index():
     filters = current_filters()
     unposted_only = filters["unposted"] == "1"

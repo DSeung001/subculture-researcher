@@ -7,3 +7,4 @@ service-account*.json
 .streamlit/secrets.toml
 .DS_Store
 .local/
+.claude/worktrees/

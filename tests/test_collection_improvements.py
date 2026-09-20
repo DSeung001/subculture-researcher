@@ -569,7 +569,7 @@ class InboxPeriodTests(unittest.TestCase):
 
     def test_page_shows_period_chips(self):
         with patch.object(review, "fetch_contents_page", return_value=([], False, "")) as fetch:
-            html = review.app.test_client().get("/").get_data(as_text=True)
+            html = review.app.test_client().get("/inbox").get_data(as_text=True)
         self.assertEqual(fetch.call_args.args[2], "14")
         for label in ("최근 7일", "최근 14일", "최근 30일", "전체 기간"):
             self.assertIn(label, html)

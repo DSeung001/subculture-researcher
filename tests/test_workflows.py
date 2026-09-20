@@ -38,7 +38,7 @@ class WorkflowTests(unittest.TestCase):
     def test_review_forms_use_storage_category(self):
         snapshot = self.snapshot("FIGURE:abc", {"category": "GOODS", "title": "자료", "status": "NEW"})
         with patch.object(review, "fetch_contents_page", return_value=([snapshot], False, "")):
-            response = review.app.test_client().get("/")
+            response = review.app.test_client().get("/inbox")
         self.assertEqual(response.status_code, 200)
         self.assertIn('/items/FIGURE/abc/status', response.get_data(as_text=True))
         self.assertIn('value="FIGURE:abc"', response.get_data(as_text=True))

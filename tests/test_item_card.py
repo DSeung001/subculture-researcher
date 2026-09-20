@@ -71,7 +71,7 @@ class SharedCardRenderingTests(unittest.TestCase):
 
     def inbox(self, *snapshots):
         with patch.object(review, "fetch_contents_page", return_value=(list(snapshots), False, "")):
-            return self.client.get("/").get_data(as_text=True)
+            return self.client.get("/inbox").get_data(as_text=True)
 
     def library(self, *snapshots, url="/library"):
         db = Mock()

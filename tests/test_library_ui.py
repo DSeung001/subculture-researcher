@@ -38,6 +38,15 @@ class LibraryUiTests(unittest.TestCase):
         self.client = app.test_client()
         self.lib = Library(self.path)
 
+    def test_the_app_opens_on_the_work_planning_page_and_the_inbox_moved(self):
+        home = self.client.get("/")
+        self.assertEqual(home.status_code, 302)
+        self.assertTrue(home.headers["Location"].endswith("/library"))
+        landing = self.client.get("/", follow_redirects=True)
+        self.assertEqual(landing.status_code, 200)
+        self.assertIn('topnav-link active', landing.get_data(as_text=True))
+        self.assertEqual(self.app.url_map.bind("localhost").match("/inbox")[0], "index")
+
     def test_active_filter_chips_drop_only_their_own_condition(self):
         from subculture.library.interface.routes import active_filters
         work = self.lib.save_term("works", "프리렌")
