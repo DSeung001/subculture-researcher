@@ -8,8 +8,9 @@ back to the source documents there so the inbox keeps its 「미발행만 보기
 from collections.abc import Callable
 from datetime import datetime, timezone
 
+from subculture.drafts.domain.posts import DraftPosts
 from subculture.drafts.domain.rules import (
-    MAX_SOURCES, DraftError, build_body, display_title, infer_angle, unique_ids, validate_id,
+    MAX_SOURCES, DraftError, build_posts, display_title, infer_angle, unique_ids, validate_id,
 )
 from subculture.drafts.infrastructure import draft_repository
 from subculture.library.infrastructure.local_library import Library
@@ -48,12 +49,17 @@ def _load_contents(library: Library, source_ids: list[str], cloud=None) -> list[
 
 
 def create_draft(
-    library: Library, source_ids, angle: str | None = None, body: str | None = None, *,
-    body_factory: Callable[[list[dict], str], str] | None = None, cloud=None,
+    library: Library, source_ids, angle: str | None = None, body: str | None = None,
+    reply: str | None = None, *,
+    body_factory: Callable[[list[dict], str], DraftPosts] | None = None, cloud=None,
 ) -> int:
-    """Validate once before generating an optional expensive body from fresh sources."""
-    if body is not None and body_factory is not None:
-        raise ValueError("body와 body_factory는 함께 지정할 수 없습니다.")
+    """Validate once before generating optional expensive posts from fresh sources.
+
+    A draft is two posts: the body (facts, no links) and the reply (links). `body_factory` writes
+    both; a given `body` (and optional `reply`) is stored as is.
+    """
+    if (body is not None or reply is not None) and body_factory is not None:
+        raise ValueError("body/reply와 body_factory는 함께 지정할 수 없습니다.")
     ids = unique_ids(source_ids)
     if not ids:
         raise DraftError("항목을 선택해주세요.")
@@ -70,13 +76,15 @@ def create_draft(
     draft_repository.ensure_no_duplicate(library, ids, chosen_angle)
 
     if body_factory is not None:
-        body = body_factory(items, chosen_angle)
+        posts = body_factory(items, chosen_angle)
+    elif body is not None:
+        posts = DraftPosts(body, reply or "")
+    else:
+        posts = build_posts(items, chosen_angle)
+        if reply is not None:
+            posts = DraftPosts(posts.body, reply)
 
-    return draft_repository.insert_draft(
-        library, ids, chosen_angle,
-        body if body is not None else build_body(items, chosen_angle),
-        _now(),
-    )
+    return draft_repository.insert_draft(library, ids, chosen_angle, posts.body, posts.reply, _now())
 
 
 def list_drafts(library: Library, status: str = "DRAFT", limit: int = 1000) -> list[dict]:
@@ -108,8 +116,8 @@ def list_drafts(library: Library, status: str = "DRAFT", limit: int = 1000) -> l
     return drafts
 
 
-def save_body(library: Library, draft_id: int, body: str) -> None:
-    draft_repository.update_body(library, draft_id, body, _now())
+def save_posts(library: Library, draft_id: int, body: str, reply: str) -> None:
+    draft_repository.update_posts(library, draft_id, body, reply, _now())
 
 
 def publish_draft(library: Library, draft_id: int, cloud=None) -> list[str]:

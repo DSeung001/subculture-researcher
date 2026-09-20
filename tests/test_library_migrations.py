@@ -103,9 +103,37 @@ class MigrationTests(unittest.TestCase):
             session.add(DraftItem(draft_id=draft.id, item_id="FIGURE:gone"))  # no foreign key on item_id
             self.assertEqual(draft.status, "DRAFT")
 
-    def test_postgres_chain_ends_at_the_drafts_revision(self):
-        self.assertEqual(head("postgresql"), "pg0002_drafts")
-        self.assertEqual(head(), "0004_drafts")
+    def test_reply_column_is_added_without_touching_existing_drafts(self):
+        from alembic import command
+        from subculture.library.infrastructure.database import config
+
+        engine = make_engine(self.path, foreign_keys=False)
+        with engine.begin() as connection:  # a database still at the drafts revision
+            cfg = config()
+            cfg.attributes["connection"] = connection
+            command.upgrade(cfg, "0004_drafts")
+        engine.dispose()
+        with closing(sqlite3.connect(self.path)) as con:
+            self.assertNotIn("reply_body", [row[1] for row in con.execute("PRAGMA table_info(drafts)")])
+            con.execute("INSERT INTO items VALUES ('FIGURE:x', '굿즈', 'https://example.com/x', 'shop', '{}', NULL, '2026-09-19')")
+            con.execute("INSERT INTO drafts (id, angle, body, status, posted_at, created_at, updated_at) "
+                        "VALUES (3, 'COMPARE', '예전 본문 https://example.com/x', 'POSTED', 'p', 'c', 'u')")
+            con.execute("INSERT INTO draft_items VALUES (3, 'FIGURE:x', 0)")
+            con.commit()
+        with self.assertRaises(SchemaError):
+            Library(self.path)  # not upgraded implicitly
+        self.assertTrue(upgrade_database(self.path).is_file())  # backup first
+        with closing(sqlite3.connect(self.path)) as con:
+            self.assertEqual(
+                con.execute("SELECT id, angle, body, status, posted_at, created_at, updated_at, reply_body FROM drafts").fetchall(),
+                [(3, "COMPARE", "예전 본문 https://example.com/x", "POSTED", "p", "c", "u", "")],
+            )
+            self.assertEqual(con.execute("SELECT * FROM draft_items").fetchall(), [(3, "FIGURE:x", 0)])
+            self.assertEqual(con.execute("SELECT title FROM items").fetchall(), [("굿즈",)])
+
+    def test_chains_end_at_the_reply_body_revisions(self):
+        self.assertEqual(head("postgresql"), "pg0003_draft_reply_body")
+        self.assertEqual(head(), "0005_draft_reply_body")
 
     def test_unknown_or_incomplete_schema_is_rejected_without_stamp(self):
         self.legacy()

@@ -4,14 +4,17 @@ GEMINI_API_KEY comes from the environment: a local .env file (loaded with
 python-dotenv) during development, a repository secret in GitHub Actions.
 """
 
+import json
 import os
 import re
 import time
 from collections import Counter
+from datetime import datetime
 
 import requests
 
-from subculture.shared.presentation import product_caption
+from subculture.drafts.domain.posts import BODY_TARGET, DraftPosts, build_reply
+from subculture.shared.presentation import KST, product_caption
 
 
 GEMINI_URL = (
@@ -55,28 +58,70 @@ SELECT_PROMPT_TEMPLATE = (
     "소재:\n{material}"
 )
 
-# Stage 2: write the actual post for the items Stage 1 picked. The shared
-# structure/format rules stay one template; only the emphasis line varies by
-# the draft's dominant category, so a FIGURE draft leans on price/size/release
-# info while a FESTIVAL draft leans on date/venue, etc.
+# Stage 2: write the posts for the items Stage 1 picked. A draft is two posts: a content post
+# (no links) and a reply that lists the links. The model writes only the content post and a short
+# display name per source; the reply and every URL are assembled in code from the sources, so the
+# model never sees or writes a URL. The shared structure/format rules stay one template; only the
+# emphasis line varies by the draft's dominant category, so a FIGURE draft leans on price/size/
+# release info while a FESTIVAL draft leans on date/venue, etc.
 PROMPT_TEMPLATE = (
-    "너는 애니메이션/피규어 서브컬처 X(트위터) 계정을 운영하는 소셜 미디어 에디터야. "
-    "아래 소재로 X 유저들이 반응하기 좋은 한국어 게시글 초안을 하나 써줘. "
-    "글의 각도는 '{angle}'야.\n"
-    "형식 규칙:\n"
-    "- 첫 줄은 시선을 끄는 한 문장으로 시작해줘.\n"
-    "- 문장을 짧게 끊고, 필요하면 줄바꿈으로 가독성을 높여줘.\n"
+    "너는 X(트위터)에 애니메이션/피규어 서브컬처 정보를 올리는 콘텐츠 에디터야. "
+    "아래 소재로 게시물 1개(post1)를 쓰고, 소재마다 짧은 이름(display_name)을 붙여줘. "
+    "글의 각도는 '{angle}'야. 실제 사람이 새 소식을 발견해서 소개하는 것처럼 자연스럽게 쓰고, "
+    "광고 문구나 상품 DB를 그대로 요약한 것처럼 보이면 안 돼. "
+    "링크는 별도 답글에 코드가 붙일 거야.\n"
+    "[post1: 콘텐츠 글]\n"
+    "- URL, 링크, 쇼핑몰 이름은 절대 넣지 마.\n"
+    "- 소재를 단순 나열하지 말고 공통점이나 차이점 1~2개만 골라 이야기해줘. "
+    "모든 소재의 가격/스케일/이름을 한 문장에 억지로 넣지 마.\n"
+    "- 첫 문장은 짧고 자연스러운 관심 유도 문장으로 써줘.\n"
+    "- 3~6줄, 줄바꿈으로 가독성을 높이고, {body_target}자 이내로 써줘 (해시태그 포함).\n"
+    "- 마지막 줄에 관련성 높은 해시태그를 2~3개 붙여줘 (띄어쓰기 없이, 예: #피규어 #굿스마일컴퍼니).\n"
+    "- 이모지는 최대 1개까지만 써줘.\n"
     "- {category_hint}\n"
-    "- 과장된 광고 문구 없이 담백하게, 이모지는 최대 1개까지만 써줘.\n"
-    "- 본문은 120자 이내로 써줘 (해시태그 제외).\n"
-    "- 마지막 줄에 본문 내용과 직접 관련된 해시태그를 2~4개 붙여줘 (띄어쓰기 없이, 예: #피규어 #굿스마일컴퍼니).\n"
-    "- 번호로 준 소재를 모두 본문에 반영해줘 (하나라도 빼지 마).\n"
-    "- 제공된 소재에 있는 사실만 쓰고, 없는 일정·가격·설정은 지어내지 마.\n"
-    "- AniList, 트렌딩, 순위/집계 사이트명, 출처 내부명은 본문·해시태그에 쓰지 마. "
-    "인지도는 '인기 있는', '화제의', '지금 주목받는'처럼 자연스러운 SNS 홍보 표현으로 써줘.\n"
-    "- 본문과 해시태그만 출력하고 링크는 쓰지 마 (링크는 따로 붙일 거야).\n\n"
+    "[문장 다양성]\n"
+    "매번 소재에 가장 자연스러운 접근법 하나를 골라줘: 여러 신상이 동시에 나온 점 언급 / 가격 차이 언급 / "
+    "스케일·종류 차이 언급 / 특정 소재 하나를 중심으로 나머지를 함께 소개 / 가벼운 개인적 관찰로 시작 / "
+    "마지막에 선택 질문. 항상 질문으로 시작하거나 끝내지 말고, 같은 표현과 문장 구조를 반복하지 마.\n"
+    "[예약/일반 구분]\n"
+    "- 각 소재의 '판매유형'을 그대로 따라줘. 예약 상품과 일반 판매 상품이 섞여 있으면 어느 쪽이 예약이고 "
+    "어느 쪽이 바로 구매 가능한지 자연스럽게 짚어줘 (예: 'A는 예약 중, B는 바로 구매 가능').\n"
+    "- 모두 같은 유형이면 반복하지 말고 한 번만 언급해줘.\n"
+    "- 판매유형에 없는 예약 여부·마감일·입고일은 추측하지 마. '예약 마감 지남'은 예약 중이라고 쓰지 마.\n"
+    "- 품절 소재는 구매를 권하는 표현을 쓰지 마.\n"
+    "[문체]\n"
+    "- 한국 X 사용자가 쓴 것처럼 간결하게. 보도자료·쇼핑몰 광고·SEO 문체는 피해줘.\n"
+    "- '놓치지 마세요', '다양한 라인업', '추천드립니다', '비교해 보세요' 같은 광고성 표현을 쓰지 마. "
+    "'~까지.', '~입니다.'를 연속으로 쓰지 마. 과장하지 마.\n"
+    "- 제공된 소재에 있는 사실만 쓰고, 없는 일정·가격·발매일·크기·특전·평가는 지어내지 마.\n"
+    "- AniList, 트렌딩, 순위/집계 사이트명, 출처 내부명은 쓰지 마. "
+    "인지도는 '인기 있는', '화제의', '지금 주목받는'처럼 자연스러운 표현으로 써줘.\n"
+    "[products: 소재별 이름]\n"
+    "- 소재마다 index(소재 번호)와 display_name을 하나씩 줘. 소재를 빠뜨리지 마.\n"
+    "- display_name은 상품을 알아볼 수 있는 짧은 이름으로, '[예약]' 같은 쇼핑몰 태그, 제조사명, "
+    "이미 앞에 나온 작품명 반복, 가격·스케일 설명을 빼줘. URL은 쓰지 마.\n\n"
     "소재:\n{material}"
 )
+
+# Structured output: the model returns the post and the per-source names, never a link.
+POSTS_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "post1": {"type": "STRING"},
+        "products": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "index": {"type": "INTEGER"},
+                    "display_name": {"type": "STRING"},
+                },
+                "required": ["index", "display_name"],
+            },
+        },
+    },
+    "required": ["post1", "products"],
+}
 
 CATEGORY_HINTS = {
     "ANIME": (
@@ -128,6 +173,30 @@ def _airing_hint(item: dict) -> str:
     return " · ".join(parts)
 
 
+def _sale_type_hint(item: dict, today: str | None = None) -> str:
+    """Preorder vs regular sale, from the stored status; empty when it is not known."""
+    if item.get("entityType") != "PRODUCT":
+        return ""
+    status = item.get("saleStatus")
+    if status == "PREORDER":
+        deadline = str(item.get("preorderEndAt") or "")
+        today = today or datetime.now(KST).date().isoformat()
+        if deadline and deadline[:10] < today:
+            # A stored PREORDER can be stale once its deadline has passed.
+            return f"예약 마감 지남 (마감 {deadline})"
+        parts = ["예약"]
+        if deadline:
+            parts.append(f"예약마감 {deadline}")
+        if item.get("releaseWindowText"):
+            parts.append(f"입고 {item['releaseWindowText']}")
+        return " · ".join(parts)
+    if status == "IN_STOCK":
+        return "일반 판매(재고 있음)"
+    if status == "SOLD_OUT":
+        return "품절"
+    return ""
+
+
 def _material_block(items: list[dict]) -> str:
     lines = []
     for idx, item in enumerate(items, start=1):
@@ -148,6 +217,9 @@ def _material_block(items: list[dict]) -> str:
         # Structured product fields (price/예약 여부/사이즈/발매일 등), not just
         # whatever the scraped summary text happens to mention, so the model
         # can state reservation urgency accurately.
+        sale_type = _sale_type_hint(item)
+        if sale_type:
+            lines.append(f"   판매유형: {sale_type}")
         product = product_caption(item)
         if product:
             lines.append(f"   구매정보: {product}")
@@ -229,7 +301,7 @@ def _throttle() -> None:
         time.sleep(wait)
 
 
-def _post_gemini(prompt: str, key: str):
+def _post_gemini(prompt: str, key: str, response_schema: dict | None = None):
     """POST with request spacing and retries; returns the final response."""
     global _last_call_at, _quota_exhausted
     if _quota_exhausted:
@@ -241,6 +313,10 @@ def _post_gemini(prompt: str, key: str):
         # reasoning; skip it to save quota.
         "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
     }
+    if response_schema is not None:
+        body["generationConfig"].update(
+            {"responseMimeType": "application/json", "responseSchema": response_schema}
+        )
     for attempt in range(MAX_RETRIES + 1):
         _throttle()
         try:
@@ -270,9 +346,9 @@ def _post_gemini(prompt: str, key: str):
     return response
 
 
-def _call_gemini(prompt: str, key: str) -> str:
+def _call_gemini(prompt: str, key: str, response_schema: dict | None = None) -> str:
     try:
-        response = _post_gemini(prompt, key)
+        response = _post_gemini(prompt, key, response_schema)
         response.raise_for_status()
         payload = response.json()
     except (requests.RequestException, ValueError) as exc:
@@ -320,33 +396,38 @@ def select_top_items(items: list[dict], size: int) -> list[dict]:
     return picked if picked else items[:size]
 
 
-def _append_source_block(body: str, items: list[dict]) -> str:
-    """Append real source titles/URLs after the model text (never model-generated)."""
-    lines = [body.rstrip(), "", "출처"]
-    appended = False
-    for item in items:
-        url = (item.get("url") or "").strip()
-        if not url:
+def _parse_posts(text: str, item_count: int) -> tuple[str, dict[int, str]]:
+    """The content post and the display names by 0-based source position, from the model's JSON."""
+    try:
+        payload = json.loads(text)
+    except ValueError as exc:
+        raise AiWriterError(f"Gemini 응답을 JSON으로 읽지 못했습니다: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise AiWriterError("Gemini 응답 형식이 올바르지 않습니다.")
+    post1 = payload.get("post1")
+    post1 = post1.strip() if isinstance(post1, str) else ""
+    if not post1:
+        raise AiWriterError("Gemini가 본문을 쓰지 못했습니다.")
+
+    names: dict[int, str] = {}
+    for product in payload.get("products") or []:
+        if not isinstance(product, dict):
             continue
-        title = (item.get("titleKo") or item.get("title") or "").strip()
-        if title:
-            lines.append(f"- {title}")
-            lines.append(f"  {url}")
-        else:
-            lines.append(f"- {url}")
-        appended = True
-    if not appended:
-        return f"{body.rstrip()}\n"
-    return "\n".join(lines) + "\n"
+        index, name = product.get("index"), product.get("display_name")
+        # The numbers are 1-based like the material block; anything else is ignored.
+        valid_index = isinstance(index, int) and not isinstance(index, bool) and 1 <= index <= item_count
+        if valid_index and isinstance(name, str) and name.strip():
+            names.setdefault(index - 1, name.strip())
+    return post1, names
 
 
-def write_draft_body(items: list[dict], angle: str) -> str:
-    """Ask Gemini Flash for a short Korean X-post draft, then attach real source URLs.
+def write_draft_posts(items: list[dict], angle: str) -> DraftPosts:
+    """Ask Gemini Flash for the content post and per-source names, then assemble the link reply.
 
-    The model writes body + hashtags only (no links). After the call, this
-    function appends a 출처 block built from each item's actual `url` /
-    `titleKo` fields so the draft body always carries the bundled sources
-    without hallucinated links.
+    The model returns JSON (`post1` and a `display_name` per numbered source) and never sees a
+    URL. The reply is built here from each item's real `url`, so links are never model-generated,
+    broken or dropped; a source the model named badly or skipped keeps its link under a name
+    cleaned from its title.
     """
     key = api_key()
     if not key:
@@ -356,7 +437,9 @@ def write_draft_body(items: list[dict], angle: str) -> str:
 
     category_hint = CATEGORY_HINTS.get(_dominant_category(items), DEFAULT_CATEGORY_HINT)
     prompt = PROMPT_TEMPLATE.format(
-        angle=angle, category_hint=category_hint, material=_material_block(items)
+        angle=angle, category_hint=category_hint, body_target=BODY_TARGET,
+        material=_material_block(items),
     )
-    text = _call_gemini(prompt, key)
-    return _append_source_block(text, items)
+    text = _call_gemini(prompt, key, POSTS_SCHEMA)
+    post1, names = _parse_posts(text, len(items))
+    return DraftPosts(post1 + "\n", build_reply(items, names))

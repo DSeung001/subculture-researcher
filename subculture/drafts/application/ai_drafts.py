@@ -5,7 +5,7 @@ from subculture.drafts.domain.rules import MAX_SOURCES, DraftError, infer_angle
 from subculture.drafts.domain.selection import (
     DRAFT_SIZE, SELECTION_POOL_SIZE, WORK_DRAFT_LABELS, WORK_DRAFT_TYPES, pick_work_source_ids,
 )
-from subculture.drafts.infrastructure.ai_writer import AiWriterError, select_top_items, write_draft_body
+from subculture.drafts.infrastructure.ai_writer import AiWriterError, select_top_items, write_draft_posts
 from subculture.library.infrastructure.local_library import Library
 from subculture.shared.presentation import content_score
 
@@ -32,7 +32,7 @@ def create_trending_draft(library: Library, size: int = DRAFT_SIZE, category: st
     top = select_top_items(pool, size)
     angle = infer_angle(top)
     source_ids = [item["_id"] for item in top]
-    return create_draft(library, source_ids, angle=angle, body_factory=write_draft_body, cloud=cloud)
+    return create_draft(library, source_ids, angle=angle, body_factory=write_draft_posts, cloud=cloud)
 
 
 def run_trending_draft(library: Library, category: str | None = None) -> str:
@@ -87,7 +87,7 @@ def create_work_drafts(
             results.append((draft_type, None, None))
             continue
         try:
-            draft_id = create_draft(library, source_ids, body_factory=write_draft_body)
+            draft_id = create_draft(library, source_ids, body_factory=write_draft_posts)
         except DraftError as exc:
             results.append((draft_type, None, str(exc)))
             continue

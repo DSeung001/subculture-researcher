@@ -51,7 +51,7 @@ class WorkflowTests(unittest.TestCase):
     def test_ai_flow_defers_writer_and_validates_size(self):
         library = Mock()
         library.draft_candidates.return_value = [{"_id": "FIGURE:a"}]
-        with patch.object(ai_drafts, "write_draft_body") as writer, \
+        with patch.object(ai_drafts, "write_draft_posts") as writer, \
              patch.object(ai_drafts, "create_draft", return_value=7) as create:
             self.assertEqual(ai_drafts.create_trending_draft(library), 7)
             writer.assert_not_called()
@@ -93,7 +93,7 @@ class WorkflowTests(unittest.TestCase):
         library.linked_work_items.return_value = groups
         library.posted_item_ids.return_value = set()
         with patch.object(ai_drafts, "create_draft", side_effect=["d1", "d2", "d3"]) as create, \
-             patch.object(ai_drafts, "write_draft_body"):
+             patch.object(ai_drafts, "write_draft_posts"):
             results = ai_drafts.create_work_drafts(library)
         self.assertEqual([r[0] for r in results], ["FIGURE", "ANIME", "MIXED"])
         self.assertEqual([r[1] for r in results], ["d1", "d2", "d3"])
@@ -128,7 +128,7 @@ class WorkflowTests(unittest.TestCase):
         library.linked_work_items.return_value = groups
         library.posted_item_ids.return_value = set()
         with patch.object(ai_drafts, "create_draft", side_effect=["d1"]) as create, \
-             patch.object(ai_drafts, "write_draft_body"):
+             patch.object(ai_drafts, "write_draft_posts"):
             results = ai_drafts.create_work_drafts(library, work_id=2)
         self.assertEqual(create.call_args_list[0].args[1], ["ANIME:c"])
         by_type = {draft_type: draft_id for draft_type, draft_id, _ in results}

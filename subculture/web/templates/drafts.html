@@ -43,6 +43,10 @@
 
   {% include "_ai_busy.html" %}
 
+  {% macro count_label(text, limit) -%}
+    {{ post_length(text) }}{% if limit %} / {{ limit }}{% endif %}자
+  {%- endmacro %}
+
   <div class="items">
     {% for draft in drafts %}
     <article class="card draft-card" id="draft-{{ draft['_id'] }}">
@@ -75,26 +79,59 @@
         </li>
         {% endfor %}
       </ul>
+      {% set did = draft['_id'] %}
       {% if draft.status == 'DRAFT' %}
-      <form method="post" action="{{ url_for('save_draft_body', draft_id=draft['_id']) }}" class="note-form" id="draft-body-{{ draft['_id'] }}">
+      <form method="post" action="{{ url_for('save_draft_body', draft_id=did) }}" class="note-form draft-posts" id="draft-body-{{ did }}">
         <input type="hidden" name="list_status" value="{{ list_status }}">
-        <label>본문
-          <textarea name="body" rows="8">{{ draft.body or '' }}</textarea>
-        </label>
+        <section class="post-block">
+          <div class="post-head">
+            <label class="post-label" for="post-body-{{ did }}">① 본문 · 정보</label>
+            <span class="post-count{% if post_length(draft.body or '') > body_target %} is-over{% endif %}" data-count-for="post-body-{{ did }}" data-limit="{{ body_target }}">{{ count_label(draft.body or '', body_target) }}</span>
+            <button type="button" class="btn btn-small" data-copy-target="post-body-{{ did }}">복사</button>
+          </div>
+          <textarea id="post-body-{{ did }}" name="body" rows="8">{{ draft.body or '' }}</textarea>
+        </section>
+        <section class="post-block post-reply">
+          <div class="post-head">
+            <label class="post-label" for="post-reply-{{ did }}">② 댓글 · 구매 링크</label>
+            <span class="post-count" data-count-for="post-reply-{{ did }}">{{ count_label(draft.reply or '', 0) }}</span>
+            <button type="button" class="btn btn-small" data-copy-target="post-reply-{{ did }}">복사</button>
+          </div>
+          <textarea id="post-reply-{{ did }}" name="reply" rows="6" placeholder="본문 글에 답글로 달 링크 (예: 구매 링크 ↓)">{{ draft.reply or '' }}</textarea>
+        </section>
       </form>
       <div class="draft-actions">
-        <button type="submit" class="btn" form="draft-body-{{ draft['_id'] }}">본문 저장</button>
-        <form method="post" action="{{ url_for('publish_draft_item', draft_id=draft['_id']) }}">
+        <button type="submit" class="btn" form="draft-body-{{ did }}">본문·댓글 저장</button>
+        <form method="post" action="{{ url_for('publish_draft_item', draft_id=did) }}">
           <input type="hidden" name="list_status" value="{{ list_status }}">
           <button type="submit" class="btn btn-primary">발행함</button>
         </form>
-        <form method="post" action="{{ url_for('delete_draft_item', draft_id=draft['_id']) }}">
+        <form method="post" action="{{ url_for('delete_draft_item', draft_id=did) }}">
           <input type="hidden" name="list_status" value="{{ list_status }}">
           <button type="submit" class="btn btn-danger">삭제</button>
         </form>
       </div>
       {% else %}
-      <pre class="draft-body">{{ draft.body or '' }}</pre>
+      <div class="draft-posts">
+        <section class="post-block">
+          <div class="post-head">
+            <span class="post-label">① 본문 · 정보</span>
+            <span class="post-count">{{ count_label(draft.body or '', 0) }}</span>
+            <button type="button" class="btn btn-small" data-copy-target="post-body-{{ did }}">복사</button>
+          </div>
+          <pre class="draft-body" id="post-body-{{ did }}">{{ draft.body or '' }}</pre>
+        </section>
+        {% if draft.reply %}
+        <section class="post-block post-reply">
+          <div class="post-head">
+            <span class="post-label">② 댓글 · 구매 링크</span>
+            <span class="post-count">{{ count_label(draft.reply, 0) }}</span>
+            <button type="button" class="btn btn-small" data-copy-target="post-reply-{{ did }}">복사</button>
+          </div>
+          <pre class="draft-body" id="post-reply-{{ did }}">{{ draft.reply }}</pre>
+        </section>
+        {% endif %}
+      </div>
       {% endif %}
     </article>
     {% else %}

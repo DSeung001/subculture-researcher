@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 
-from subculture.drafts.infrastructure.ai_writer import AiWriterError, write_draft_body
+from subculture.drafts.infrastructure.ai_writer import AiWriterError, write_draft_posts
 from subculture.drafts.domain.rules import MAX_SOURCES, DraftError
 from subculture.drafts.application.drafts import create_draft
 from subculture.library.domain.taxonomy import FILTER_KEYS, TAXONOMIES
@@ -222,7 +222,7 @@ def draft_create():
     ai = request.form.get("mode") == "ai"
     try:
         draft_id = create_draft(
-            store(), request.form.getlist("item_ids"), body_factory=write_draft_body if ai else None,
+            store(), request.form.getlist("item_ids"), body_factory=write_draft_posts if ai else None,
         )
     except (DraftError, AiWriterError) as exc:
         flash(str(exc), "error")

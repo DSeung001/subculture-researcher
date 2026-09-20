@@ -104,6 +104,7 @@ class Draft(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     angle: Mapped[str] = mapped_column(Text)
     body: Mapped[str] = mapped_column(Text)
+    reply_body: Mapped[str] = mapped_column(Text, server_default=text("''"))
     status: Mapped[str] = mapped_column(Text, server_default=text("'DRAFT'"))
     posted_at: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text)

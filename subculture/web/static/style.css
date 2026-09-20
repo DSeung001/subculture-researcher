@@ -825,6 +825,53 @@ body.ai-draft-busy-open {
   padding: 8px 14px;
 }
 
+/* A draft is two posts: the content post and, indented under it, the reply with the links. */
+.draft-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.post-block .draft-body { margin-top: 0; }
+
+.post-reply {
+  margin-left: 18px;
+  padding-left: 14px;
+  border-left: 3px solid var(--border);
+}
+
+.post-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.post-head .post-label {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.post-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-count.is-over {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.btn-small {
+  width: auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 .draft-body {
   margin: 12px 0 0;
   white-space: pre-wrap;

@@ -13,8 +13,9 @@ from google.cloud.firestore import Client
 from subculture.web import app as review
 from subculture.drafts.interface import delete_firestore_drafts
 from subculture.shared.content_model import content_ref
+from subculture.drafts.domain.posts import DraftPosts
 from subculture.drafts.domain.rules import DraftError
-from subculture.drafts.application.drafts import create_draft, delete_draft, list_drafts, publish_draft, save_body
+from subculture.drafts.application.drafts import create_draft, delete_draft, list_drafts, publish_draft, save_posts
 from subculture.library.infrastructure.database import SchemaError
 from subculture.library.infrastructure.local_library import Library
 
@@ -51,14 +52,15 @@ class DraftCase(unittest.TestCase):
 
 class CreateTests(DraftCase):
     def test_ids_are_deduplicated_and_the_body_uses_the_stored_sources(self):
-        writer = Mock(return_value="AI body")
+        writer = Mock(return_value=DraftPosts("AI body", "AI reply"))
         draft_id = create_draft(self.lib, [" FIGURE:a ", "FIGURE:a", "FIGURE:b"], body_factory=writer)
         self.assertIsInstance(draft_id, int)
         items, angle = writer.call_args.args
         self.assertEqual([item["_id"] for item in items], ["FIGURE:a", "FIGURE:b"])
         self.assertEqual(angle, "COMPARE")
         (draft,) = list_drafts(self.lib)
-        self.assertEqual((draft["body"], draft["sourceIds"]), ("AI body", ["FIGURE:a", "FIGURE:b"]))
+        self.assertEqual((draft["body"], draft["reply"], draft["sourceIds"]),
+                         ("AI body", "AI reply", ["FIGURE:a", "FIGURE:b"]))
         self.assertEqual(draft["status"], "DRAFT")
 
     def test_source_count_limits_and_bad_ids(self):
@@ -76,7 +78,7 @@ class CreateTests(DraftCase):
         self.assertEqual(list_drafts(self.lib, "ALL"), [])
 
     def test_same_sources_and_angle_is_a_duplicate_in_any_order_and_state(self):
-        writer = Mock(return_value="body")
+        writer = Mock(return_value=DraftPosts("body", "reply"))
         first = create_draft(self.lib, ["FIGURE:a", "FIGURE:b"], angle="COMPARE", body_factory=writer)
         writer.reset_mock()
         with self.assertRaisesRegex(DraftError, "이미 있습니다"):
@@ -89,7 +91,7 @@ class CreateTests(DraftCase):
         create_draft(self.lib, ["FIGURE:a"], angle="COMPARE")  # another source set is fine
 
     def test_news_cannot_reuse_a_posted_source_but_other_angles_can(self):
-        writer = Mock(return_value="body")
+        writer = Mock(return_value=DraftPosts("body", "reply"))
         with self.assertRaisesRegex(DraftError, "뉴스"):
             create_draft(self.lib, ["ANIME:c"], angle="NEWS", body_factory=writer)  # postedAt in the document
         writer.assert_not_called()
@@ -108,13 +110,23 @@ class CreateTests(DraftCase):
     def test_body_and_body_factory_are_exclusive(self):
         with self.assertRaises(ValueError):
             create_draft(self.lib, ["FIGURE:a"], body="x", body_factory=Mock())
+        with self.assertRaises(ValueError):
+            create_draft(self.lib, ["FIGURE:a"], reply="x", body_factory=Mock())
 
-    def test_default_body_lists_titles_urls_and_notes(self):
-        draft_id = create_draft(self.lib, ["FIGURE:a"])
+    def test_default_draft_keeps_links_out_of_the_body_and_in_the_reply(self):
+        draft_id = create_draft(self.lib, ["FIGURE:a", "FIGURE:b"])
         (draft,) = list_drafts(self.lib)
         self.assertEqual(draft["_id"], draft_id)
         self.assertIn("한글 제목", draft["body"])
-        self.assertIn("https://example.com/a", draft["body"])
+        self.assertNotIn("https://", draft["body"])
+        self.assertTrue(draft["reply"].startswith("링크 ↓"))  # no product among the sources
+        self.assertIn("https://example.com/a", draft["reply"])
+        self.assertIn("https://example.com/b", draft["reply"])
+
+    def test_given_body_and_reply_are_stored_as_they_are(self):
+        create_draft(self.lib, ["FIGURE:a"], body="직접 쓴 본문", reply="직접 쓴 댓글")
+        (draft,) = list_drafts(self.lib)
+        self.assertEqual((draft["body"], draft["reply"]), ("직접 쓴 본문", "직접 쓴 댓글"))
 
 
 class MissingSourceFetchTests(DraftCase):
@@ -134,7 +146,7 @@ class MissingSourceFetchTests(DraftCase):
         cloud = MagicMock()
         cloud.collection.side_effect = client.collection
         cloud.get_all.return_value = list(reversed(snapshots))  # get_all does not keep the input order
-        writer = Mock(return_value="body")
+        writer = Mock(return_value=DraftPosts("body", "reply"))
         create_draft(self.lib, ["GOODS:x", "FIGURE:a", "GOODS:y"], body_factory=writer, cloud=cloud)
         cloud.get_all.assert_called_once()
         self.assertEqual(len(cloud.get_all.call_args.args[0]), 2)  # only the two unsynced ones
@@ -185,15 +197,16 @@ class ListingTests(DraftCase):
 
 
 class LifecycleTests(DraftCase):
-    def test_save_body_edits_only_unpublished_drafts(self):
+    def test_save_posts_edits_only_unpublished_drafts(self):
         draft_id = create_draft(self.lib, ["FIGURE:a"])
-        save_body(self.lib, draft_id, "새 본문")
-        self.assertEqual(list_drafts(self.lib)[0]["body"], "새 본문")
+        save_posts(self.lib, draft_id, "새 본문", "새 댓글")
+        (draft,) = list_drafts(self.lib)
+        self.assertEqual((draft["body"], draft["reply"]), ("새 본문", "새 댓글"))
         publish_draft(self.lib, draft_id)
         with self.assertRaisesRegex(DraftError, "수정"):
-            save_body(self.lib, draft_id, "또 수정")
+            save_posts(self.lib, draft_id, "또 수정", "또 수정")
         with self.assertRaisesRegex(DraftError, "찾을 수 없"):
-            save_body(self.lib, 999, "x")
+            save_posts(self.lib, 999, "x", "y")
 
     def test_delete_removes_the_draft_and_its_sources_but_not_published_ones(self):
         gone = create_draft(self.lib, ["FIGURE:a"])
@@ -275,6 +288,42 @@ class DraftsPageTests(DraftCase):
         self.assertIn('referrerpolicy="no-referrer"', html)
         self.assertIn("card-thumb-empty", html)  # FIGURE:b has no photo
         self.assertIn("한글 제목", html)
+
+    def test_page_shows_body_and_reply_with_copy_buttons_and_counters(self):
+        create_draft(self.lib, ["FIGURE:a"], body="본문 글", reply="구매 링크 ↓\n\n제목\nhttps://example.com/a")
+        html = self.get().get_data(as_text=True)
+        self.assertIn("① 본문", html)
+        self.assertIn("② 댓글", html)
+        self.assertIn('name="body"', html)
+        self.assertIn('name="reply"', html)
+        self.assertEqual(html.count("data-copy-target="), 2)
+        self.assertIn(">4 / 260자<", html)  # the body counter shows its target
+        self.assertIn(">35자<", html)  # the reply: 12 characters of text + a link counted as 23
+
+    def test_published_drafts_show_both_posts_read_only(self):
+        draft_id = create_draft(self.lib, ["FIGURE:a"], body="본문 글", reply="댓글 글")
+        publish_draft(self.lib, draft_id)
+        html = self.get("/drafts?status=POSTED").get_data(as_text=True)
+        self.assertNotIn("<textarea", html)
+        self.assertIn("본문 글", html)
+        self.assertIn("댓글 글", html)
+        self.assertEqual(html.count("data-copy-target="), 2)
+
+    def test_a_draft_without_a_reply_still_offers_the_reply_box(self):
+        # Drafts written before replies existed have an empty reply and keep their old body.
+        create_draft(self.lib, ["FIGURE:a"], body="예전 본문")
+        html = self.get().get_data(as_text=True)
+        self.assertIn("예전 본문", html)
+        self.assertIn('name="reply"', html)
+
+    def test_save_route_stores_body_and_reply(self):
+        draft_id = create_draft(self.lib, ["FIGURE:a"])
+        with patch.dict(review.app.config, {"LIBRARY_PATH": str(self.path)}):
+            response = review.app.test_client().post(
+                f"/drafts/{draft_id}/body", data={"body": "고친 본문", "reply": "고친 댓글"})
+        self.assertEqual(response.status_code, 302)
+        (draft,) = list_drafts(self.lib)
+        self.assertEqual((draft["body"], draft["reply"]), ("고친 본문", "고친 댓글"))
 
     def test_published_drafts_show_photos_too(self):
         publish_draft(self.lib, create_draft(self.lib, ["FIGURE:a"]))

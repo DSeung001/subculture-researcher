@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from subculture.library.interface import routes as library_routes
+from subculture.drafts.domain.posts import DraftPosts
 from subculture.drafts.infrastructure.ai_writer import AiWriterError
 from subculture.drafts.application.drafts import list_drafts, publish_draft
 from subculture.library.infrastructure.models import Draft
@@ -66,15 +67,15 @@ class DraftFlowTests(FlowCase):
         self.assertEqual(draft["status"], "DRAFT")
 
     def test_ai_mode_writes_the_body_with_the_model_and_only_then(self):
-        with patch.object(library_routes, "write_draft_body", return_value="AI 본문") as writer:
+        with patch.object(library_routes, "write_draft_posts", return_value=DraftPosts("AI 본문", "AI 댓글")) as writer:
             self.create(["FIGURE:a"], mode="plain")
             writer.assert_not_called()
             self.create(["FIGURE:a", "FIGURE:b"], mode="ai")
         writer.assert_called_once()
         items, _ = writer.call_args.args
         self.assertEqual([item["_id"] for item in items], ["FIGURE:a", "FIGURE:b"])
-        bodies = {d["body"] for d in self.drafts()}
-        self.assertIn("AI 본문", bodies)
+        posts = {(d["body"], d["reply"]) for d in self.drafts()}
+        self.assertIn(("AI 본문", "AI 댓글"), posts)
 
     def test_the_landing_page_shows_the_new_draft_with_its_photo(self):
         response = self.create(["FIGURE:a"], follow_redirects=True)
@@ -108,7 +109,7 @@ class DraftFlowTests(FlowCase):
         self.assertEqual(len(self.drafts()), 1)
 
     def test_model_failure_flashes_and_saves_nothing(self):
-        with patch.object(library_routes, "write_draft_body", side_effect=AiWriterError("GEMINI_API_KEY 없음")):
+        with patch.object(library_routes, "write_draft_posts", side_effect=AiWriterError("GEMINI_API_KEY 없음")):
             html = self.create(["FIGURE:a"], mode="ai", follow_redirects=True).get_data(as_text=True)
         self.assertIn("GEMINI_API_KEY", html)
         self.assertEqual(self.drafts(), [])

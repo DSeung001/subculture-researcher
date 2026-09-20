@@ -1,5 +1,6 @@
 """What a draft is allowed to be: source limits, angle choice and the plain-text body (no I/O)."""
 
+from subculture.drafts.domain.posts import DraftPosts, build_reply
 from subculture.shared.content_model import ANGLES as ALLOWED_ANGLES
 
 
@@ -23,7 +24,8 @@ def infer_angle(items: list[dict]) -> str:
     return "COMPARE"
 
 
-def build_body(items: list[dict], angle: str) -> str:
+def build_posts(items: list[dict], angle: str) -> DraftPosts:
+    """The quick draft: source facts in the body (no links) and the links in the reply."""
     lines = [f"[{angle}]", ""]
     for item in items:
         source = item.get("source") or ""
@@ -31,13 +33,11 @@ def build_body(items: list[dict], angle: str) -> str:
         summary = (item.get("summaryKo") or item.get("summary") or "").strip()
         if summary:
             lines.append(f"  {summary[:500]}")
-        if item.get("url"):
-            lines.append(f"  {item['url']}")
         note = (item.get("note") or "").strip()
         if note:
             lines.append(f"  메모: {note}")
         lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    return DraftPosts("\n".join(lines).rstrip() + "\n", build_reply(items))
 
 
 def unique_ids(source_ids) -> list[str]:

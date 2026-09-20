@@ -31,13 +31,15 @@ def ensure_no_duplicate(library: Library, source_ids: list[str], angle: str) -> 
             raise DraftError(DUPLICATE_MESSAGE)
 
 
-def insert_draft(library: Library, source_ids: list[str], angle: str, body: str, now: str) -> int:
+def insert_draft(
+    library: Library, source_ids: list[str], angle: str, body: str, reply: str, now: str,
+) -> int:
     with library.connect() as session:
         # Checked again in the writing transaction: the body may have taken a while to write.
         if _duplicate_exists(session, source_ids, angle):
             raise DraftError(DUPLICATE_MESSAGE)
         draft = Draft(
-            angle=angle, body=body,
+            angle=angle, body=body, reply_body=reply,
             status="DRAFT", posted_at=None, created_at=now, updated_at=now,
         )
         session.add(draft)
@@ -64,7 +66,8 @@ def fetch_drafts(library: Library, status: str, limit: int) -> tuple[list[dict],
     with library.connect() as session:
         rows = session.scalars(query).all()
         drafts = [{
-            "_id": row.id, "angle": row.angle, "body": row.body, "status": row.status,
+            "_id": row.id, "angle": row.angle, "body": row.body, "reply": row.reply_body,
+            "status": row.status,
             "createdAt": _parse_time(row.created_at), "postedAt": _parse_time(row.posted_at),
         } for row in rows]
         members = {}
@@ -88,10 +91,10 @@ def _editable_draft(session, draft_id: int, action: str) -> Draft:
     return draft
 
 
-def update_body(library: Library, draft_id: int, body: str, now: str) -> None:
+def update_posts(library: Library, draft_id: int, body: str, reply: str, now: str) -> None:
     with library.connect() as session:
         draft = _editable_draft(session, draft_id, "수정")
-        draft.body, draft.updated_at = body, now
+        draft.body, draft.reply_body, draft.updated_at = body, reply, now
 
 
 def mark_posted(library: Library, draft_id: int, posted_at: str) -> list[str]:

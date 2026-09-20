@@ -159,3 +159,51 @@ document.addEventListener("submit", (event) => {
 window.addEventListener("pageshow", (event) => {
   if (event.persisted && aiBusy && !aiBusy.hidden) location.reload();
 });
+
+// Draft posts: character counters and copy buttons. A link counts as 23 characters, like on X
+// (the same rule as post_length in subculture/drafts/domain/posts.py).
+const X_URL_LENGTH = 23;
+const postLength = (text) => text.replace(/https?:\/\/\S+/g, "x".repeat(X_URL_LENGTH)).length;
+
+const updatePostCount = (counter) => {
+  const source = document.getElementById(counter.dataset.countFor);
+  if (!source) return;
+  const limit = Number(counter.dataset.limit) || 0;
+  const length = postLength(source.value ?? source.textContent);
+  counter.textContent = limit ? `${length} / ${limit}자` : `${length}자`;
+  counter.classList.toggle("is-over", limit > 0 && length > limit);
+};
+document.querySelectorAll("[data-count-for]").forEach(updatePostCount);
+document.addEventListener("input", (event) => {
+  if (!event.target.matches("textarea[id]")) return;
+  document.querySelectorAll(`[data-count-for="${event.target.id}"]`).forEach(updatePostCount);
+});
+
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const scratch = document.createElement("textarea");
+    scratch.value = text;
+    scratch.style.position = "fixed";
+    scratch.style.opacity = "0";
+    document.body.appendChild(scratch);
+    scratch.select();
+    try {
+      return document.execCommand("copy");
+    } finally {
+      scratch.remove();
+    }
+  }
+};
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-copy-target]");
+  if (!button) return;
+  const source = document.getElementById(button.dataset.copyTarget);
+  if (!source) return;
+  const original = button.textContent;
+  button.textContent = (await copyText((source.value ?? source.textContent).trim())) ? "복사됨" : "복사 실패";
+  setTimeout(() => { button.textContent = original; }, 1500);
+});

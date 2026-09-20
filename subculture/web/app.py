@@ -12,8 +12,9 @@ from subculture.shared.firebase_client import get_db
 from subculture.collection.application.manual_entry import add_manual_content
 from subculture.library.interface.erd import build_erd
 from subculture.shared.content_model import ANGLES, CATEGORIES, SOURCE_TIERS, STATUSES, category_collection, content_id, content_ref
+from subculture.drafts.domain.posts import BODY_TARGET, post_length
 from subculture.drafts.domain.rules import DraftError
-from subculture.drafts.application.drafts import create_draft, delete_draft, list_drafts, publish_draft, save_body
+from subculture.drafts.application.drafts import create_draft, delete_draft, list_drafts, publish_draft, save_posts
 from subculture.library.infrastructure.database import SchemaError
 from subculture.library.infrastructure.local_library import Library
 from subculture.collection.infrastructure.sources_config import load_sources
@@ -242,6 +243,8 @@ def drafts_page():
         draft_status_labels=DRAFT_STATUS_LABELS,
         list_status=status,
         work_options=work_options,
+        body_target=BODY_TARGET,
+        post_length=post_length,
     )
 
 
@@ -297,11 +300,11 @@ def create_work_ai_draft_item():
 @app.post("/drafts/<int:draft_id>/body")
 def save_draft_body(draft_id):
     try:
-        save_body(local_library(), draft_id, request.form.get("body", ""))
+        save_posts(local_library(), draft_id, request.form.get("body", ""), request.form.get("reply", ""))
     except DraftError as exc:
         flash(str(exc), "error")
     else:
-        flash("본문을 저장했습니다.", "success")
+        flash("본문과 댓글을 저장했습니다.", "success")
     return redirect(drafts_list_url())
 
 
