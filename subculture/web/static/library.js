@@ -8,6 +8,26 @@ taxonomy?.addEventListener("change", () => {
   }
 });
 
+const workSearch = document.getElementById("work-search");
+const workSearchEmpty = document.getElementById("work-search-empty");
+const workRows = () => [...document.querySelectorAll(".work-row")];
+const normalizeSearch = (value) => value.toLowerCase().replace(/\s+/g, "");
+const filterWorks = () => {
+  if (!workSearch) return;
+  const query = normalizeSearch(workSearch.value);
+  let visible = 0;
+  for (const row of workRows()) {
+    const match = !query || normalizeSearch(row.dataset.search || "").includes(query);
+    row.hidden = !match;
+    if (match) visible += 1;
+  }
+  if (workSearchEmpty) workSearchEmpty.hidden = !query || visible > 0;
+};
+workSearch?.addEventListener("input", filterWorks);
+workSearch?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") event.preventDefault();
+});
+
 const selectAll = document.getElementById("library-select-all");
 const selectedCount = document.getElementById("library-selected-count");
 const itemBoxes = () => [...document.querySelectorAll(".library-item-select")];

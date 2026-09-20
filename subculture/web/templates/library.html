@@ -16,19 +16,24 @@
   {% include "_flash.html" %}
   <div class="library-grid">
     <aside class="library-side">
-      <section class="library-panel"><h2>작품·IP</h2>
+      <section class="library-panel library-works-panel"><h2>작품·IP</h2>
         <a class="library-link {% if not active and not collection %}selected{% endif %}" href="{{ url_for('library.index') }}">전체 소재</a>
         <a class="library-link {% if filters.unclassified %}selected{% endif %}" href="{{ url_for('library.index', unclassified='1') }}">작품 미분류</a>
         <hr class="library-divider">
+        {% if terms.works %}
+        <input type="search" id="work-search" placeholder="작품·IP 검색" aria-label="작품·IP 검색" autocomplete="off">
         <div class="work-list">
           {% for work in terms.works %}
-          <div class="work-row">
+          <div class="work-row" data-search="{{ work.name }} {{ work.aliases }}">
             <a class="library-link {% if filters.works == work.id|string %}selected{% endif %}" href="{{ url_for('library.index', works=work.id) }}">{{ work.name }}</a>
             <a class="work-edit" href="{{ url_for('library.work_edit', work_id=work.id) }}" aria-label="{{ work.name }} 편집">편집</a>
           </div>
           {% endfor %}
         </div>
-        {% if not terms.works %}<p>분류 사전에서 작품을 먼저 추가하거나 <code>python seed_works.py</code>를 실행하세요.</p>{% endif %}
+        <p class="work-search-empty" id="work-search-empty" hidden>일치하는 작품 없음</p>
+        {% else %}
+        <p>분류 사전에서 작품을 먼저 추가하거나 <code>python seed_works.py</code>를 실행하세요.</p>
+        {% endif %}
       </section>
       <section class="library-panel"><h2>기획 묶음</h2>
         {% for group in collections %}<a class="library-link {% if collection and collection.id == group.id %}selected{% endif %}" href="{{ url_for('library.index', collection=group.id) }}">{{ group.name }}</a>{% endfor %}

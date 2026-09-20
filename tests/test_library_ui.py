@@ -100,6 +100,14 @@ class LibraryUiTests(unittest.TestCase):
             self.assertNotIn("library-header", html)
             self.assertNotIn("library-message", html)
 
+    def test_work_sidebar_exposes_search_and_alias_data(self):
+        self.lib.save_term("works", "프리렌", aliases="Frieren")
+        html = self.client.get("/library").get_data(as_text=True)
+        self.assertIn('id="work-search"', html)
+        self.assertIn('data-search="프리렌 Frieren"', html)
+        self.assertIn('id="work-search-empty"', html)
+        self.assertIn("library-works-panel", html)
+
 
 if __name__ == "__main__":
     unittest.main()
