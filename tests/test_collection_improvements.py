@@ -454,6 +454,19 @@ class KeywordMatchTests(unittest.TestCase):
             "Re:제로",
         )
 
+    def test_space_stripped_shop_titles_match_catalog_aliases(self):
+        # Shop titles omit or keep spaces; catalog keeps both forms as keywords.
+        cases = (
+            ("체인소 맨 하이 프리미엄 피규어", "체인소 맨"),
+            ("체인소맨 레제 넨도로이드", "체인소맨"),
+            ("붕괴스타레일 효광 미토스", "붕괴스타레일"),
+            ("귀멸의칼날 토미오카기유", "귀멸의칼날"),
+            ("블루아카이브 아로나", "블루아카이브"),
+        )
+        for title, keyword in cases:
+            with self.subTest(title=title, keyword=keyword):
+                self.assertEqual(match_keyword(normalized(title), keyword), keyword)
+
     def test_genshin_is_in_the_catalog_and_links_hoyoverse_titles(self):
         from subculture.library.application import seed_works
         with tempfile.TemporaryDirectory() as directory:
@@ -470,6 +483,30 @@ class KeywordMatchTests(unittest.TestCase):
             works = {w["name"]: w["id"] for w in library.terms()["works"]}
             rows, _ = library.items({"works": str(works["원신"])})
             self.assertEqual([row["id"] for row in rows], ["FIGURE:g"])
+
+    def test_azur_lane_is_in_the_catalog_and_links_shop_titles(self):
+        from subculture.library.application import seed_works
+        with tempfile.TemporaryDirectory() as directory:
+            library = Library(Path(directory) / "library.sqlite3")
+            cloud = Mock()
+            cloud.collection_group.return_value.stream.return_value = iter([
+                SimpleNamespace(
+                    id="a",
+                    reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
+                    to_dict=lambda: {
+                        "url": "https://s.example.com/a",
+                        "title": "[예약]벽람항로 아주르 레인 키어사지 피규어",
+                        "source": "따빼몰",
+                    },
+                ),
+            ])
+            library.sync(cloud)
+            created, linked = seed_works.seed(library)
+            self.assertGreater(created, 0)
+            self.assertEqual(linked, 1)
+            works = {w["name"]: w["id"] for w in library.terms()["works"]}
+            rows, _ = library.items({"works": str(works["벽람항로"])})
+            self.assertEqual([row["id"] for row in rows], ["FIGURE:a"])
 
     def test_unmatched_report_summarises_unlinked_items_by_source(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -129,6 +129,7 @@ works:
     aliases:
       - 투러브 트러블 다크니스
       - 투러브 트러블
+      - 투러브트러블
       - To LOVEる
       - To LOVE
       - とらぶる
@@ -141,6 +142,7 @@ works:
     aliases:
       - 붕괴 스타레일
       - 붕괴:스타레일
+      - 붕괴스타레일
       - Honkai Star Rail
       - 崩壊スターレイル
       - Star Rail
@@ -154,6 +156,7 @@ works:
       - ZZZ
   - name: 동방 프로젝트
     aliases:
+      - 동방프로젝트
       - Touhou
       - 東方
   - name: 우마무스메 프리티 더비
@@ -163,6 +166,7 @@ works:
       - ウマ娘
   - name: "BanG Dream!"
     aliases:
+      - BanG Dream
       - 뱅드림
       - バンドリ
       - Girls Band Party
@@ -174,27 +178,35 @@ works:
       - Vocaloid
   - name: 체인소맨
     aliases:
+      - 체인소 맨
       - Chainsaw Man
       - チェンソーマン
   - name: 블루록
     aliases:
+      - 블루 록
       - Blue Lock
       - ブルーロック
   - name: "승리의 여신: 니케"
     aliases:
       - 승리의 여신 니케
+      - 승리의여신니케
+      - 승리의여신 니케
       - Goddess of Victory Nikke
       - NIKKE
   - name: NEEDY GIRL OVERDOSE
     aliases:
       - 니디 걸 오버도즈
+      - 니디걸 오버도즈
+      - 니디걸오버도즈
       - Needy Girl Overdose
   - name: 브라운더스트 2
     aliases:
+      - 브라운더스트2
       - Brown Dust 2
       - ブラウンダスト2
   - name: 페르소나 4
     aliases:
+      - 페르소나4
       - Persona 4
       - ペルソナ4
   - name: 주술회전
@@ -203,16 +215,20 @@ works:
       - 呪術廻戦
   - name: 고블린 슬레이어
     aliases:
+      - 고블린슬레이어
       - Goblin Slayer
       - ゴブリンスレイヤー
   - name: High School DxD
     aliases:
       - "하이 스쿨 D×D"
       - 하이 스쿨 DxD
+      - 하이스쿨DXD
+      - 하이스쿨DxD
       - "ハイスクールD×D"
   - name: FINAL FANTASY
     aliases:
       - 파이널 판타지
+      - 파이널판타지
       - Final Fantasy
       - ファイナルファンタジー
   - name: 학원 아이돌마스터
@@ -254,14 +270,17 @@ works:
       - 가구야 공주
   - name: 블루 아카이브
     aliases:
+      - 블루아카이브
       - Blue Archive
       - ブルーアーカイブ
   - name: 귀멸의 칼날
     aliases:
+      - 귀멸의칼날
       - 鬼滅の刃
       - Demon Slayer
   - name: 나의 히어로 아카데미아
     aliases:
+      - 나의히어로아카데미아
       - 僕のヒーローアカデミア
       - My Hero Academia
       - 히로아카
@@ -284,6 +303,7 @@ works:
       - 유희왕 듀얼 몬스터즈 GX
   - name: 마징가 Z
     aliases:
+      - 마징가Z
       - マジンガーZ
       - Mazinger Z
   - name: 아카메가 벤다
@@ -302,6 +322,7 @@ works:
       - Dark Moon
   - name: 모노가타리 시리즈
     aliases:
+      - 모노가타리
       - モノガタリ
       - 바케모노가타리
       - 化物語
@@ -325,3 +346,294 @@ works:
     aliases:
       - 薬屋のひとりごと
       - The Apothecary Diaries
+  # Gaps from unmatched shop / AniList / Laftel titles (2026-09)
+  - name: 벽람항로
+    aliases:
+      - 아주르레인
+      - Azur Lane
+      - アズールレーン
+  - name: 명일방주
+    aliases:
+      - Arknights
+      - アークナイツ
+  - name: "퍼니싱: 그레이 레이븐"
+    aliases:
+      - 퍼니싱 그레이 레이븐
+      - 퍼니싱그레이레이븐
+      - Punishing Gray Raven
+      - Punishing: Gray Raven
+      - PGR
+  - name: "워해머 40,000"
+    aliases:
+      - 워해머
+      - 워해머40K
+      - 워해머40
+      - Warhammer
+      - Warhammer 40K
+      - 호루스 헤러시
+      - 호루스헤러시
+  - name: 페르소나 3
+    aliases:
+      - 페르소나3
+      - Persona 3
+      - ペルソナ3
+  - name: 킹 오브 파이터즈
+    aliases:
+      - 킹오브파이터즈
+      - 더킹오브파이터즈
+      - The King of Fighters
+      - KOF
+  - name: 기동전사 건담
+    aliases:
+      - 건담
+      - Gundam
+      - 機動戦士ガンダム
+  - name: Fate 시리즈
+    aliases:
+      - 페이트
+      - 페이트그랜드오더
+      - 페이트 그랜드 오더
+      - 페이트 스테이 나이트
+      - Fate/Grand Order
+      - Fate/stay night
+      - Fate/kaleid
+      - FGO
+      - 프리즈마 일리야
+  - name: 치이카와
+    aliases:
+      - 치카와
+      - 먼작귀
+      - Chiikawa
+      - ちいかわ
+  - name: 스타크래프트
+    aliases:
+      - StarCraft
+      - Star Craft
+  - name: 홀로라이브
+    aliases:
+      - Hololive
+      - ホロライブ
+  - name: HALO
+    aliases:
+      - 헤일로
+      - Halo
+  - name: 원펀맨
+    aliases:
+      - 원 펀맨
+      - One Punch Man
+      - ワンパンマン
+  - name: 그 비스크 돌은 사랑을 한다
+    aliases:
+      - 그비스크돌은사랑을한다
+      - 비스크 돌
+      - My Dress-Up Darling
+      - その着せ替え人形は恋をする
+  - name: 오버로드
+    aliases:
+      - Overlord
+      - オーバーロード
+  - name: 봇치 더 록
+    aliases:
+      - 봇치 더 락
+      - Bocchi the Rock
+      - ぼっち・ざ・ろっく
+  - name: HUNTER×HUNTER
+    aliases:
+      - 헌터X헌터
+      - 헌터×헌터
+      - Hunter x Hunter
+  - name: 명탐정 코난
+    aliases:
+      - Detective Conan
+      - 名探偵コナン
+  - name: 케이온!
+    aliases:
+      - 케이온
+      - K-On
+      - けいおん
+  - name: 요스가노소라
+    aliases:
+      - Yosuga no Sora
+      - ヨスガノソラ
+  - name: 신세기 에반게리온
+    aliases:
+      - 에반게리온
+      - Evangelion
+      - 新世紀エヴァンゲリオン
+  - name: 소녀전선
+    aliases:
+      - Girls' Frontline
+      - ドールズフロントライン
+  - name: 사이버펑크 엣지러너
+    aliases:
+      - 사이버펑크엣지러너
+      - Cyberpunk Edgerunners
+      - サイバーパンク エッジランナーズ
+  - name: 몬스터 헌터
+    aliases:
+      - Monster Hunter
+      - モンスターハンター
+  - name: 나 혼자만 레벨업
+    aliases:
+      - 나혼자만레벨업
+      - Solo Leveling
+      - 俺だけレベルアップな件
+  - name: 라스트 오리진
+    aliases:
+      - 라스트오리진
+      - Last Origin
+  - name: 단다단
+    aliases:
+      - Dandadan
+      - ダンダダン
+  - name: 5등분의 신부
+    aliases:
+      - 5등분의신부
+      - The Quintessential Quintuplets
+      - 五等分の花嫁
+  - name: 데이트 어 라이브
+    aliases:
+      - 데이트어라이브
+      - Date A Live
+      - デート・ア・ライブ
+  - name: 함대 컬렉션
+    aliases:
+      - 칸코레
+      - Kantai Collection
+      - 艦隊これくしょん
+  - name: 최애의 아이
+    aliases:
+      - 최애의아이
+      - Oshi no Ko
+      - 【推しの子】
+  - name: 하이큐!!
+    aliases:
+      - 하이큐
+      - Haikyuu
+      - ハイキュー
+  - name: "프린세스 커넥트! Re:Dive"
+    aliases:
+      - 프린세스 커넥트
+      - Princess Connect
+      - プリンセスコネクト
+  - name: 마법소녀 마도카☆마기카
+    aliases:
+      - 마도카
+      - Madoka Magica
+      - 魔法少女まどか☆マギカ
+  - name: 제로의 사역마
+    aliases:
+      - Zero no Tsukaima
+      - ゼロの使い魔
+  - name: 헬테이커
+    aliases:
+      - Helltaker
+  - name: 제노블레이드
+    aliases:
+      - Xenoblade
+      - ゼノブレイド
+  - name: 카논
+    aliases:
+      - Kanon
+  - name: 트릭컬 리바이브
+    aliases:
+      - 트릭컬
+      - Trickcal
+  - name: 파이브 스타 스토리
+    aliases:
+      - 파이브스타스토리
+      - The Five Star Stories
+      - ファイブスター物語
+  - name: 강철의 연금술사
+    aliases:
+      - 강철의연금술사
+      - Fullmetal Alchemist
+      - 鋼の錬金術師
+  - name: 우자키양은 놀고싶어
+    aliases:
+      - 우자키양은놀고싶어
+      - Uzaki-chan Wants to Hang Out
+      - 宇崎ちゃんは遊びたい
+  - name: 도쿄 구울
+    aliases:
+      - 도쿄구울
+      - Tokyo Ghoul
+      - 東京喰種
+  - name: 던전에서 만남을 추구하면 안 되는 걸까
+    aliases:
+      - 던전에서만남을추구하면안되는걸까
+      - 던만추
+      - DanMachi
+      - ダンジョンに出会いを求めるのは間違っているだろうか
+  - name: 아이돌마스터
+    aliases:
+      - Idolmaster
+      - THE IDOLM@STER
+      - アイドルマスター
+  - name: 학생회에도 구멍이 있어요
+    aliases:
+      - 학생회에도구멍은있다
+      - 生徒会にも穴はある
+  - name: 내 마음의 위험한 녀석
+    aliases:
+      - The Danger in My Heart
+      - 僕の心のヤバイやつ
+  - name: 마법소녀를 동경해서
+    aliases:
+      - Gushing over Magical Girls
+      - 魔法少女にあこがれて
+  - name: 거짓말쟁이 게임
+    aliases:
+      - LIAR GAME
+      - ライアーゲーム
+  - name: 지하라 씨, 광산인가요?
+    aliases:
+      - 地雷なんですか？地原さん
+  - name: 오빠들한테 미안해.
+    aliases:
+      - うちの弟どもがすみません
+  - name: 포켓몬
+    aliases:
+      - 포켓몬스터
+      - Pokemon
+      - Pokémon
+      - ポケットモンスター
+  - name: 마법에 걸렸습니다! 이루마군
+    aliases:
+      - 이루마군
+      - Welcome to Demon School Iruma-kun
+      - 魔入りました！入間くん
+  - name: 오니 신부
+    aliases:
+      - Bride of the Oni
+      - 鬼の花嫁
+  - name: 환승 목적지의 아름다운 소녀는 소년 시절 함께 놀던 어릴 적 친구였습니다.
+    aliases:
+      - 転校先の清楚可憐な美少女が、昔男子と思って一緒に遊んだ幼馴染だった件
+  - name: 도망을 잘 치는 도련님
+    aliases:
+      - 가출 와카쿤
+      - The Elusive Samurai
+      - 逃げ上手の若君
+  - name: 하노리상은 환생하더라도 싸우고 싶어한다
+    aliases:
+      - 花織さんは転生しても喧嘩がしたい
+  - name: 이걸 그리고 죽어라
+    aliases:
+      - 이거 그리고 죽어
+      - Draw This and Die
+      - これ描いて死ね
+  - name: 세계에서 가장 강력한 후위대
+    aliases:
+      - 世界最強の後衛 ～迷宮国の新人探索者～
+  - name: 왕좌 전투와 무능의 어둠 속에서 가장 강력한 왕자를 연기하는 SS 등급의 왕자는 그림자로부터 왕좌를 차지하기 위한 전투를 지배합니다.
+    aliases:
+      - 最強出涸らし皇子の暗躍帝位争い
+  - name: 탐정은 이미 죽었어.
+    aliases:
+      - The Detective Is Already Dead
+      - 探偵はもう、死んでいる
+  - name: 천막의 자두가르
+    aliases:
+      - Jadugar
+      - 天幕のジャードゥーガル
