@@ -29,6 +29,8 @@ MANIAHOUSE_IN_STOCK = SOURCES["마니아하우스 입고완료"]
 HEROTIME = SOURCES["헤로타임 최신예약"]
 DOKI = SOURCES["도키도키굿즈 신상품"]
 DAEWON = SOURCES["대원샵 상품(439827)"]
+ARTPLEX = SOURCES["아트플렉스 전체 상품"]
+ITTAN = SOURCES["이딴가게 신규입고"]
 NAVER_STORE_HOSTS = {"brand.naver.com", "smartstore.naver.com"}
 NAVER_STORES = [SOURCES[name] for name in ("메가하우스 몰 입고 상품", "메가하우스 몰 예약 상품", "코토부키야 몰")]
 
@@ -333,6 +335,115 @@ DAEWON_LIST = """
   <div class="float-icon"><i class="soldout">품절</i></div>
   <div class="func-wrap"><a class="prd-link" href="/product/detail/132787597"></a><div class="btn-wrap"><a class="winopen">새창</a><a class="wish">찜</a><a class="basket">장바구니</a></div></div></div>
 </div>"""
+
+
+# artplex.co.kr category 50: Cafe24 skin whose card is <li id="anchorBoxId_N">; a hidden "상품명 :" label, a 상품요약정보 line
+# ("26년 10월 입고 예정"), the selling price and a lower 최적할인가 (coupon price) follow. Protocol-relative photo links.
+ARTPLEX_LIST = """
+<ul class="prdList s16-product-grid">
+<li id="anchorBoxId_40511" class="s16-product-item xans-record-"><div class="prdList__item s16-product-card">
+ <div class="thumbnail s16-card-image"><a href="/product/붕괴-스타레일-공식-정품-굿즈-파이논-엘리트-게임패드-호화판/40511/category/50/display/1/"><img src="//ecimg.cafe24img.com/pg692b/artplex/web/product/medium/20260918/b855.jpg" alt="게임패드" loading="lazy"></a>
+  <div class="icon__box"><span class="wish"><img src="//img.echosting.cafe24.com/design/skin/admin/ko_KR/btn_wish_before.png" alt="관심상품 등록 전"></span><img src="//img.echosting.cafe24.com/design/skin/admin/ko_KR/btn_list_cart.gif" alt="장바구니 담기"></div></div>
+ <div class="description s16-card-info" ec-data-price="285100"><div class="name s16-product-name"><a href="/product/붕괴-스타레일-공식-정품-굿즈-파이논-엘리트-게임패드-호화판/40511/category/50/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>붕괴 스타레일 공식 정품 굿즈 파이논 엘리트 게임패드 호화판</span></a></div>
+  <ul class="spec"><li><strong class="title displaynone"><span>상품요약정보</span> :</strong> <span>26년 10월 입고 예정</span></li>
+  <li><strong class="title displaynone"><span>판매가</span> :</strong> <span>285,100원</span></li>
+  <li><strong class="title"><span>최적할인가</span> :</strong> <span>283,100원</span></li></ul></div></div></li>
+<li id="anchorBoxId_40508" class="s16-product-item xans-record-"><div class="prdList__item s16-product-card">
+ <div class="thumbnail s16-card-image"><a href="/product/붕괴-스타레일-공식-정품-굿즈-완매-1-7-피규어-전시-케이스/40508/category/50/display/1/"><img src="//ecimg.cafe24img.com/pg692b/artplex/web/product/medium/20260918/c001.jpg" alt="전시 케이스"></a></div>
+ <div class="description s16-card-info"><div class="name s16-product-name"><a href="/product/붕괴-스타레일-공식-정품-굿즈-완매-1-7-피규어-전시-케이스/40508/category/50/display/1/"><span>붕괴 스타레일 공식 정품 굿즈 완매 1/7 피규어 전시 케이스</span></a></div>
+  <ul class="spec"><li><span>27년 4월 출하 예정</span></li><li><strong class="title displaynone"><span>판매가</span> :</strong> <span>160,200원</span></li></ul></div></div></li>
+<li id="anchorBoxId_40001" class="s16-product-item xans-record-"><div class="prdList__item s16-product-card">
+ <div class="thumbnail s16-card-image"><a href="/product/리버스-1999-공식-정품-굿즈-컬러풀-아크릴-스탠드/40001/category/50/display/1/"><img src="//ecimg.cafe24img.com/pg692b/artplex/web/product/medium/20260801/d002.jpg" alt="아크릴"></a></div>
+ <div class="description s16-card-info"><div class="name s16-product-name"><a href="/product/리버스-1999-공식-정품-굿즈-컬러풀-아크릴-스탠드/40001/category/50/display/1/"><span>리버스 1999 공식 정품 굿즈 컬러풀 아크릴 스탠드</span></a></div>
+  <ul class="spec"><li><strong class="title displaynone"><span>판매가</span> :</strong> <span>9,300원</span></li></ul></div></div></li>
+</ul>"""
+
+# ittanstore.com category 25: Cafe24 card with a thumbnail block and a span.name link; some cards list a struck-through 소비자가
+# before the 판매가, and dispatch dates sit in the title as "[10월 8일 발송예정]".
+ITTAN_LIST = """
+<ul class="prdList grid4">
+<li id="anchorBoxId_45563" class="xans-record-"><div class="thumbnail"><a href="/product/반프레스토-원피스-그란디스타-피규어-몽키-d-루피-기어5-3탄/45563/category/25/display/1/" name="anchorBoxName_45563"><img src="//ittanstore.com/web/product/medium/202602/8151.jpg" alt="루피"></a></div>
+ <div class="description"><div class="icon"><div class="promotion"><img src="/web/upload/icon_new.png" alt="New"></div></div>
+  <span class="name"><a href="/product/반프레스토-원피스-그란디스타-피규어-몽키-d-루피-기어5-3탄/45563/category/25/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>반프레스토 원피스 그란디스타 피규어 몽키 D 루피 기어5 3탄</span></a></span>
+  <ul class="spec"><li><strong class="title displaynone"><span>소비자가</span> :</strong> <span style="text-decoration:line-through;">26,000원</span></li>
+  <li><strong class="title displaynone"><span>판매가</span> :</strong> <span>23,000원</span></li></ul></div></li>
+<li id="anchorBoxId_45683" class="xans-record-"><div class="thumbnail"><a href="/product/메가하우스-은혼-gem-피규어-테노히라-시리즈-오키타-소고-오키타상/45683/category/25/display/1/"><img src="//ittanstore.com/web/product/medium/202609/1586.jpg" alt="오키타"></a></div>
+ <div class="description"><span class="name"><a href="/product/메가하우스-은혼-gem-피규어-테노히라-시리즈-오키타-소고-오키타상/45683/category/25/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>[10월 8일 발송예정] 메가하우스 은혼 GEM 피규어 테노히라 시리즈 오키타 소고 오키타상</span></a></span>
+  <ul class="spec"><li><strong class="title displaynone"><span>판매가</span> :</strong> <span>80,000원</span></li></ul></div></li>
+<li id="anchorBoxId_45500" class="xans-record-"><div class="thumbnail"><a href="/product/타이토-하츠네-미쿠-네코미미-고양이-티셔츠버전/45500/category/25/display/1/"><img src="//ittanstore.com/web/product/medium/202609/aaaa.jpg" alt="미쿠"></a></div>
+ <div class="description"><span class="name"><a href="/product/타이토-하츠네-미쿠-네코미미-고양이-티셔츠버전/45500/category/25/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>타이토 Desktop Cute 하츠네미쿠 네코미미 고양이 티셔츠버전</span></a></span>
+  <ul class="spec"><li><strong class="title displaynone"><span>판매가</span> :</strong> <span>27,000원</span></li></ul>
+  <img src="//img.echosting.cafe24.com/design/skin/admin/ko_KR/ico_product_soldout.gif" alt="품절"></div></li>
+</ul>"""
+
+
+class ArtplexListTests(unittest.TestCase):
+    def items(self):
+        return list(extract_links(ARTPLEX_LIST, ARTPLEX["url"], ARTPLEX))
+
+    def test_seo_links_become_product_no_urls_with_the_bare_title_and_photo(self):
+        items = self.items()
+        self.assertEqual([item["url"] for item in items], [
+            "https://artplex.co.kr/product/detail.html?product_no=40511",
+            "https://artplex.co.kr/product/detail.html?product_no=40508",
+            "https://artplex.co.kr/product/detail.html?product_no=40001",
+        ])
+        self.assertEqual(items[0]["title"], "붕괴 스타레일 공식 정품 굿즈 파이논 엘리트 게임패드 호화판")  # hidden label stripped
+        self.assertEqual(items[1]["title"], "붕괴 스타레일 공식 정품 굿즈 완매 1/7 피규어 전시 케이스")
+        self.assertEqual(items[0]["imageUrl"], "https://ecimg.cafe24img.com/pg692b/artplex/web/product/medium/20260918/b855.jpg")
+
+    def test_price_is_the_selling_price_not_the_coupon_price(self):
+        first, second, third = self.items()
+        self.assertEqual((first["price"], second["price"], third["price"]), (285100, 160200, 9300))
+        self.assertEqual(first["shop"], "아트플렉스")
+
+    def test_arrival_and_shipping_notices_are_preorders_and_the_rest_in_stock(self):
+        first, second, third = self.items()
+        self.assertEqual(first["saleStatus"], "PREORDER")  # "입고 예정"
+        self.assertEqual(second["saleStatus"], "PREORDER")  # "출하 예정"
+        self.assertEqual(third["saleStatus"], "IN_STOCK")
+
+    def test_source_is_an_automatic_list_only_robots_checked_cafe24_html(self):
+        self.assertEqual(ARTPLEX["url"], "https://artplex.co.kr/category/%EC%A0%84%EC%B2%B4-%EC%83%81%ED%92%88/50/")
+        self.assertNotIn("filter", ARTPLEX["url"])  # robots.txt disallows ?filter=
+        self.assertIn(ARTPLEX, automatic_sources())
+        self.assertTrue(ARTPLEX["respect_robots"])
+        self.assertTrue(ARTPLEX["list_product_mode"])
+        self.assertFalse(ARTPLEX.get("product_mode"))
+        self.assertEqual(ARTPLEX["category"], "GOODS")
+
+
+class IttanstoreListTests(unittest.TestCase):
+    def items(self):
+        return list(extract_links(ITTAN_LIST, ITTAN["url"], ITTAN))
+
+    def test_seo_links_become_product_no_urls_with_the_bare_title(self):
+        items = self.items()
+        self.assertEqual([item["url"] for item in items], [
+            "https://ittanstore.com/product/detail.html?product_no=45563",
+            "https://ittanstore.com/product/detail.html?product_no=45683",
+            "https://ittanstore.com/product/detail.html?product_no=45500",
+        ])
+        self.assertEqual(items[0]["title"], "반프레스토 원피스 그란디스타 피규어 몽키 D 루피 기어5 3탄")
+        self.assertTrue(items[1]["title"].startswith("[10월 8일 발송예정] 메가하우스"))  # the dispatch tag is kept
+        self.assertEqual(items[0]["imageUrl"], "https://ittanstore.com/web/product/medium/202602/8151.jpg")
+
+    def test_price_is_the_selling_price_and_stocked_cards_are_not_preorders(self):
+        first, second, _ = self.items()
+        self.assertEqual((first["price"], second["price"]), (23000, 80000))  # not the struck-through 소비자가
+        self.assertEqual((first["saleStatus"], second["saleStatus"]), ("IN_STOCK", "IN_STOCK"))  # 발송예정 is not 예약
+        self.assertEqual(first["shop"], "이딴가게")
+
+    def test_a_sold_out_icon_marks_the_card_sold_out(self):
+        self.assertEqual(self.items()[2]["saleStatus"], "SOLD_OUT")
+
+    def test_source_is_an_automatic_list_only_robots_checked_cafe24_html(self):
+        self.assertEqual(ITTAN["url"], "https://ittanstore.com/category/%EC%8B%A0%EA%B7%9C-%EC%9E%85%EA%B3%A0/25/")
+        self.assertIn(ITTAN, automatic_sources())
+        self.assertTrue(ITTAN["respect_robots"])
+        self.assertTrue(ITTAN["list_product_mode"])
+        self.assertFalse(ITTAN.get("product_mode"))
+        self.assertEqual(ITTAN["category"], "FIGURE")
 
 
 class HerotimeListTests(unittest.TestCase):
