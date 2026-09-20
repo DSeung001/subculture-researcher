@@ -88,19 +88,28 @@ def visible_text(soup: BeautifulSoup) -> str:
     return soup.get_text("\n", strip=True)
 
 
+def _card_text(node, source: dict) -> str:
+    """Visible text of a list card. `card_alt_text: true` adds its images' alt text, for shops that
+    mark sold-out only with an icon (e.g. <img alt="품절">), which get_text() never sees."""
+    text = node.get_text(" ", strip=True)
+    if source.get("card_alt_text"):
+        text += " " + " ".join(img.get("alt") or "" for img in node.select("img"))
+    return " ".join(text.split())
+
+
 def list_product_fields(anchor, source: dict, base_url: str, image_url: str | None) -> dict:
     """Price and sale status read from the list card itself, so no detail request is needed.
 
     The link's own text is used when it already carries the price (whole card is the
     link); otherwise the item's card — the widest ancestor holding only this item's link.
     """
-    fields = extract_product_fields(source, " ".join(anchor.get_text(" ", strip=True).split()), image_url)
+    fields = extract_product_fields(source, _card_text(anchor, source), image_url)
     if fields:
         return fields
     card = card_of(anchor, source.get("link_selector", "a[href]"), base_url)
     if card is None:
         return {}
-    return extract_product_fields(source, " ".join(card.get_text(" ", strip=True).split()), image_url)
+    return extract_product_fields(source, _card_text(card, source), image_url)
 
 
 def extract_links(html: str, base_url: str, source: dict):

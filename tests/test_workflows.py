@@ -290,6 +290,16 @@ class WorkflowTests(unittest.TestCase):
                 self.assertEqual(normalize_url(url), comics)
         template = "https://comics-art.co.kr/product/{$url}"
         self.assertEqual(normalize_url(template), template)  # the unfilled skin template keeps no product_no
+        for host, product_no, path in (
+            ("herotime.co.kr", 76677, "/product/블리츠웨이-카보틱스-마징가z-보스보로트/76677/category/51/display/1/"),
+            ("dokidokigoods.co.kr", 176907, "/product/detail.html?product_no=176907&cate_no=28&display_group=3"),
+        ):
+            for prefix in ("", "www.", "m."):
+                with self.subTest(host=prefix + host):
+                    self.assertEqual(
+                        normalize_url(f"https://{prefix}{host}{path}"),
+                        f"https://{host}/product/detail.html?product_no={product_no}",
+                    )
         maniahouse = "https://maniahouse.co.kr/product/detail.html?product_no=25843"
         for url in (
             "https://maniahouse.co.kr/product/detail.html?product_no=25843&cate_no=45&display_group=1",

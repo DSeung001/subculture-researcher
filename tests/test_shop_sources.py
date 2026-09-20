@@ -26,6 +26,9 @@ COMICS_ART_NEW = SOURCES["코믹스아트 신작 상품"]
 COMICS_ART_IN_STOCK = SOURCES["코믹스아트 입고 완료 당일 발송"]
 MANIAHOUSE_PREORDER = SOURCES["마니아하우스 예약상품"]
 MANIAHOUSE_IN_STOCK = SOURCES["마니아하우스 입고완료"]
+HEROTIME = SOURCES["헤로타임 최신예약"]
+DOKI = SOURCES["도키도키굿즈 신상품"]
+DAEWON = SOURCES["대원샵 상품(439827)"]
 NAVER_STORE_HOSTS = {"brand.naver.com", "smartstore.naver.com"}
 NAVER_STORES = [SOURCES[name] for name in ("메가하우스 몰 입고 상품", "메가하우스 몰 예약 상품", "코토부키야 몰")]
 
@@ -282,6 +285,142 @@ class ComicsArtListTests(unittest.TestCase):
                 self.assertTrue(source["list_product_mode"])
                 self.assertFalse(source.get("product_mode"))  # detail pages always carry a "예약주문" button
                 self.assertEqual(source["category"], "FIGURE")
+
+
+# herotime.co.kr list (cate_no=51): Cafe24 cards like comics-art; the name link may or may not carry a hidden "상품명 :" label.
+HEROTIME_LIST = """
+<ul class="prdList">
+ <li class="item"><div class="prdImg"><a href="/product/블리츠웨이-카보틱스-마징가z-보스보로트/76677/category/51/display/1/"><img src="//herotime.co.kr/web/product/medium/202609/e2e9.jpg" alt="블리츠웨이"></a></div>
+  <img src="/web/upload/custom_3017421942056367.png" alt="">
+  <div class="description"><strong class="name"><a href="/product/블리츠웨이-카보틱스-마징가z-보스보로트/76677/category/51/display/1/"><span class="title displaynone"><span>상품명</span> :</span> <span>블리츠웨이 카보틱스 마징가Z 보스보로트</span></a></strong>
+  <ul><li><strong>판매가 :</strong> <span>389,000원</span></li><li><strong>마감 :</strong> <span>10월 12일</span></li><li><strong>발매 :</strong> <span>26년 12월</span></li></ul></div></li>
+ <li class="item"><div class="prdImg"><a href="/product/앨리스-글린트-고블린-슬레이어2-엘프/76650/category/51/display/1/"><img src="//herotime.co.kr/web/product/medium/202609/c599.jpg"></a></div>
+  <div class="description"><strong class="name"><a href="/product/앨리스-글린트-고블린-슬레이어2-엘프/76650/category/51/display/1/">앨리스 글린트 고블린 슬레이어2 엘프 한정판 1/7</a></strong>
+  <ul><li><strong>소비자가 :</strong> <span>280,000원</span></li><li><strong>판매가 :</strong> <span>255,000원</span></li><li><strong>발매 :</strong> <span>27년 06월</span></li></ul></div></li>
+</ul>"""
+
+# dokidokigoods.co.kr list (cate_no=28): the card is the <li>; the name link starts with a "상품명 :" span,
+# links carry cate_no/display_group, and a sold-out card only has an icon whose alt is "품절".
+DOKI_LIST = """
+<ul>
+ <li><a href="/product/detail.html?product_no=176907&cate_no=28&display_group=3"><img src="//dokidokigoods.co.kr/web/product/big/202510/0df6.png" alt="데스노트 굿즈 Crux 원화 일러스트 스티커"></a>
+  <strong class="name"><a href="/product/detail.html?product_no=176907&cate_no=28&display_group=3"><span>상품명 :</span> 데스노트 굿즈 Crux 원화 일러스트 스티커 - 야가미 라이토 &amp; 류크</a></strong>
+  <ul><li><strong>판매가 :</strong> 7,000원</li></ul><img src="/web/upload/icon_202607141458267100.png" alt="장바구니 담기"></li>
+ <li><a href="/product/detail.html?product_no=176916&cate_no=28&display_group=3"><img src="//dokidokigoods.co.kr/web/product/big/202510/ccd5.png" alt="아크릴 스탠드"></a>
+  <strong class="name"><a href="/product/detail.html?product_no=176916&cate_no=28&display_group=3"><span>상품명 :</span> 데스노트 굿즈 Crux 아크릴 스탠드 - 야가미 라이토 &amp; L</a></strong>
+  <ul><li><strong>판매가 :</strong> 23,000원</li></ul><img src="//img.echosting.cafe24.com/design/skin/admin/ko_KR/ico_product_soldout.gif" alt="품절"></li>
+ <li><a href="/product/detail.html?product_no=176930&cate_no=28&display_group=3"><img src="//dokidokigoods.co.kr/web/product/big/202609/aaaa.png" alt="넨도로이드"></a>
+  <strong class="name"><a href="/product/detail.html?product_no=176930&cate_no=28&display_group=3"><span>상품명 :</span> [26년 12월 발매] 넨도로이드 프리렌</a></strong>
+  <ul><li><strong>판매가 :</strong> 68,000원</li></ul><img src="/web/upload/icon_202607141458267100.png" alt="장바구니 담기"></li>
+</ul>"""
+
+# daewonshop.com category as rendered (NHN Commerce): price without "원", then points and badges, then the button labels.
+DAEWON_LIST = """
+<div class="prd-list-table album-type">
+ <div class="item"><div class="thumb"><figure><img src="//daewonshop.cdn-nhncommerce.com/20260916/a_600.jpg" alt="누들 스토퍼"></figure></div>
+  <div class="summary"><p class="brand"><a href="/brand/12">FuRyu</a></p><p class="subj"><a href="/product/detail/137089214">[예약판매 2월 발매][니디 걸 오버도즈] 누들 스토퍼 피규어 -초절정 귀요미 천사-</a></p>
+   <p class="price"><span class="real">29,000</span></p><p class="tag-icon"><i class="point">290</i></p></div>
+  <div class="float-icon"><i class="reserve">예약</i><i class="new">신규</i></div>
+  <div class="func-wrap"><figure><img src="" alt=""></figure><a class="prd-link" href="/product/detail/137089214"></a><div class="btn-wrap"><a class="winopen">새창</a><a class="wish">찜</a><a class="basket">장바구니</a></div></div></div>
+ <div class="item"><div class="thumb"><figure><img src="//daewonshop.cdn-nhncommerce.com/20260916/b_600.jpg" alt="파우치"></figure></div>
+  <div class="summary"><p class="brand"><a href="/brand/7">호리</a></p><p class="subj"><a href="/product/detail/133454254">[닌텐도] 호리 통통한 하이브리드 파우치 for Nintendo Switch 2 시나모롤</a></p>
+   <p class="price"><span class="real">42,800</span></p><p class="tag-icon"><i class="point">428</i></p></div>
+  <div class="float-icon"><i class="new">신규</i></div>
+  <div class="func-wrap"><a class="prd-link" href="/product/detail/133454254"></a><div class="btn-wrap"><a class="winopen">새창</a><a class="wish">찜</a><a class="basket">장바구니</a></div></div></div>
+ <div class="item"><div class="thumb"><figure><img src="//daewonshop.cdn-nhncommerce.com/20260916/c_600.jpg" alt="키링"></figure></div>
+  <div class="summary"><p class="brand"><a href="/brand/9">반프레스토</a></p><p class="subj"><a href="/product/detail/132787597">짱구는 못말려 인형 키링 1,200 세트</a></p>
+   <p class="price"><span class="real">12,500</span></p></div>
+  <div class="float-icon"><i class="soldout">품절</i></div>
+  <div class="func-wrap"><a class="prd-link" href="/product/detail/132787597"></a><div class="btn-wrap"><a class="winopen">새창</a><a class="wish">찜</a><a class="basket">장바구니</a></div></div></div>
+</div>"""
+
+
+class HerotimeListTests(unittest.TestCase):
+    def items(self):
+        return list(extract_links(HEROTIME_LIST, HEROTIME["url"], HEROTIME))
+
+    def test_seo_links_become_product_no_urls_with_the_bare_title(self):
+        items = self.items()
+        self.assertEqual([item["url"] for item in items], [
+            "https://herotime.co.kr/product/detail.html?product_no=76677",
+            "https://herotime.co.kr/product/detail.html?product_no=76650",
+        ])
+        self.assertEqual(items[0]["title"], "블리츠웨이 카보틱스 마징가Z 보스보로트")  # hidden "상품명 :" label stripped
+        self.assertEqual(items[1]["title"], "앨리스 글린트 고블린 슬레이어2 엘프 한정판 1/7")  # ...and an absent label left alone
+        self.assertEqual(items[0]["imageUrl"], "https://herotime.co.kr/web/product/medium/202609/e2e9.jpg")
+
+    def test_price_is_the_selling_price_and_release_only_cards_are_preorders(self):
+        first, second = self.items()
+        self.assertEqual((first["price"], first["saleStatus"], first["shop"]), (389000, "PREORDER", "헤로타임"))
+        self.assertEqual(second["price"], 255000)  # not the 소비자가 listed before it
+        self.assertEqual(second["saleStatus"], "PREORDER")  # only a 발매 label, no "예약" word
+
+    def test_source_is_an_automatic_list_only_robots_checked_cafe24_html(self):
+        self.assertEqual(HEROTIME["url"], "https://herotime.co.kr/product/list.html?cate_no=51")
+        self.assertIn(HEROTIME, automatic_sources())
+        self.assertTrue(HEROTIME["respect_robots"])
+        self.assertTrue(HEROTIME["list_product_mode"])
+        self.assertFalse(HEROTIME.get("product_mode"))
+        self.assertEqual(HEROTIME["category"], "FIGURE")
+
+
+class DokidokiListTests(unittest.TestCase):
+    def items(self, source=None):
+        source = source or DOKI
+        return list(extract_links(DOKI_LIST, source["url"], source))
+
+    def test_links_drop_the_cate_and_display_params_and_the_label_and_entities_are_cleaned(self):
+        items = self.items()
+        self.assertEqual([item["url"] for item in items], [
+            f"https://dokidokigoods.co.kr/product/detail.html?product_no={n}" for n in (176907, 176916, 176930)])
+        self.assertEqual(items[0]["title"], "데스노트 굿즈 Crux 원화 일러스트 스티커 - 야가미 라이토 & 류크")
+        self.assertEqual(items[0]["imageUrl"], "https://dokidokigoods.co.kr/web/product/big/202510/0df6.png")
+        self.assertEqual((items[0]["price"], items[0]["shop"]), (7000, "도키도키굿즈"))
+
+    def test_sold_out_icon_and_release_tag_set_the_status(self):
+        statuses = [item["saleStatus"] for item in self.items()]
+        self.assertEqual(statuses, ["IN_STOCK", "SOLD_OUT", "PREORDER"])
+
+    def test_card_alt_text_is_opt_in(self):
+        statuses = [item["saleStatus"] for item in self.items({**DOKI, "card_alt_text": False})]
+        self.assertEqual(statuses[1], "IN_STOCK")  # get_text() alone never sees the icon's alt
+
+    def test_source_is_automatic_goods_news_and_avoids_the_sort_and_filter_queries_robots_forbids(self):
+        self.assertEqual(DOKI["url"], "https://dokidokigoods.co.kr/product/list.html?cate_no=28")
+        self.assertIn(DOKI, automatic_sources())
+        self.assertTrue(DOKI["respect_robots"])
+        self.assertEqual((DOKI["category"], DOKI["content_angle"]), ("GOODS", "NEWS"))
+        self.assertNotIn("sort=", DOKI["url"])
+        self.assertNotIn("filter=", DOKI["url"])
+
+
+class DaewonshopListTests(unittest.TestCase):
+    def items(self):
+        return list(extract_links(DAEWON_LIST, "https://www.daewonshop.com/category/439827", DAEWON))
+
+    def test_each_card_is_one_product_with_its_title_and_photo(self):
+        items = self.items()
+        self.assertEqual([item["url"] for item in items], [
+            "https://www.daewonshop.com/product/detail/137089214",
+            "https://www.daewonshop.com/product/detail/133454254",
+            "https://www.daewonshop.com/product/detail/132787597",
+        ])  # the hidden prd-link and the brand link are not items
+        self.assertEqual(items[0]["title"], "[예약판매 2월 발매][니디 걸 오버도즈] 누들 스토퍼 피규어 -초절정 귀요미 천사-")
+        self.assertEqual(items[0]["imageUrl"], "https://daewonshop.cdn-nhncommerce.com/20260916/a_600.jpg")
+        self.assertEqual(items[0]["shop"], "대원샵")
+
+    def test_price_is_the_amount_before_the_points_not_the_points_or_a_number_in_the_title(self):
+        self.assertEqual([item["price"] for item in self.items()], [29000, 42800, 12500])
+
+    def test_badges_set_the_status(self):
+        self.assertEqual([item["saleStatus"] for item in self.items()], ["PREORDER", "IN_STOCK", "SOLD_OUT"])
+
+    def test_source_is_a_rendered_robots_checked_goods_list(self):
+        self.assertIn(DAEWON, automatic_sources())
+        self.assertTrue(DAEWON["render_js"])
+        self.assertTrue(DAEWON["respect_robots"])
+        self.assertTrue(DAEWON["list_product_mode"])
+        self.assertEqual(DAEWON["category"], "GOODS")
 
 
 class ProductFieldOptionTests(unittest.TestCase):

@@ -46,6 +46,14 @@ CAFE24_SHOPS = (
         frozenset({"maniahouse.co.kr", "www.maniahouse.co.kr", "m.maniahouse.co.kr"}),
         "maniahouse.co.kr",
     ),
+    HostRule(
+        frozenset({"herotime.co.kr", "www.herotime.co.kr", "m.herotime.co.kr"}),
+        "herotime.co.kr",
+    ),
+    HostRule(
+        frozenset({"dokidokigoods.co.kr", "www.dokidokigoods.co.kr", "m.dokidokigoods.co.kr"}),
+        "dokidokigoods.co.kr",
+    ),
 )
 
 

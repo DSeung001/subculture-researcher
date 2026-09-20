@@ -46,46 +46,7 @@ sources:
     image_deny_patterns:
       - '^/common/'  # 이미지 없는 보도자료의 사이트 공통 og.png
 
-  # 일본 애니 공식 YouTube 채널. channel_id로 공식 Atom feed만 읽는다.
-  # RSS가 간헐 404를 내므로 자동 스케줄에서 제외하고 collect_manual.py로만 실행한다.
-  - name: KADOKAWA Anime YouTube
-    type: youtube_feed
-    url: https://www.youtube.com/@KADOKAWAanime
-    channel_url: https://www.youtube.com/@KADOKAWAanime
-    channel_id: UCY5fcqgSrQItPAX_Z5Frmwg
-    region: JP
-    category: ANIME
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    max_items: 25
-    manual_only: true
-    enabled: true
-
-  - name: Aniplex YouTube
-    type: youtube_feed
-    url: https://www.youtube.com/@aniplex
-    channel_url: https://www.youtube.com/@aniplex
-    channel_id: UC14QT5j2nQI8lKBCGtrrBQA
-    region: JP
-    category: ANIME
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    max_items: 25
-    manual_only: true
-    enabled: true
-
-  - name: TOHO animation YouTube
-    type: youtube_feed
-    url: https://www.youtube.com/@TOHOanimation
-    channel_url: https://www.youtube.com/@TOHOanimation
-    channel_id: UC14Yc2Qv92DMuyNRlHvpo2Q
-    region: JP
-    category: ANIME
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    max_items: 25
-    manual_only: true
-    enabled: true
+  # 애니메이션 본편을 올리는 YouTube 채널(KADOKAWA Anime·Aniplex·TOHO animation)은 소스에서 제외했다. 본편 채널은 소스로 두지 않는다.
 
   # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
   - name: HOBBY Watch 피규어
@@ -174,7 +135,7 @@ sources:
     max_pages: 4
     enabled: true
 
-  # 수동 전용은 위 manual_only(YouTube RSS) 소스와 아래 local_only(네이버 스토어) 소스. 라프텔은 store.laftel.net 공개 HTML만
+  # 수동 전용은 아래 local_only(네이버 스토어) 소스. 라프텔은 store.laftel.net 공개 HTML만
   # 자동 수집한다(아래 「라프텔 스토어」). laftel.net 인기·신작 브라우저 수집은 쓰지 않는다.
 
   # 국내 리셀러의 호요버스(원신/스타레일/젠레스존제로) 공식 라이선스 굿즈. 예약마감/가격이 목록에 노출된다.
@@ -369,6 +330,88 @@ sources:
     list_image_selector: '.prdImg img'
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'  # 할인 카드에는 소비자가가 먼저 나온다
     shop: 코믹스아트
+
+  # 헤로타임(Cafe24 피규어샵) 최신 예약 상품(cate_no=51, 페이지당 20건). 카드 구조는 코믹스아트와 같아 목록 카드 텍스트만 쓴다.
+  # 카드에는 "예약" 단어 없이 마감·발매만 있어 그 라벨을 예약 신호로 넣는다. 마감은 연도가 없어 preorderEndAt은 비운다.
+  # 상품명 앞의 숨김 라벨("상품명 :")이 있든 없든 제목이 같도록 title_strip_pattern으로 걷어 낸다.
+  - name: 헤로타임 최신예약
+    type: html
+    url: https://herotime.co.kr/product/list.html?cate_no=51
+    link_selector: 'strong.name a'
+    title_strip_pattern: '^상품명\s*:\s*'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://herotime\.co\.kr/product/detail\.html\?product_no=\d+'
+    max_items: 40
+    page_param: page  # Cafe24 ?page=N (페이지당 20건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: '.prdImg img'
+    price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
+    preorder_words:
+      - '발매 :'
+      - '마감 :'
+    shop: 헤로타임
+
+  # 도키도키굿즈(Cafe24 애니 굿즈샵) 신상품(cate_no=28, 페이지당 20건, 최신순). robots.txt는 sort=/filter= 쿼리만 막으므로 정렬 파라미터는 쓰지 않는다.
+  # 품절은 카드에 텍스트 없이 아이콘(alt="품절")으로만 나와 card_alt_text로 alt를 읽는다. 제목의 "[25년 12월 발매]" 꼬리표를 예약 신호로 본다(품절이 우선).
+  - name: 도키도키굿즈 신상품
+    type: html
+    url: https://dokidokigoods.co.kr/product/list.html?cate_no=28
+    link_selector: 'strong.name a'
+    title_strip_pattern: '^상품명\s*:\s*'
+    region: KR
+    category: GOODS
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://dokidokigoods\.co\.kr/product/detail\.html\?product_no=\d+'
+    max_items: 40
+    page_param: page  # Cafe24 ?page=N (페이지당 20건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: img
+    card_alt_text: true
+    price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
+    preorder_words:
+      - '월 발매]'
+    shop: 도키도키굿즈
+
+  # 대원샵(NHN Commerce)은 목록을 JS로 그려 브라우저 렌더링(render_js)으로 읽는다. 목록은 48건이 한 페이지이고 페이지 이동은 링크가 없는 버튼이라 첫 페이지만 본다.
+  # 카드는 div.item이고 가격에 "원"이 없다("브랜드 제목 29,000 290 예약 신규 새창 찜 장바구니"). 가격은 "새창" 앞의 금액(뒤의 적립 포인트·뱃지 제외)이다.
+  # 카테고리(439827)의 이름은 페이지에서 확인하지 못해 번호로 부른다. 예약·품절은 카드의 뱃지 텍스트("예약", "품절")로 판단한다.
+  - name: 대원샵 상품(439827)
+    type: html
+    url: https://www.daewonshop.com/category/439827
+    render_js: true
+    render_timeout_seconds: 30
+    link_selector: 'p.subj a'
+    region: KR
+    category: GOODS
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://www\.daewonshop\.com/product/detail/\d+'
+    max_items: 48
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: '.thumb img'
+    price_pattern: '(\d{1,3}(?:,\d{3})+)(?:\s+\d[\d,]*)?(?:\s+[가-힣]{1,4})*\s+새창'
+    shop: 대원샵
 
   # 국내 정품 피규어샵의 예약상품 목록. 장르 제한 없이 미국/일본/중국 라이선스 피규어가 섞여 있다.
   - name: 피규어프레소 예약상품
