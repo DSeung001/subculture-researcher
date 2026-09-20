@@ -14,7 +14,7 @@ from datetime import datetime
 import requests
 
 from subculture.drafts.domain.posts import BODY_TARGET, DraftPosts, build_reply
-from subculture.shared.presentation import KST, product_caption
+from subculture.shared.presentation import KST, price_text, product_caption
 
 
 GEMINI_URL = (
@@ -74,7 +74,7 @@ PROMPT_TEMPLATE = (
     "[post1: 콘텐츠 글]\n"
     "- URL, 링크, 쇼핑몰 이름은 절대 넣지 마.\n"
     "- 소재를 단순 나열하지 말고 공통점이나 차이점 1~2개만 골라 이야기해줘. "
-    "모든 소재의 가격/스케일/이름을 한 문장에 억지로 넣지 마.\n"
+    "모든 소재의 이름·스케일을 한 문장에 억지로 나열하지 마. 가격은 아래 [가격 정보] 규칙을 따라.\n"
     "- 첫 문장은 짧고 자연스러운 관심 유도 문장으로 써줘.\n"
     "- 3~6줄, 줄바꿈으로 가독성을 높이고, {body_target}자 이내로 써줘 (해시태그 포함).\n"
     "- 마지막 줄에 관련성 높은 해시태그를 2~3개 붙여줘 (띄어쓰기 없이, 예: #피규어 #굿스마일컴퍼니).\n"
@@ -91,6 +91,12 @@ PROMPT_TEMPLATE = (
     "'판매 중입니다', '저희', '우리 샵' 같은 판매자 표현을 쓰지 마. 링크를 안내하는 문구도 쓰지 마.\n"
     "- 직접 사 봤거나 실물을 본 것처럼 쓰지 마. 소재에 없는 사용·구매 경험은 지어내지 마. "
     "감상은 '눈에 띄네', '라인이 예쁘다' 정도의 가벼운 관찰로 하고, 특정 상점이나 판매처를 홍보하지 마.\n"
+    "[가격 정보]\n"
+    "- 소재에 '가격'이 있으면 본문에서 그 가격을 빠뜨리지 마. 소재별로 짚어도 되고, 가격대가 비슷하면 "
+    "'7만 원대'나 '7~10만 원'처럼 묶어도 돼. 가격이 눈에 띄게 다른 소재는 따로 짚어줘.\n"
+    "- 가격은 소재에 적힌 금액만 써. 환산·할인 계산·추측은 하지 말고, 가격이 없는 소재의 가격은 언급하지 마.\n"
+    "- 가격은 사실 정보로만 담담하게 전하고, 싸다·저렴하다·가성비 같은 판단이나 구매 권유는 쓰지 마.\n"
+    "- display_name에는 가격을 넣지 마.\n"
     "[예약/일반 구분]\n"
     "- 각 소재의 '판매유형'을 그대로 따라줘. 예약 상품과 일반 판매 상품이 섞여 있으면 어느 쪽이 예약 접수 중이고 "
     "어느 쪽이 이미 재고가 있는지 소식 전하듯 짚어줘 (예: 'A는 예약 접수 중, B는 재고가 있는 상태').\n"
@@ -225,6 +231,9 @@ def _material_block(items: list[dict]) -> str:
         # Structured product fields (price/예약 여부/사이즈/발매일 등), not just
         # whatever the scraped summary text happens to mention, so the model
         # can state reservation urgency accurately.
+        price = price_text(item)
+        if price:
+            lines.append(f"   가격: {price}")
         sale_type = _sale_type_hint(item)
         if sale_type:
             lines.append(f"   판매유형: {sale_type}")

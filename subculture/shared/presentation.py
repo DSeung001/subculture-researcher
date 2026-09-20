@@ -231,6 +231,15 @@ def metric_caption(item: dict) -> str:
     return " | ".join(parts)
 
 
+def price_text(item: dict) -> str:
+    """The stored product price as text (`12,000원`, `30 USD`), empty when there is none."""
+    price = item.get("price")
+    if item.get("entityType") != "PRODUCT" or not isinstance(price, int):
+        return ""
+    currency = item.get("currency") or "KRW"
+    return f"{price:,}원" if currency == "KRW" else f"{price:,} {currency}"
+
+
 def product_caption(item: dict, *, today: str | None = None) -> str:
     if item.get("entityType") != "PRODUCT":
         return ""
@@ -240,10 +249,9 @@ def product_caption(item: dict, *, today: str | None = None) -> str:
     status = item.get("saleStatus")
     if status:
         parts.append(SALE_STATUS_LABELS.get(status, str(status)))
-    price = item.get("price")
-    if isinstance(price, int):
-        currency = item.get("currency") or "KRW"
-        parts.append(f"{price:,}원" if currency == "KRW" else f"{price:,} {currency}")
+    price = price_text(item)
+    if price:
+        parts.append(price)
     if item.get("preorderEndAt"):
         today = today or datetime.now(KST).date().isoformat()
         deadline = str(item["preorderEndAt"])

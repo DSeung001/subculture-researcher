@@ -139,6 +139,27 @@ class SaleTypeTests(unittest.TestCase):
         self.assertEqual(self.hint(), "")
         self.assertEqual(ai_writer._sale_type_hint({"saleStatus": "PREORDER"}), "")
 
+    def test_material_block_gives_each_product_its_price_on_its_own_line(self):
+        material = ai_writer._material_block([
+            product("한국 피규어", "https://shop.example.com/1", price=72000),
+            product("해외 피규어", "https://shop.example.com/2", price=30, currency="USD"),
+            product("가격 모름", "https://shop.example.com/3"),
+            {"title": "상품이 아님", "price": 5000},
+        ])
+        self.assertIn("   가격: 72,000원", material)
+        self.assertIn("   가격: 30 USD", material)
+        self.assertEqual(material.count("   가격:"), 2)  # no line where there is no price to state
+
+    def test_prompt_requires_stated_prices_without_inventing_or_judging(self):
+        prompt = ai_writer.PROMPT_TEMPLATE.format(
+            angle="COMPARE", category_hint="힌트", body_target=260, material="1. 소재")
+        self.assertIn("[가격 정보]", prompt)
+        self.assertIn("가격을 빠뜨리지 마", prompt)
+        self.assertIn("가격이 없는 소재의 가격은 언급하지 마", prompt)
+        self.assertIn("가성비", prompt)  # listed as a judgement not to make
+        self.assertIn("display_name에는 가격을 넣지 마", prompt)
+        self.assertNotIn("가격/스케일/이름을 한 문장에 억지로 넣지 마", prompt)  # no longer discourages prices
+
     def test_material_block_lists_the_sale_type(self):
         material = ai_writer._material_block([
             product("예약 피규어", "https://shop.example.com/1", saleStatus="PREORDER"),
