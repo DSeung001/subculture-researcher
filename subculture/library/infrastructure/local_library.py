@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import delete, exists, func, or_, select
+from sqlalchemy import JSON, cast, delete, exists, func, or_, select, type_coerce
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.orm import Session
@@ -403,6 +403,15 @@ class Library:
             })
         return list(groups.values())
 
+    def _collected_at(self):
+        """`collectedAt` from the stored document (ISO text, UTC, so it sorts as text); "" when missing."""
+        # Text is not JSON for PostgreSQL, while a CAST to JSON on SQLite would read it as a number.
+        if self.engine.dialect.name == "postgresql":
+            payload = cast(Item.payload, JSON)
+        else:
+            payload = type_coerce(Item.payload, JSON)
+        return func.coalesce(payload["collectedAt"].as_string(), "")
+
     def items(self, filters, page=1, collection_id=None):
         query = select(Item)
         for table in TAXONOMIES:
@@ -423,7 +432,8 @@ class Library:
             if filters.get(key):
                 value = date.fromisoformat(filters[key]).isoformat()
                 query = query.where(Item.deadline >= value if key == "deadline_from" else Item.deadline <= value)
-        order = (Item.synced_at.desc(), Item.id)
+        # Newest collected first. `synced_at` is one timestamp per sync run, so it cannot order items.
+        order = (self._collected_at().desc(), Item.id)
         if collection_id:
             query = query.join(CollectionItem, CollectionItem.item_id == Item.id).where(
                 CollectionItem.collection_id == collection_id)

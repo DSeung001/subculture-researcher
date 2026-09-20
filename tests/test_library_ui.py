@@ -38,6 +38,21 @@ class LibraryUiTests(unittest.TestCase):
         self.client = app.test_client()
         self.lib = Library(self.path)
 
+    def test_items_are_listed_newest_collected_first(self):
+        # One sync stamps every row with the same synced_at, so the order has to come from the document.
+        self.lib.sync(cloud(
+            snapshot("old", "오래된 소식", collectedAt="2026-09-01T00:00:00+00:00"),
+            snapshot("none", "수집 시각 없음"),
+            snapshot("new", "새 소식", collectedAt="2026-09-19T12:30:00+00:00"),
+            snapshot("mid", "중간 소식", collectedAt="2026-09-10T08:00:00+00:00"),
+        ))
+        rows, total = self.lib.items({})
+        self.assertEqual(total, 4)
+        self.assertEqual([row["id"] for row in rows],
+                         ["FIGURE:new", "FIGURE:mid", "FIGURE:old", "FIGURE:none"])
+        page = self.client.get("/library").get_data(as_text=True)
+        self.assertLess(page.index("새 소식"), page.index("오래된 소식"))
+
     def test_the_app_opens_on_the_work_planning_page_and_the_inbox_moved(self):
         home = self.client.get("/")
         self.assertEqual(home.status_code, 302)
