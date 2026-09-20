@@ -2,8 +2,8 @@ name: Collect sources
 
 on:
   schedule:
-    # UTC 23:00 = KST 08:00 (매일)
-    - cron: "0 23 * * *"
+    # 주 3번: UTC 일·화·목 23:00 = KST 월·수·금 08:00
+    - cron: "0 23 * * 0,2,4"
   workflow_dispatch:
 
 jobs:

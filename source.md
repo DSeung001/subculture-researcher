@@ -4,7 +4,7 @@
 
 ## 자동 수집
 
-`python collect.py`. GitHub Actions가 매일 KST 08:00(UTC 23:00)에 실행하며 로컬에서도 돌릴 수 있습니다. 수동 전용 소스(`manual_only`/`local_only`)는 건너뛰고, HTML 소스는 `robots.txt`를 확인합니다.
+`python collect.py`. GitHub Actions가 주 3번(월·수·금 KST 08:00, UTC 일·화·목 23:00)에 실행하며 로컬에서도 돌릴 수 있습니다. 수동 전용 소스(`manual_only`/`local_only`)는 건너뛰고, HTML 소스는 `robots.txt`를 확인합니다.
 
 - 로컬 실행은 수집 후 로컬 DB 동기화와 AI 초안 생성까지 기본으로 하며(`--no-sync`, `--no-ai-draft`로 끔), `CI` 환경(Actions)에서는 둘 다 건너뜁니다.
 
