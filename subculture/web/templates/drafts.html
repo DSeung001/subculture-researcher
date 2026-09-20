@@ -93,11 +93,11 @@
         </section>
         <section class="post-block post-reply">
           <div class="post-head">
-            <label class="post-label" for="post-reply-{{ did }}">② 댓글 · 구매 링크</label>
+            <label class="post-label" for="post-reply-{{ did }}">② 댓글 · 상품 링크</label>
             <span class="post-count" data-count-for="post-reply-{{ did }}">{{ count_label(draft.reply or '', 0) }}</span>
             <button type="button" class="btn btn-small" data-copy-target="post-reply-{{ did }}">복사</button>
           </div>
-          <textarea id="post-reply-{{ did }}" name="reply" rows="6" placeholder="본문 글에 답글로 달 링크 (예: 구매 링크 ↓)">{{ draft.reply or '' }}</textarea>
+          <textarea id="post-reply-{{ did }}" name="reply" rows="6" placeholder="본문 글에 답글로 달 링크 (예: 상품 페이지 참고 ↓)">{{ draft.reply or '' }}</textarea>
         </section>
       </form>
       <div class="draft-actions">
@@ -124,7 +124,7 @@
         {% if draft.reply %}
         <section class="post-block post-reply">
           <div class="post-head">
-            <span class="post-label">② 댓글 · 구매 링크</span>
+            <span class="post-label">② 댓글 · 상품 링크</span>
             <span class="post-count">{{ count_label(draft.reply, 0) }}</span>
             <button type="button" class="btn btn-small" data-copy-target="post-reply-{{ did }}">복사</button>
           </div>

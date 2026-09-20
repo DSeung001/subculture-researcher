@@ -11,6 +11,9 @@ from subculture.shared.image_urls import http_url
 
 # The content post is meant to read like one normal post; longer than this only warns.
 BODY_TARGET = 260
+PRODUCT_LINKS_HEADER = "상품 페이지 참고 ↓"
+PLAIN_LINKS_HEADER = "링크 ↓"
+
 # X counts every link as this many characters, whatever its real length.
 URL_LENGTH = 23
 
@@ -55,7 +58,8 @@ def _clean_name(name: str) -> str:
 
 
 def reply_header(items: list[dict]) -> str:
-    return "구매 링크 ↓" if any(item.get("entityType") == "PRODUCT" for item in items) else "링크 ↓"
+    """Fixed opening line of the reply; sources that are not products get a plain one."""
+    return PRODUCT_LINKS_HEADER if any(item.get("entityType") == "PRODUCT" for item in items) else PLAIN_LINKS_HEADER
 
 
 def build_reply(items: list[dict], names: dict[int, str] | None = None) -> str:

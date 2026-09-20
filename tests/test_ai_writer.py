@@ -183,7 +183,7 @@ class WriteDraftPostsTests(unittest.TestCase):
         self.assertNotIn("https://", posts.body)
         self.assertEqual(
             posts.reply,
-            "구매 링크 ↓\n\n엘렌 조\nhttps://shop.example.com/1\n\n호시미 미야비\nhttps://shop.example.com/2\n",
+            "상품 페이지 참고 ↓\n\n엘렌 조\nhttps://shop.example.com/1\n\n호시미 미야비\nhttps://shop.example.com/2\n",
         )
         prompt, _, schema = call.call_args.args[0], call.call_args.args[1], call.call_args.args[2]
         self.assertNotIn("https://", prompt)
@@ -207,7 +207,7 @@ class WriteDraftPostsTests(unittest.TestCase):
     def test_sources_without_a_link_are_left_out_of_the_reply(self):
         items = [self.items[0], {"title": "링크 없음", "category": "FIGURE"}]
         posts, _ = write(items, model_json("본문", (1, "엘렌 조"), (2, "링크 없음")))
-        self.assertEqual(posts.reply, "구매 링크 ↓\n\n엘렌 조\nhttps://shop.example.com/1\n")
+        self.assertEqual(posts.reply, "상품 페이지 참고 ↓\n\n엘렌 조\nhttps://shop.example.com/1\n")
 
     def test_a_reply_for_non_products_is_headed_plain_links(self):
         items = [{"title": "새 애니 소식", "category": "ANIME", "url": "https://news.example.com/1"}]

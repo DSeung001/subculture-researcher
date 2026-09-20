@@ -290,7 +290,7 @@ class DraftsPageTests(DraftCase):
         self.assertIn("한글 제목", html)
 
     def test_page_shows_body_and_reply_with_copy_buttons_and_counters(self):
-        create_draft(self.lib, ["FIGURE:a"], body="본문 글", reply="구매 링크 ↓\n\n제목\nhttps://example.com/a")
+        create_draft(self.lib, ["FIGURE:a"], body="본문 글", reply="상품 페이지 참고 ↓\n\n제목\nhttps://example.com/a")
         html = self.get().get_data(as_text=True)
         self.assertIn("① 본문", html)
         self.assertIn("② 댓글", html)
@@ -298,7 +298,7 @@ class DraftsPageTests(DraftCase):
         self.assertIn('name="reply"', html)
         self.assertEqual(html.count("data-copy-target="), 2)
         self.assertIn(">4 / 260자<", html)  # the body counter shows its target
-        self.assertIn(">35자<", html)  # the reply: 12 characters of text + a link counted as 23
+        self.assertIn(">39자<", html)  # the reply: 16 characters of text + a link counted as 23
 
     def test_published_drafts_show_both_posts_read_only(self):
         draft_id = create_draft(self.lib, ["FIGURE:a"], body="본문 글", reply="댓글 글")
