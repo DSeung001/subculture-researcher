@@ -102,6 +102,20 @@ class AiWriterPromptTests(unittest.TestCase):
         self.assertIn("판매유형", prompt)
         self.assertIn("display_name", prompt)
 
+    def test_prompt_makes_the_account_a_curator_not_a_seller(self):
+        prompt = ai_writer.PROMPT_TEMPLATE.format(
+            angle="COMPARE", category_hint="힌트", body_target=260, material="1. 소재")
+        self.assertIn("큐레이션 계정", prompt)
+        self.assertIn("판매자가 아니라", prompt)
+        self.assertIn("[정보 공유 계정]", prompt)
+        for seller_phrase in ("구매하세요", "예약하세요", "특가", "서두르세요", "저희"):
+            self.assertIn(seller_phrase, prompt)  # listed as forbidden phrases
+        self.assertIn("실물을 본 것처럼 쓰지 마", prompt)
+        # The preorder-vs-regular example must not sound like a shop either.
+        self.assertNotIn("바로 구매 가능", prompt)
+        for hint in ai_writer.CATEGORY_HINTS.values():
+            self.assertNotIn("판매처", hint)
+
 
 class SaleTypeTests(unittest.TestCase):
     def hint(self, **fields):
