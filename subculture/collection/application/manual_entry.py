@@ -8,10 +8,11 @@ from subculture.shared.image_urls import http_url
 
 
 # Shops whose product URLs are saved by hand as products: (host, path prefix, source label, shop).
-# The Naver brand store is here because its robots.txt forbids automatic collection.
+# The Naver stores are here because their robots.txt forbids automatic collection.
 MANUAL_SHOPS = (
     ("laftel.net", "", "Laftel Store", "Laftel"),
     ("brand.naver.com", "/kotobukiyamall", "Kotobukiya Mall (Naver)", "코토부키야 몰(네이버)"),
+    ("smartstore.naver.com", "/megahousemall", "Mega House Mall (Naver)", "메가하우스 몰(네이버)"),
 )
 
 

@@ -48,9 +48,9 @@
 ## 수동 수집
 
 아래 소스는 GitHub Actions/`collect.py`에서 돌리지 않고 `python collect_manual.py`로만 실행합니다. `sources.yaml`에서 `manual_only: true`(또는 `local_only: true`)로 표시하며, `collect.py --source`에 수동 소스를, `collect_manual.py --source`에 자동 소스를 주면 오류가 납니다. AI 초안은 `--ai-draft`를 줄 때만 만듭니다(기본 꺼짐).
-(브라우저 기반 수동 소스는 현재 없고 `local_only`를 쓰는 소스도 없습니다. Playwright 프로필 수집이 다시 필요하면 여기에 적습니다.)
+브라우저 기반 수동 소스(`type: local_browser`, `local_only: true`)는 창을 띄운 **시크릿(디스크 프로필 없음) Playwright 브라우저**에서 실행합니다. 캡차·인증은 소스별 `interactive_ready` 랜덤 대기 시간에 사용자가 직접 처리하며 우회는 시도하지 않습니다. 이 방식은 `robots.txt`를 확인하지 않으므로 사용자가 화면 앞에서 지켜보는 목록 수집에만 씁니다(저장된 프로필이 필요하면 소스에 `persistent_profile: true`).
 
-소스 등록 없이 하는 수동 입력도 있습니다: 인박스 「+ 콘텐츠 추가」로 URL을 직접 저장하는 방식입니다(아래 코토부키야 몰).
+소스 등록 없이 하는 수동 입력도 있습니다: 인박스 「+ 콘텐츠 추가」로 URL을 직접 저장하는 방식이며 네이버 스토어 수집의 보조 수단입니다(아래 코토부키야 몰·메가하우스 몰).
 
 ### YouTube 공식 채널 (RSS)
 
@@ -60,15 +60,21 @@
 
 라프텔은 **스토어**(`store.laftel.net`)만 자동 HTML로 수집합니다. `laftel.net` 인기·신작 브라우저 수집은 쓰지 않습니다.
 
-## 자동 수집을 하지 않는 곳
+### 네이버 스토어 (브라우저 수동 수집)
 
-### 코토부키야 몰 (네이버 브랜드스토어)
+`python collect_manual.py --source "소스이름"`으로 실행합니다. 창이 열리면 캡차·인증을 직접 처리하고 상품 목록이 보이는 상태로 두세요. 대기 후 현재 화면의 상품 링크·카드 텍스트(가격·상태)·대표 이미지만 읽습니다. `collect.py`(GitHub Actions)는 이 소스를 건너뜁니다.
 
-- URL: https://brand.naver.com/kotobukiyamall
-- `brand.naver.com`의 `robots.txt`가 모든 봇에 `Disallow: /`이고 일반 요청에는 HTTP 429를 반환하므로 **자동 수집 대상이 아닙니다.**
-- 대신 인박스의 「+ 콘텐츠 추가」에서 상품 URL을 직접 저장합니다. 카테고리를 「피규어」로 고르면 상품(`entityType=PRODUCT`, `shop=코토부키야 몰(네이버)`)으로 저장되고, 「이미지 URL」에 상품 사진 주소를 붙여 넣을 수 있습니다.
+| 소스 | 목록 URL | 저장 |
+|---|---|---|
+| 코토부키야 몰 | https://brand.naver.com/kotobukiyamall (카테고리 URL이 정해지면 교체) | `shop=코토부키야 몰(네이버)` |
+| 메가하우스 몰 입고 상품 | [입고 상품](https://smartstore.naver.com/megahousemall/category/5ba2f27d4bde41c4ba84f1fd9c83364a?cp=1) | `shop=메가하우스 몰(네이버)`, NEWS |
+| 메가하우스 몰 예약 상품 | [예약 상품](https://smartstore.naver.com/megahousemall/category/a5876c8b741541e7ad056af202efdfb6?cp=1) | `shop=메가하우스 몰(네이버)`, PRICE |
 
-### 제외한 소스
+- `brand.naver.com`·`smartstore.naver.com`의 `robots.txt`는 모든 봇에 `Disallow: /`이고 일반 요청에는 HTTP 429를 반환하므로 **자동 수집 대상이 아닙니다.** 위 소스는 사용자가 입회하는 로컬 시크릿 브라우저 수동 수집이라는 예외로만 둡니다(목록 페이지만, 느린 속도, 챌린지 우회 없음).
+- 셀렉터(`a[href*="/products/"]`)는 실제 화면에서 확인하지 못한 값입니다. 처음에는 `--dry-run`으로 결과를 확인하세요.
+- 수집이 막히면 인박스의 「+ 콘텐츠 추가」에서 상품 URL을 직접 저장할 수 있습니다. 카테고리를 「피규어」로 고르면 같은 `shop` 값의 상품(`entityType=PRODUCT`)으로 저장되고, 「이미지 URL」에 상품 사진 주소를 붙여 넣을 수 있습니다.
+
+## 제외한 소스
 
 Good Smile 뉴스(배송·점검 공지뿐), 애니메이트 코리아 페어·이벤트, 일러스타 페스, 코믹월드, Kotobukiya 뉴스(로컬 브라우저), animate 서울홍대점(X), 라프텔 인기·신작(브라우저)은 신상품·예약 정보를 얻지 못하거나 스토어 HTML로 대체되어 제거했습니다.
 Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어려워 붙이지 않았습니다(사유는 `sources.yaml` 하단 주석).
@@ -99,6 +105,8 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 | `page_count_field` | JSON API: 응답의 전체 페이지 수 필드. 여기까지만 요청 |
 | `detail_refresh_hours` | 이미 저장된 URL의 상세 재요청 간격(기본 72시간, `0`이면 항상 요청). 상품(`product_mode`)은 이 간격마다 가격·예약 상태를 갱신, 사진 전용(`fetch_detail_image`)은 사진이 있으면 다시 열지 않고 없으면 이 간격으로만 재시도 |
 
+`type: local_browser`(브라우저 수동 수집) 전용 키: `local_only: true`(자동 수집 제외), `interactive_ready`·`interactive_message`·`ready_wait_min_seconds`/`ready_wait_max_seconds`(사용자가 화면을 준비하는 랜덤 대기), `scroll_steps`·`scroll_delay_seconds`, `persistent_profile: true`(기본은 시크릿 컨텍스트). 이 방식의 `product_mode`는 상세를 열지 않고 목록 카드 텍스트에서 가격·상태를 읽습니다.
+
 이미 저장된 항목은 다음 수집 때 같은 URL의 값(사진 포함)이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
 
 ### 소스별 목록 규모 메모
@@ -126,7 +134,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 ## 수집 원칙
 
-1. 자동 수집 전에 해당 사이트의 `robots.txt`를 확인합니다. 자동 수집을 금지하는 사이트(예: 네이버 브랜드스토어)는 소스로 등록하지 않습니다.
+1. 자동 수집 전에 해당 사이트의 `robots.txt`를 확인합니다. 자동 수집을 금지하는 사이트(예: 네이버 브랜드스토어·스마트스토어)는 `collect.py` 소스로 등록하지 않습니다. 예외는 사용자가 입회해 로컬 시크릿 브라우저로 돌리는 `local_only` 수동 수집뿐입니다.
 2. `robots.txt` 확인에 실패하면 자동 수집을 건너뜁니다.
 3. 원문 전체를 복제하지 않고 제목, URL, 출처, 분류, 상품 메타데이터와 이미지 링크만 저장합니다.
 4. X는 비공식 스크래핑하지 않습니다.

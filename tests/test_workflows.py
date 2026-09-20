@@ -206,6 +206,45 @@ class WorkflowTests(unittest.TestCase):
         sleep.assert_not_called()
         stdin.assert_not_called()
 
+    def run_local_browser(self, source):
+        """Drive local_browser_items against a fake Playwright; returns (playwright, browser, context)."""
+        import sys
+        from subculture.collection.infrastructure.collectors import local_browser as lb
+
+        context = MagicMock()
+        context.pages = []
+        page = context.new_page.return_value
+        page.url = "https://example.com/list"
+        page.locator.return_value.count.return_value = 0
+        browser = MagicMock()
+        browser.new_context.return_value = context
+        playwright = MagicMock()
+        playwright.chromium.launch.return_value = browser
+        playwright.chromium.launch_persistent_context.return_value = context
+        sync_api = MagicMock()
+        sync_api.sync_playwright.return_value.__enter__.return_value = playwright
+        with patch.dict(sys.modules, {"playwright": MagicMock(), "playwright.sync_api": sync_api}), \
+             patch.object(lb.time, "sleep"):
+            self.assertEqual(list(lb.local_browser_items({"name": "예시", "url": "https://example.com/list", **source})), [])
+        return playwright, browser, context
+
+    def test_local_browser_uses_a_private_context_by_default(self):
+        playwright, browser, context = self.run_local_browser({"scroll_steps": 0})
+        playwright.chromium.launch.assert_called_once()
+        self.assertFalse(playwright.chromium.launch.call_args.kwargs["headless"])
+        browser.new_context.assert_called_once_with(no_viewport=True)
+        playwright.chromium.launch_persistent_context.assert_not_called()
+        context.close.assert_called_once()
+        browser.close.assert_called_once()
+
+    def test_local_browser_persistent_profile_is_opt_in(self):
+        with patch("subculture.collection.infrastructure.collectors.local_browser.Path.mkdir"):
+            playwright, browser, context = self.run_local_browser({"scroll_steps": 0, "persistent_profile": True})
+        playwright.chromium.launch.assert_not_called()
+        playwright.chromium.launch_persistent_context.assert_called_once()
+        self.assertFalse(playwright.chromium.launch_persistent_context.call_args.kwargs["headless"])
+        context.close.assert_called_once()
+
     def test_url_deduplication_stays_canonical(self):
         store = ContentStore()
         first = store.save({"url": "https://example.com/item?utm_source=x#detail", "category": "FIGURE"})

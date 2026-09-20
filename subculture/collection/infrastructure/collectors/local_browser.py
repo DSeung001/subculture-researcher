@@ -1,8 +1,10 @@
-"""Slow local-only Playwright collector using a persistent browser profile.
+"""Slow local-only Playwright collector for sources that cannot be collected automatically.
 
-This collector is intentionally headed. Authentication, MFA and bot challenges
-are completed by the user in the opened browser during a random ready wait;
-the collector does not attempt to bypass them.
+This collector is intentionally headed and runs in a private browser context
+(no on-disk profile; `persistent_profile: true` opts back into a saved one).
+Authentication, MFA and bot challenges are completed by the user in the opened
+browser during a random ready wait; the collector does not attempt to bypass
+them. It does not check robots.txt, so only use it for sources the user attends.
 """
 
 import random
@@ -148,6 +150,26 @@ def _wait_until_ready(source: dict) -> None:
     time.sleep(wait)
 
 
+def _open_context(playwright, source: dict, slow_mo: int):
+    """Return (browser or None, context). Private (no on-disk profile) unless the source opts in."""
+    launch_args = dict(headless=False, slow_mo=slow_mo, args=["--start-maximized"])
+    if source.get("persistent_profile", False):
+        profile_name = source.get("browser_profile") or re.sub(
+            r"[^a-zA-Z0-9_-]+", "-", source["name"]
+        ).strip("-").lower()
+        profile_dir = Path(source.get("profile_dir") or ".local/playwright") / profile_name
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        return None, playwright.chromium.launch_persistent_context(
+            str(profile_dir), viewport=None, **launch_args
+        )
+    browser = playwright.chromium.launch(**launch_args)
+    try:
+        return browser, browser.new_context(no_viewport=True)
+    except Exception:
+        browser.close()
+        raise
+
+
 def local_browser_items(source: dict):
     try:
         from playwright.sync_api import sync_playwright
@@ -155,12 +177,6 @@ def local_browser_items(source: dict):
         raise RuntimeError(
             "로컬 브라우저 수집에는 playwright 설치와 chromium 설치가 필요합니다."
         ) from exc
-
-    profile_name = source.get("browser_profile") or re.sub(
-        r"[^a-zA-Z0-9_-]+", "-", source["name"]
-    ).strip("-").lower()
-    profile_dir = Path(source.get("profile_dir") or ".local/playwright") / profile_name
-    profile_dir.mkdir(parents=True, exist_ok=True)
 
     timeout_ms = int(source.get("render_timeout_seconds", 45)) * 1000
     slow_mo = int(source.get("slow_mo_ms", 250))
@@ -174,13 +190,7 @@ def local_browser_items(source: dict):
     required_text_patterns = source.get("required_text_patterns", [])
 
     with sync_playwright() as playwright:
-        context = playwright.chromium.launch_persistent_context(
-            str(profile_dir),
-            headless=False,
-            slow_mo=slow_mo,
-            viewport=None,
-            args=["--start-maximized"],
-        )
+        browser, context = _open_context(playwright, source, slow_mo)
         context.set_default_timeout(timeout_ms)
         page = context.pages[0] if context.pages else context.new_page()
         try:
@@ -246,7 +256,11 @@ def local_browser_items(source: dict):
                 if item_delay:
                     time.sleep(item_delay)
         finally:
-            context.close()
+            try:
+                context.close()
+            finally:
+                if browser is not None:
+                    browser.close()
 
 
 def collect_local_browser(db, source: dict, store=None) -> dict:

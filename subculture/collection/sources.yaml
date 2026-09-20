@@ -174,7 +174,7 @@ sources:
     max_pages: 4
     enabled: true
 
-  # 수동 전용(YouTube RSS 등)은 위 manual_only 소스. 라프텔은 store.laftel.net 공개 HTML만
+  # 수동 전용은 위 manual_only(YouTube RSS) 소스와 아래 local_only(네이버 스토어) 소스. 라프텔은 store.laftel.net 공개 HTML만
   # 자동 수집한다(아래 「라프텔 스토어」). laftel.net 인기·신작 브라우저 수집은 쓰지 않는다.
 
   # 국내 리셀러의 호요버스(원신/스타레일/젠레스존제로) 공식 라이선스 굿즈. 예약마감/가격이 목록에 노출된다.
@@ -432,6 +432,70 @@ sources:
     list_product_mode: true
     list_image_selector: '.item_photo_box img'
     shop: 애니메이트 코리아
+
+  # 네이버 스토어(브랜드스토어·스마트스토어)는 robots.txt가 Disallow: / 라 자동 수집(collect.py)에서는 제외한다.
+  # 대신 사용자가 화면 앞에 있는 상태로 collect_manual.py에서 로컬 시크릿 브라우저(Playwright)로만 목록을 읽는다.
+  # 로그인/캡차는 대기 시간에 직접 처리하고, 우회는 시도하지 않는다. local_browser는 robots.txt를 확인하지 않는다.
+  - name: 메가하우스 몰 입고 상품
+    type: local_browser
+    url: https://smartstore.naver.com/megahousemall/category/5ba2f27d4bde41c4ba84f1fd9c83364a?cp=1
+    link_selector: 'a[href*="/megahousemall/products/"]'
+    region: KR
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://smartstore\.naver\.com/megahousemall/products/\d+'
+    max_items: 40
+    local_only: true
+    enabled: true
+    interactive_ready: true
+    interactive_message: 캡차/인증이 뜨면 직접 처리하고 상품 목록이 보이는 상태로 대기하세요.
+    scroll_steps: 4
+    product_mode: true
+    list_image_selector: img
+    shop: 메가하우스 몰(네이버)
+
+  - name: 메가하우스 몰 예약 상품
+    type: local_browser
+    url: https://smartstore.naver.com/megahousemall/category/a5876c8b741541e7ad056af202efdfb6?cp=1
+    link_selector: 'a[href*="/megahousemall/products/"]'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://smartstore\.naver\.com/megahousemall/products/\d+'
+    max_items: 40
+    local_only: true
+    enabled: true
+    interactive_ready: true
+    interactive_message: 캡차/인증이 뜨면 직접 처리하고 상품 목록이 보이는 상태로 대기하세요.
+    scroll_steps: 4
+    product_mode: true
+    list_image_selector: img
+    shop: 메가하우스 몰(네이버)
+
+  # 코토부키야 몰은 카테고리 URL을 아직 몰라 스토어 홈에서 시작한다. 카테고리 URL이 정해지면 url만 바꾼다.
+  - name: 코토부키야 몰
+    type: local_browser
+    url: https://brand.naver.com/kotobukiyamall
+    link_selector: 'a[href*="/kotobukiyamall/products/"]'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://brand\.naver\.com/kotobukiyamall/products/\d+'
+    max_items: 40
+    local_only: true
+    enabled: true
+    interactive_ready: true
+    interactive_message: 캡차/인증이 뜨면 직접 처리하고 상품 목록이 보이는 상태로 대기하세요.
+    scroll_steps: 4
+    product_mode: true
+    list_image_selector: img
+    shop: 코토부키야 몰(네이버)
 
   # 미국 공식 피규어 브랜드 뉴스. Sideshow는 Queue-it 대기실(사실상 항상 리다이렉트)로
   # 막혀 있어 자동 수집이 불가능해 McFarlane Toys 공식 뉴스로 대체했다.

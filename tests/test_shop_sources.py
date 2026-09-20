@@ -5,13 +5,16 @@ so a wrong selector or pattern in the config fails here, not in a live collectio
 """
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.parse import urlsplit
 
 from subculture.collection.infrastructure.collectors.common import extract_product_fields
+from subculture.collection.infrastructure.collectors.local_browser import _matches_any
 from subculture.collection.infrastructure.collectors.html_links import extract_links, fetch_detail, html_items
 from subculture.collection.application.manual_entry import add_manual_content, manual_shop
-from subculture.collection.infrastructure.sources_config import automatic_sources, is_manual_source, load_sources
+from subculture.collection.infrastructure.sources_config import (
+    automatic_sources, is_manual_source, load_sources, manual_sources,
+)
 
 SOURCES = {source["name"]: source for source in load_sources()}
 LAFTEL = SOURCES["라프텔 스토어"]
@@ -23,6 +26,8 @@ COMICS_ART_NEW = SOURCES["코믹스아트 신작 상품"]
 COMICS_ART_IN_STOCK = SOURCES["코믹스아트 입고 완료 당일 발송"]
 MANIAHOUSE_PREORDER = SOURCES["마니아하우스 예약상품"]
 MANIAHOUSE_IN_STOCK = SOURCES["마니아하우스 입고완료"]
+NAVER_STORE_HOSTS = {"brand.naver.com", "smartstore.naver.com"}
+NAVER_STORES = [SOURCES[name] for name in ("메가하우스 몰 입고 상품", "메가하우스 몰 예약 상품", "코토부키야 몰")]
 
 # store.laftel.net: the whole product card is the link; only fresh items carry a NEW badge.
 LAFTEL_HOME = """
@@ -315,7 +320,12 @@ class SourceListTests(unittest.TestCase):
         for source in load_sources():
             host = urlsplit(source["url"]).hostname or ""
             self.assertNotIn(host, {"x.com", "twitter.com"}, source["name"])       # AGENTS.md: no X scraping
-            self.assertNotEqual(host, "brand.naver.com", source["name"])            # robots.txt: Disallow: /
+            if host in NAVER_STORE_HOSTS:
+                # robots.txt: Disallow: / -> only the attended local browser, never collect.py.
+                self.assertEqual(source["type"], "local_browser", source["name"])
+                self.assertTrue(source.get("local_only"), source["name"])
+                self.assertTrue(is_manual_source(source), source["name"])
+                self.assertNotIn(source, automatic_sources(), source["name"])
 
     def test_shop_sources_are_automatic_robots_checked_html(self):
         for source in (LAFTEL, ANIMATE):
@@ -329,12 +339,55 @@ class SourceListTests(unittest.TestCase):
         ))
 
 
+class NaverLocalBrowserSourceTests(unittest.TestCase):
+    def test_sources_are_attended_private_browser_product_lists(self):
+        for source in NAVER_STORES:
+            with self.subTest(source["name"]):
+                self.assertEqual(source["type"], "local_browser")
+                self.assertTrue(source["local_only"])
+                self.assertTrue(source["product_mode"])
+                self.assertTrue(source["interactive_ready"])          # user clears any challenge; no bypass
+                self.assertNotIn("persistent_profile", source)        # private context by default
+                self.assertNotIn("respect_robots", source)
+                self.assertNotIn(source, automatic_sources())
+                self.assertIn(source, manual_sources())
+
+    def test_shop_label_matches_the_manual_entry_label(self):
+        for source in NAVER_STORES:
+            with self.subTest(source["name"]):
+                sample = f"{source['url'].split('?')[0].split('/category')[0]}/products/123"
+                self.assertEqual(manual_shop(sample)[1], source["shop"])
+
+    def test_allow_patterns_only_pass_that_stores_product_urls(self):
+        for source in NAVER_STORES:
+            with self.subTest(source["name"]):
+                store = source["url"].split("?")[0].split("/category")[0]
+                self.assertTrue(_matches_any(source["allow_patterns"], f"{store}/products/1234567?nl-query=x"))
+                self.assertFalse(_matches_any(source["allow_patterns"], f"{store}/category/abc"))
+                self.assertFalse(_matches_any(source["allow_patterns"], "https://example.com/products/1"))
+
+    def test_collect_py_refuses_and_collect_manual_accepts_them(self):
+        from subculture.collection.application.collection_runner import run_collection
+
+        with patch("subculture.collection.application.collection_runner.ContentStore"), \
+             patch("subculture.collection.application.collection_runner.COLLECTORS", {"local_browser": Mock()}) as collectors:
+            run_collection(NAVER_STORES[:1], db=None, dry_run=True, allow_manual=False)
+            collectors["local_browser"].assert_not_called()
+            collectors["local_browser"].return_value = dict(
+                processed=0, inserted=0, existing=0, updated=0, failed=0, skipped=0, reason="", errors=[])
+            run_collection(NAVER_STORES[:1], db=None, dry_run=True, allow_manual=True)
+            collectors["local_browser"].assert_called_once()
+
+
 class ManualShopTests(unittest.TestCase):
     def test_naver_kotobukiya_mall_and_laftel_are_saved_as_products(self):
         self.assertEqual(manual_shop("https://brand.naver.com/kotobukiyamall/products/123"),
                          ("Kotobukiya Mall (Naver)", "코토부키야 몰(네이버)"))
         self.assertEqual(manual_shop("https://store.laftel.net/products/4659"), ("Laftel Store", "Laftel"))
+        self.assertEqual(manual_shop("https://smartstore.naver.com/megahousemall/products/123"),
+                         ("Mega House Mall (Naver)", "메가하우스 몰(네이버)"))
         self.assertIsNone(manual_shop("https://brand.naver.com/othershop/products/1"))
+        self.assertIsNone(manual_shop("https://smartstore.naver.com/othershop/products/1"))
         self.assertIsNone(manual_shop("https://notlaftel.net/products/1"))
 
     def saved(self, url, category="FIGURE", image_url=""):
