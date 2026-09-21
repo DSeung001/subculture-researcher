@@ -51,6 +51,7 @@ class WorkflowTests(unittest.TestCase):
     def test_ai_flow_defers_writer_and_validates_size(self):
         library = Mock()
         library.draft_candidates.return_value = [{"_id": "FIGURE:a"}]
+        library.drafted_item_ids.return_value = set()
         with patch.object(ai_drafts, "write_draft_posts") as writer, \
              patch.object(ai_drafts, "create_draft", return_value=7) as create:
             self.assertEqual(ai_drafts.create_trending_draft(library), 7)
@@ -60,6 +61,23 @@ class WorkflowTests(unittest.TestCase):
         for size in (0, -1, 21, True):
             with self.subTest(size=size), self.assertRaises(DraftError):
                 ai_drafts.create_trending_draft(library, size=size)
+
+    def test_trending_draft_leaves_out_items_already_in_a_draft(self):
+        library = Mock()
+        library.draft_candidates.return_value = [{"_id": "FIGURE:a"}, {"_id": "FIGURE:b"}]
+        library.drafted_item_ids.return_value = {"FIGURE:a"}
+        with patch.object(ai_drafts, "select_top_items", side_effect=lambda pool, size: pool[:size]) as select, \
+             patch.object(ai_drafts, "create_draft", return_value=7) as create:
+            self.assertEqual(ai_drafts.create_trending_draft(library, size=1), 7)
+            self.assertEqual(select.call_args.args[0], [{"_id": "FIGURE:b"}])
+            self.assertEqual(create.call_args.args[1], ["FIGURE:b"])
+
+        library.drafted_item_ids.return_value = {"FIGURE:a", "FIGURE:b"}
+        with patch.object(ai_drafts, "select_top_items") as select, \
+             patch.object(ai_drafts, "create_draft") as create:
+            self.assertIsNone(ai_drafts.create_trending_draft(library))
+            select.assert_not_called()  # no candidates left: no Gemini call
+            create.assert_not_called()
 
     def test_work_drafts_skip_shared_sources_and_ignore_unusable(self):
         groups = [
@@ -140,7 +158,7 @@ class WorkflowTests(unittest.TestCase):
         from subculture.collection.interface import collect_cli as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[]), \
              patch.object(collect_mod, "get_db", return_value=self.db), \
-             patch.object(collect_mod, "run_collection") as run, \
+             patch.object(collect_mod, "run_collection", return_value={"total": {"inserted": 2}}) as run, \
              patch.object(collect_mod, "run_local_trending_draft", return_value="[AI 초안] ok") as draft, \
              patch.dict("os.environ", {}, clear=False):
             import os
@@ -149,11 +167,27 @@ class WorkflowTests(unittest.TestCase):
         run.assert_called_once()
         draft.assert_called_once_with(None)  # the draft goes to the local library, not Firestore
 
+    def test_collect_skips_the_draft_when_nothing_new_was_inserted(self):
+        from subculture.collection.interface import collect_cli as collect_mod
+        from subculture.collection.interface import collect_manual_cli as manual_mod
+        for module, argv in ((collect_mod, []), (manual_mod, ["--ai-draft"])):
+            with self.subTest(module=module.__name__), \
+                 patch.object(module, "load_sources", return_value=[]), \
+                 patch.object(module, "get_db", return_value=self.db), \
+                 patch.object(module, "run_collection", return_value={"total": {"inserted": 0}}), \
+                 patch.object(module, "sync_local"), \
+                 patch.object(module, "run_local_trending_draft") as draft, \
+                 patch.dict("os.environ", {}, clear=False):
+                import os
+                os.environ.pop("CI", None)
+                module.main(argv)
+            draft.assert_not_called()
+
     def test_cloud_run_never_writes_a_draft(self):
         from subculture.collection.interface import collect_cli as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[]), \
              patch.object(collect_mod, "get_db", return_value=self.db), \
-             patch.object(collect_mod, "run_collection"), \
+             patch.object(collect_mod, "run_collection", return_value={"total": {"inserted": 2}}), \
              patch.object(collect_mod, "run_local_trending_draft") as draft, \
              patch.dict("os.environ", {"CI": "true"}):
             collect_mod.main([])

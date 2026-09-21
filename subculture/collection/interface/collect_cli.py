@@ -88,7 +88,7 @@ def main(argv=None):
         sources = automatic_sources(all_sources)
 
     db = None if args.dry_run else get_db()
-    run_collection(
+    result = run_collection(
         sources,
         db=db,
         dry_run=args.dry_run,
@@ -105,7 +105,11 @@ def main(argv=None):
 
     # Drafts live in the local library; the cloud run (CI) has none to write to.
     if db is not None and not args.no_ai_draft and not os.environ.get("CI"):
-        print(run_local_trending_draft(args.db))
+        # Nothing new means the same candidates as the last draft: skip the Gemini calls.
+        if result["total"]["inserted"] > 0:
+            print(run_local_trending_draft(args.db))
+        else:
+            print("[AI 초안] 신규 항목 없음, 건너뜀")
 
 
 if __name__ == "__main__":

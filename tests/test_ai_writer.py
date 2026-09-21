@@ -239,10 +239,41 @@ class GeminiRequestTests(unittest.TestCase):
         self.assertEqual(config["responseMimeType"], "application/json")
         self.assertIs(config["responseSchema"], ai_writer.POSTS_SCHEMA)
 
-    def test_selection_calls_stay_plain_text(self):
+    def test_no_schema_means_plain_text_output(self):
         config = self.sent_body(None)
         self.assertNotIn("responseMimeType", config)
         self.assertNotIn("responseSchema", config)
+
+
+class SelectTopItemsTests(unittest.TestCase):
+    ITEMS = [{"title": f"item {number}"} for number in range(1, 6)]
+
+    def select(self, response=None, error=None):
+        with patch.object(ai_writer, "api_key", return_value="fake-key"), patch.object(
+            ai_writer, "_call_gemini", return_value=response, side_effect=error
+        ) as call:
+            picked = ai_writer.select_top_items(self.ITEMS, 2)
+        return picked, call
+
+    def test_selection_asks_for_a_json_array_of_numbers(self):
+        picked, call = self.select("[3, 1]")
+        self.assertEqual(picked, [self.ITEMS[2], self.ITEMS[0]])
+        self.assertIs(call.call_args.args[2], ai_writer.SELECTION_SCHEMA)
+
+    def test_out_of_range_and_repeated_numbers_are_ignored(self):
+        picked, _ = self.select("[9, 2, 2, 4]")
+        self.assertEqual(picked, [self.ITEMS[1], self.ITEMS[3]])
+
+    def test_an_unparseable_or_failed_selection_falls_back_to_score_order(self):
+        for kwargs in ({"response": "모르겠어요"}, {"error": ai_writer.AiWriterError("down")}):
+            with self.subTest(kwargs=kwargs):
+                picked, _ = self.select(**kwargs)
+                self.assertEqual(picked, self.ITEMS[:2])
+
+    def test_no_call_when_every_candidate_is_needed(self):
+        with patch.object(ai_writer, "_call_gemini") as call:
+            self.assertEqual(ai_writer.select_top_items(self.ITEMS[:2], 2), self.ITEMS[:2])
+        call.assert_not_called()
 
 
 if __name__ == "__main__":

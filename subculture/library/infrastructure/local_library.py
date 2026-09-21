@@ -243,6 +243,11 @@ class Library:
         with self.connect() as session:
             return set(session.scalars(query))
 
+    def drafted_item_ids(self):
+        """Item ids already used by any draft, whether still a DRAFT or published."""
+        with self.connect() as session:
+            return set(session.scalars(select(DraftItem.item_id)))
+
     def draft_candidates(self, category=None):
         """Every stored document a new draft could use: not ignored, not posted, not in a published draft."""
         used = self.posted_item_ids()

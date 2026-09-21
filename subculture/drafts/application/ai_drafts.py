@@ -13,8 +13,8 @@ from subculture.shared.presentation import content_score
 def create_trending_draft(library: Library, size: int = DRAFT_SIZE, category: str | None = None, cloud=None) -> int | None:
     """Create one AI-written draft from the items most likely to be widely seen.
 
-    Candidates are the locally synced items that are not ignored or posted. When
-    `category` is given, only that category's items are considered (e.g. to
+    Candidates are the locally synced items that are not ignored, posted, or already
+    part of a draft. When `category` is given, only that category's items are considered (e.g. to
     generate one draft per category instead of one mixed draft).
 
     Returns the new draft id, or None when there is no unposted material to
@@ -23,7 +23,10 @@ def create_trending_draft(library: Library, size: int = DRAFT_SIZE, category: st
     """
     if not isinstance(size, int) or isinstance(size, bool) or not 1 <= size <= MAX_SOURCES:
         raise DraftError(f"초안 재료 수는 1~{MAX_SOURCES}개여야 합니다.")
-    items = library.draft_candidates(category)
+    # Items already in an unpublished draft would only re-pick the same set and hit the duplicate check
+    # after the Gemini calls were spent.
+    drafted = library.drafted_item_ids()
+    items = [item for item in library.draft_candidates(category) if item["_id"] not in drafted]
     if not items:
         return None
 

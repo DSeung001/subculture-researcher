@@ -261,6 +261,13 @@ class CandidateTests(DraftCase):
         self.assertEqual(self.lib.draft_candidates("ANIME"), [])
         self.assertEqual([i["_id"] for i in self.lib.draft_candidates("FIGURE")], ["FIGURE:a"])
 
+    def test_drafted_item_ids_include_unpublished_drafts(self):
+        self.assertEqual(self.lib.drafted_item_ids(), set())
+        create_draft(self.lib, ["FIGURE:a"])
+        self.assertEqual(self.lib.drafted_item_ids(), {"FIGURE:a"})
+        self.assertEqual(self.lib.posted_item_ids(), set())  # still a DRAFT, so still a candidate elsewhere
+        self.assertIn("FIGURE:a", [i["_id"] for i in self.lib.draft_candidates()])
+
     def test_draft_sources_are_never_pruned_as_orphans(self):
         create_draft(self.lib, ["FIGURE:a"])
         # Sync linked FIGURE:d → 피규어; clear it so this row is a plain orphan.

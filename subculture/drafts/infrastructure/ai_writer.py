@@ -117,6 +117,9 @@ PROMPT_TEMPLATE = (
     "소재:\n{material}"
 )
 
+# Structured output for the selection call: 1-based candidate numbers, best first.
+SELECTION_SCHEMA = {"type": "ARRAY", "items": {"type": "INTEGER"}}
+
 # Structured output: the model returns the post and the per-source names, never a link.
 POSTS_SCHEMA = {
     "type": "OBJECT",
@@ -371,6 +374,11 @@ def _call_gemini(prompt: str, key: str, response_schema: dict | None = None) -> 
     except (requests.RequestException, ValueError) as exc:
         raise AiWriterError(f"Gemini 요청 실패: {exc}") from exc
 
+    usage = payload.get("usageMetadata") or {}
+    print(
+        f"[Gemini] 토큰 입력={usage.get('promptTokenCount', '?')} "
+        f"출력={usage.get('candidatesTokenCount', '?')}"
+    )
     candidates = payload.get("candidates") or []
     parts = (candidates[0].get("content") or {}).get("parts") if candidates else []
     text = "".join(part.get("text", "") for part in (parts or [])).strip()
@@ -396,7 +404,7 @@ def select_top_items(items: list[dict], size: int) -> list[dict]:
 
     prompt = SELECT_PROMPT_TEMPLATE.format(size=size, material=_selection_block(items))
     try:
-        text = _call_gemini(prompt, key)
+        text = _call_gemini(prompt, key, SELECTION_SCHEMA)
     except AiWriterError:
         return items[:size]
 
