@@ -66,6 +66,16 @@ class AiWriterPromptTests(unittest.TestCase):
         material = ai_writer._material_block([product("피규어", "https://shop.example.com/1")])
         self.assertNotIn("https://", material)
 
+    def test_material_block_lists_linked_work_names(self):
+        material = ai_writer._material_block([
+            product("페른 피규어", "https://shop.example.com/1", _workNames=["프리렌", "장송의 프리렌"]),
+            product("이름만 있는 피규어", "https://shop.example.com/2"),
+            product("빈 목록", "https://shop.example.com/3", _workNames=[]),
+            product("공백만", "https://shop.example.com/4", _workNames=["  ", ""]),
+        ])
+        self.assertIn("   작품: 프리렌, 장송의 프리렌", material)
+        self.assertEqual(material.count("   작품:"), 1)
+
     def test_write_prompt_forbids_anilist_and_uses_sns_tone(self):
         items = [
             {
@@ -115,6 +125,21 @@ class AiWriterPromptTests(unittest.TestCase):
         self.assertNotIn("바로 구매 가능", prompt)
         for hint in ai_writer.CATEGORY_HINTS.values():
             self.assertNotIn("판매처", hint)
+
+    def test_figure_hint_weaves_character_and_work_with_a_light_observation(self):
+        hint = ai_writer.CATEGORY_HINTS["FIGURE"]
+        self.assertIn("작품", hint)
+        self.assertIn("캐릭터", hint)
+        self.assertIn("가벼운 관찰", hint)
+        self.assertIn("추측하지 마", hint)
+        self.assertIn("가격·사이즈·발매", hint)
+
+    def test_prompt_asks_for_casual_korean_speech(self):
+        prompt = ai_writer.PROMPT_TEMPLATE.format(
+            angle="COMPARE", category_hint="힌트", body_target=260, material="1. 소재")
+        self.assertIn("반말", prompt)
+        self.assertIn("구어체", prompt)
+        self.assertIn("'합니다', '해요'체", prompt)
 
 
 class SaleTypeTests(unittest.TestCase):

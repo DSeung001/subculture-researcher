@@ -48,6 +48,13 @@ def _load_contents(library: Library, source_ids: list[str], cloud=None) -> list[
     return [items[source_id] for source_id in source_ids]
 
 
+def _attach_work_names(library: Library, items: list[dict]) -> None:
+    """Put confirmed `item_works` names on each item so the write prompt can cite the original work."""
+    names = library.work_names_for_items([item["_id"] for item in items if item.get("_id")])
+    for item in items:
+        item["_workNames"] = list(names.get(item.get("_id"), []))
+
+
 def create_draft(
     library: Library, source_ids, angle: str | None = None, body: str | None = None,
     reply: str | None = None, *,
@@ -67,6 +74,7 @@ def create_draft(
         raise DraftError(f"한 임시글에 재료는 {MAX_SOURCES}개까지입니다.")
 
     items = _load_contents(library, ids, cloud)
+    _attach_work_names(library, items)
     chosen_angle = angle if angle in ALLOWED_ANGLES else infer_angle(items)
 
     if chosen_angle == "NEWS" and (

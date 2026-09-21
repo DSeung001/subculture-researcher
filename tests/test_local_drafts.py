@@ -63,6 +63,17 @@ class CreateTests(DraftCase):
                          ("AI body", "AI reply", ["FIGURE:a", "FIGURE:b"]))
         self.assertEqual(draft["status"], "DRAFT")
 
+    def test_body_factory_receives_linked_work_names(self):
+        first = self.lib.save_term("works", "진격의 거인")
+        second = self.lib.save_term("works", "프리렌")
+        self.lib.assign(["FIGURE:a"], "works", first)
+        self.lib.assign(["FIGURE:a"], "works", second)
+        writer = Mock(return_value=DraftPosts("body", "reply"))
+        create_draft(self.lib, ["FIGURE:a", "FIGURE:b"], body_factory=writer)
+        items = writer.call_args.args[0]
+        self.assertEqual(items[0]["_workNames"], ["진격의 거인", "프리렌"])
+        self.assertEqual(items[1]["_workNames"], [])
+
     def test_source_count_limits_and_bad_ids(self):
         with self.assertRaisesRegex(DraftError, "선택"):
             create_draft(self.lib, [])

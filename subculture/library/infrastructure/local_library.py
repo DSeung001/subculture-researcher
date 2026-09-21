@@ -232,6 +232,25 @@ class Library:
             result[item_id] = data
         return result
 
+    def work_names_for_items(self, item_ids):
+        """Confirmed work names per item id. Collab items keep every linked name, ordered by name."""
+        ids = list(dict.fromkeys(item_ids))
+        if not ids:
+            return {}
+        with self.connect() as session:
+            rows = session.execute(
+                select(ItemWork.item_id, Work.name)
+                .join(Work, Work.id == ItemWork.term_id)
+                .where(ItemWork.item_id.in_(ids))
+                .order_by(Work.name)
+            ).all()
+        result = {}
+        for item_id, name in rows:
+            names = result.setdefault(item_id, [])
+            if name not in names:
+                names.append(name)
+        return result
+
     def posted_item_ids(self, item_ids=None):
         """Item ids that belong to a published draft (optionally limited to `item_ids`)."""
         query = select(DraftItem.item_id).join(Draft, Draft.id == DraftItem.draft_id).where(Draft.status == "POSTED")
