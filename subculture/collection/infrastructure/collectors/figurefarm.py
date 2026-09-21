@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 from subculture.collection.infrastructure.collectors.common import save_records
 from subculture.collection.infrastructure.collectors.http import RobotsPolicy, get_html
-from subculture.collection.infrastructure.collectors.images import detail_image
+from subculture.collection.infrastructure.collectors.images import detail_image, detail_images
 from subculture.collection.domain.content_rules import DEFAULT_DETAIL_REFRESH_HOURS, normalize_url
 
 
@@ -119,7 +119,10 @@ def figurefarm_items(source: dict, store=None):
         # Non-figure products are never stored, so without this they would be fetched every run.
         if source.get("figure_only", True) and list_title and not _is_figure(list_title):
             continue
-        if store is not None and not store.needs_detail(url, product_mode=True, refresh_hours=refresh_hours):
+        if store is not None and not store.needs_detail(
+            url, product_mode=True, refresh_hours=refresh_hours,
+            want_detail_images=bool(source.get("detail_images_selector")),
+        ):
             yield {"url": url, "title": list_title or url, "_errors": []}
             continue
         try:
@@ -145,7 +148,7 @@ def figurefarm_items(source: dict, store=None):
 
             sale_status = "SOLD_OUT" if sold_out else ("PREORDER" if preorder else "IN_STOCK")
             price = _parse_price(full_text)
-
+            image_url = detail_image(soup, final_url, source)
             item = {
                 "url": final_url,
                 "title": title,
@@ -158,10 +161,14 @@ def figurefarm_items(source: dict, store=None):
                 "sizeText": _labeled_value(soup, "치수"),
                 "price": price,
                 "currency": "KRW" if price is not None else None,
-                "imageUrl": detail_image(soup, final_url, source),
+                "imageUrl": image_url,
                 "productCheckedAt": datetime.now(timezone.utc),
                 "_errors": [],
             }
+            if source.get("detail_images_selector"):
+                item["detailImageUrls"] = detail_images(
+                    soup, final_url, source, exclude=image_url,
+                )
             yield item
         except Exception as exc:
             yield {

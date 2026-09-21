@@ -1,0 +1,39 @@
+"""Download product main + detail images from the local library into .local/image_exports."""
+
+import argparse
+
+from subculture.library.application.export_images import (
+    ExportError, export_images, resolve_item_ids, zip_export,
+)
+from subculture.library.infrastructure.local_library import Library
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db", help="Override database URL or legacy SQLite path")
+    parser.add_argument("--ids", nargs="+", help="Item ids (CATEGORY:document_id)")
+    parser.add_argument("--work-id", type=int, help="All items linked to this work")
+    parser.add_argument("--collection-id", type=int, help="All items in this collection")
+    parser.add_argument("--out", help="Output directory (default: .local/image_exports/<stamp>)")
+    parser.add_argument("--zip", action="store_true", help="Also write a .zip next to the folder")
+    parser.add_argument("--pause", type=float, default=0.35, help="Seconds between items (default 0.35)")
+    args = parser.parse_args()
+    library = Library(args.db)
+    try:
+        item_ids = resolve_item_ids(
+            library, item_ids=args.ids, work_id=args.work_id, collection_id=args.collection_id,
+        )
+        root = export_images(
+            library, item_ids,
+            directory=args.out, pause_seconds=args.pause,
+        )
+    except ExportError as exc:
+        raise SystemExit(str(exc)) from exc
+    print(f"내보냄: {root}")
+    if args.zip:
+        archive = zip_export(root)
+        print(f"ZIP: {archive}")
+
+
+if __name__ == "__main__":
+    main()

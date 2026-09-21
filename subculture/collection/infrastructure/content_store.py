@@ -14,6 +14,22 @@ from subculture.shared.content_model import category_collection
 from subculture.shared.image_urls import http_url
 
 
+def _clean_detail_image_urls(raw, *, exclude: str | None = None) -> list[str]:
+    """http(s) gallery URLs only, deduped, optionally dropping the main photo."""
+    if not isinstance(raw, list):
+        return []
+    urls: list[str] = []
+    seen: set[str] = set()
+    if exclude:
+        seen.add(exclude)
+    for value in raw:
+        url = http_url(value)
+        if url and url not in seen:
+            seen.add(url)
+            urls.append(url)
+    return urls
+
+
 class ContentStore:
     def __init__(self, db=None):
         """db=None is an isolated dry run; no Firestore access or credentials."""
@@ -32,7 +48,9 @@ class ContentStore:
                     continue
                 self.by_url.setdefault(url, []).append({
                     "id": snapshot.id, "status": data.get("status"), "ref": snapshot.reference,
-                    "imageUrl": data.get("imageUrl"), "price": data.get("price"),
+                    "imageUrl": data.get("imageUrl"),
+                    "detailImageUrls": data.get("detailImageUrls"),
+                    "price": data.get("price"),
                     "checkedAt": data.get("detailCheckedAt") or data.get("productCheckedAt"),
                 })
 
@@ -61,6 +79,7 @@ class ContentStore:
     def needs_detail(
         self, url: str, *, product_mode: bool = False,
         refresh_hours: float | None = DEFAULT_DETAIL_REFRESH_HOURS,
+        want_detail_images: bool = False,
     ) -> bool:
         """Whether a detail page must be fetched for this listed URL.
 
@@ -68,6 +87,8 @@ class ContentStore:
         `refresh_hours` (price/sale status change). Photo-only pages never change,
         so they are refetched only while the photo is missing, and then no more
         often than `refresh_hours` so a page that has no photo is not hit every run.
+        When `want_detail_images` is set and the stored gallery is empty, the page
+        is fetched once even inside the refresh window (backfill).
         `refresh_hours` of 0 turns skipping off.
         """
         if self.db is None:
@@ -82,6 +103,8 @@ class ContentStore:
         # Same document choice as save().
         canonical_id = doc_id(normalized)
         doc = min(docs, key=lambda d: (d["id"] != canonical_id, d["id"]))
+        if want_detail_images and doc.get("detailImageUrls") is None:
+            return True
         if not product_mode and doc.get("imageUrl"):
             return False
         checked = doc.get("checkedAt")
@@ -94,9 +117,17 @@ class ContentStore:
     def save(self, item: dict) -> dict[str, int]:
         # Only plain http(s) image links are ever stored or rendered.
         image_url = http_url(item.get("imageUrl"))
-        item = {k: v for k, v in item.items() if k != "imageUrl"}
+        has_detail_images = "detailImageUrls" in item
+        detail_urls = (
+            _clean_detail_image_urls(item.get("detailImageUrls"), exclude=image_url)
+            if has_detail_images else None
+        )
+        item = {k: v for k, v in item.items() if k not in {"imageUrl", "detailImageUrls"}}
         if image_url:
             item["imageUrl"] = image_url
+        if has_detail_images:
+            # Empty list marks "checked, none found" so needs_detail backfill stops.
+            item["detailImageUrls"] = detail_urls
         url = normalize_url(item["url"])
         canonical_id = doc_id(url)
         existing = self.by_url.get(url, [])

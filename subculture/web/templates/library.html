@@ -104,6 +104,7 @@
           <div class="bulk-controls">
             <label>기획 묶음<select name="collection_id"><option value="">선택하세요</option>{% for group in collections %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select></label>
             <button class="btn btn-primary" formaction="{{ url_for('library.collection_add') }}">선택 항목 담기</button>
+            <button class="btn" formaction="{{ url_for('library.export_item_images') }}">이미지 다운로드</button>
           </div>
         </form>
       </section>

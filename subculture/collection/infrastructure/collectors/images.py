@@ -47,6 +47,34 @@ def first_image(root, selector: str, base_url: str, deny=()) -> str | None:
     return None
 
 
+def all_images(root, selector: str, base_url: str, deny=()) -> list[str]:
+    """Every distinct photo URL under `selector`, in document order."""
+    urls: list[str] = []
+    seen: set[str] = set()
+    for node in root.select(selector):
+        if node.name != "img":
+            continue
+        url = img_url(node, base_url, deny)
+        if url and url not in seen:
+            seen.add(url)
+            urls.append(url)
+    return urls
+
+
+def detail_images(
+    soup, base_url: str, source: dict, *, exclude: str | None = None,
+) -> list[str]:
+    """Gallery/detail-body photos from `detail_images_selector` (empty if unset)."""
+    selector = source.get("detail_images_selector")
+    if not selector:
+        return []
+    deny = source.get("image_deny_patterns", [])
+    urls = all_images(soup, selector, base_url, deny)
+    if exclude:
+        urls = [url for url in urls if url != exclude]
+    return urls
+
+
 def card_of(anchor, link_selector: str, base_url: str):
     """The widest ancestor of a list link that still holds only that item's links.
 

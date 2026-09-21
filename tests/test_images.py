@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from subculture.collection.infrastructure.collectors import anilist, json_api, youtube_feed
 from subculture.collection.infrastructure.collectors.common import extract_product_fields
 from subculture.collection.infrastructure.collectors.html_links import extract_links, html_items
-from subculture.collection.infrastructure.collectors.images import card_of, detail_image, img_url
+from subculture.collection.infrastructure.collectors.images import card_of, detail_image, detail_images, img_url
 from subculture.collection.infrastructure.collectors.local_browser import _card_image
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.shared.image_urls import clean_image_url, http_url
@@ -115,6 +115,33 @@ class DomExtractionTests(unittest.TestCase):
         only_default = BeautifulSoup('<meta property="og:image" content="/img/common/ogp.png">', "html.parser")
         self.assertIsNone(detail_image(only_default, "https://www.site.example/n", {}))
 
+    def test_detail_images_collect_selector_photos_and_skip_noise(self):
+        page = BeautifulSoup(
+            """
+            <div id="prdDetail">
+              <img src="/web/upload/icon_1.png" width="24" height="24">
+              <img src="https://cdn.example.com/detail/1.jpg">
+              <img data-src="https://cdn.example.com/detail/2.jpg" src="/_wg/img/_btn/list_blank.png">
+              <img src="https://cdn.example.com/detail/1.jpg">
+            </div>
+            <div class="footer"><img src="https://cdn.example.com/logo.png"></div>
+            """,
+            "html.parser",
+        )
+        source = {"detail_images_selector": "#prdDetail img"}
+        self.assertEqual(
+            detail_images(page, "https://shop.example.com/p/1", source),
+            ["https://cdn.example.com/detail/1.jpg", "https://cdn.example.com/detail/2.jpg"],
+        )
+        self.assertEqual(
+            detail_images(
+                page, "https://shop.example.com/p/1", source,
+                exclude="https://cdn.example.com/detail/1.jpg",
+            ),
+            ["https://cdn.example.com/detail/2.jpg"],
+        )
+        self.assertEqual(detail_images(page, "https://shop.example.com/p/1", {}), [])
+
     def test_product_fields_keep_the_photo_only_when_there_is_one(self):
         with_photo = extract_product_fields({"name": "s"}, "가격 12,000원", "https://cdn.example.com/p.jpg")
         self.assertEqual(with_photo["imageUrl"], "https://cdn.example.com/p.jpg")
@@ -123,12 +150,12 @@ class DomExtractionTests(unittest.TestCase):
 
 
 class DetailFetchTests(unittest.TestCase):
-    def run_items(self, source, pages):
+    def run_items(self, source, pages, store=None):
         def fake_get_html(url, policy, timeout=15, source=None):
             return pages[url], url
         with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html), \
                 patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
-            return list(html_items(source))
+            return list(html_items(source, store))
 
     def test_detail_og_image_is_stored_without_a_price(self):
         listing = "https://n.example.com/list"
@@ -151,6 +178,30 @@ class DetailFetchTests(unittest.TestCase):
         (item,) = self.run_items(source, pages)
         self.assertEqual(item["imageUrl"], "https://cdn.example.com/p1.jpg")
         self.assertEqual(item["price"], 12000)
+
+    def test_shop_collects_detail_gallery_urls(self):
+        listing = "https://s.example.com/list"
+        pages = {
+            listing: '<a href="/p/1">상품 이름 하나</a>',
+            "https://s.example.com/p/1": (
+                '<meta property="og:image" content="https://cdn.example.com/main.jpg">'
+                '<div id="prdDetail">'
+                '<img src="https://cdn.example.com/main.jpg">'
+                '<img src="https://cdn.example.com/d1.jpg">'
+                '<img src="https://cdn.example.com/d2.jpg">'
+                "</div>예약 12,000원"
+            ),
+        }
+        source = {
+            "name": "shop", "url": listing, "link_selector": "a", "product_mode": True,
+            "detail_images_selector": "#prdDetail img", "respect_robots": False,
+        }
+        (item,) = self.run_items(source, pages)
+        self.assertEqual(item["imageUrl"], "https://cdn.example.com/main.jpg")
+        self.assertEqual(
+            item["detailImageUrls"],
+            ["https://cdn.example.com/d1.jpg", "https://cdn.example.com/d2.jpg"],
+        )
 
 
 class FeedAndApiTests(unittest.TestCase):
@@ -223,6 +274,28 @@ class StoreImageTests(unittest.TestCase):
         by_url = {row["url"]: row for row in store.preview}
         self.assertTrue(all("imageUrl" not in by_url[f"https://example.com/{i}"] for i in range(4)))
         self.assertEqual(by_url["https://example.com/ok"]["imageUrl"], "https://cdn.example.com/a.jpg")
+
+    def test_detail_image_urls_are_cleaned_and_empty_list_is_kept(self):
+        store = ContentStore()
+        store.save({
+            "url": "https://example.com/g",
+            "title": "t",
+            "imageUrl": "https://cdn.example.com/main.jpg",
+            "detailImageUrls": [
+                "https://cdn.example.com/main.jpg",
+                "javascript:alert(1)",
+                "https://cdn.example.com/d1.jpg",
+                "https://cdn.example.com/d1.jpg",
+            ],
+        })
+        store.save({
+            "url": "https://example.com/empty",
+            "title": "t",
+            "detailImageUrls": [],
+        })
+        by_url = {row["url"]: row for row in store.preview}
+        self.assertEqual(by_url["https://example.com/g"]["detailImageUrls"], ["https://cdn.example.com/d1.jpg"])
+        self.assertEqual(by_url["https://example.com/empty"]["detailImageUrls"], [])
 
     def test_recollection_backfills_the_photo_on_existing_documents(self):
         store = ContentStore()

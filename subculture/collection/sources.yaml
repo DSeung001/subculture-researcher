@@ -13,6 +13,7 @@ sources:
     figure_only: true
     enabled: true
     respect_robots: true
+    detail_images_selector: '#prdDetail img, .prd_detail img, .goods_description img'
 
   # 애니메이션 작품 자체의 인기/트렌드 신호. 기사 DB 복제가 아니라 소재 발견용으로 소량만 수집한다.
   - name: AniList 트렌딩 애니
@@ -159,6 +160,7 @@ sources:
     respect_robots: true
     product_mode: true
     product_text_selector: .detailArea
+    detail_images_selector: '#prdDetail img'
     shop: 따빼몰
 
   # 국내 리셀러의 명조(워더링 웨이브) 공식 라이선스 굿즈.
@@ -182,6 +184,7 @@ sources:
     respect_robots: true
     product_mode: true
     product_text_selector: .detailArea
+    detail_images_selector: '#prdDetail img'
     shop: 따빼몰
 
   # 따빼몰 전체 신규입고(cate_no=23). 작품 구분 없이 최신 입고순이라 첫 3페이지(90건)만 본다.
@@ -207,6 +210,7 @@ sources:
     respect_robots: true
     product_mode: true
     product_text_selector: .detailArea
+    detail_images_selector: '#prdDetail img'
     shop: 따빼몰
 
   # 따빼몰 전체 신규예약(cate_no=24). 제목이 [예약]으로 시작하고 넨도로이드 등 피규어와 굿즈가 섞여 있다.
@@ -230,6 +234,7 @@ sources:
     respect_robots: true
     product_mode: true
     product_text_selector: .detailArea
+    detail_images_selector: '#prdDetail img'
     shop: 따빼몰
 
   # 마니아하우스(키덜트 전문샵, Cafe24) 예약 상품(cate_no=45). 피규어·프라모델이 섞여 있고 목록이 최신순이라 첫 2페이지(70건)만 본다.
@@ -253,6 +258,7 @@ sources:
     respect_robots: true
     product_mode: true
     product_text_selector: .xans-product-detaildesign
+    detail_images_selector: '#prdDetail img'
     shop: 마니아하우스
 
   # 마니아하우스 입고 완료 상품(cate_no=46, 등록 1만 6천여 건). 최신순 첫 2페이지(70건)만 본다.
@@ -276,6 +282,7 @@ sources:
     respect_robots: true
     product_mode: true
     product_text_selector: .xans-product-detaildesign
+    detail_images_selector: '#prdDetail img'
     shop: 마니아하우스
 
   # 코믹스아트(Cafe24 피규어샵) 신작 상품(cate_no=1215). 신작 예약이 최신순으로 나온다(페이지당 56건).
@@ -489,6 +496,7 @@ sources:
     enabled: true
     respect_robots: true
     product_mode: true
+    detail_images_selector: '#prdDetail img'
     shop: 피규어프레소
 
   # 라프텔 스토어 신상품(NEW 배지). 로그인 없이 공개 HTML이며 robots.txt가 허용한다.

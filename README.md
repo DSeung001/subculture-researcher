@@ -59,6 +59,7 @@ python -m playwright install chromium
 | AI 초안 없이 수집 | `python collect.py --no-ai-draft` (GitHub Actions는 항상 이 옵션) |
 | Firestore에 남은 임시글 삭제 | `python delete_firestore_drafts.py --dry-run` 후 `--dry-run` 없이 실행 (삭제 전 `.local/backups`에 JSON 백업) |
 | 클라우드 → 로컬 동기화 | `python sync_library.py` |
+| 선택 항목 이미지 벌크 저장 | `python export_images.py --ids FIGURE:…` 또는 `--work-id N` / `--collection-id N` (작품·기획 UI의 「이미지 다운로드」도 동일) |
 | 수집 후 동기화 건너뛰기 | `python collect.py --no-sync` (`collect_manual.py`도 동일) |
 | 원격에서 사라진 로컬 항목 정리 | `python prune_library.py --dry-run` 후 `--dry-run` 없이 실행 |
 | 수동 수집 (네이버 스토어 Playwright) | `python collect_manual.py` |

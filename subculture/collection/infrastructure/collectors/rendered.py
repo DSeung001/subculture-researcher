@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from subculture.collection.infrastructure.collectors.common import extract_product_fields
 from subculture.collection.infrastructure.collectors.html_links import extract_links, extract_metrics
 from subculture.collection.infrastructure.collectors.http import USER_AGENT, pause_between_requests
-from subculture.collection.infrastructure.collectors.images import detail_image
+from subculture.collection.infrastructure.collectors.images import detail_image, detail_images
 
 
 def rendered_items(source: dict, policy):
@@ -106,6 +106,10 @@ def rendered_items(source: dict, policy):
                                 text_selector = source.get("product_text_selector")
                                 full_text = detail.locator(text_selector or "body").inner_text()
                                 item.update(extract_product_fields(source, full_text, image_url))
+                                if source.get("detail_images_selector"):
+                                    item["detailImageUrls"] = detail_images(
+                                        detail_soup, detail.url, source, exclude=image_url,
+                                    )
                         except Exception as exc:
                             item["_errors"].append(f"상세 페이지 실패: {exc}")
                     yield item

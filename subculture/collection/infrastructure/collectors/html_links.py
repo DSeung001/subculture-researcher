@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from subculture.collection.domain.content_rules import DEFAULT_DETAIL_REFRESH_HOURS, METRICS, normalize_url
 from subculture.collection.infrastructure.collectors.common import RobotsDenied, extract_product_fields, save_records
 from subculture.collection.infrastructure.collectors.http import RobotsPolicy, get_html, page_url
-from subculture.collection.infrastructure.collectors.images import card_of, detail_image, list_image
+from subculture.collection.infrastructure.collectors.images import card_of, detail_image, detail_images, list_image
 
 
 RELATIVE_KOREAN_PATTERN = re.compile(r"^(\d+)\s*(초|분|시간|일|주|개월|년)\s*전$")
@@ -213,12 +213,14 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
     detail_selectors = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
     product_mode = source.get("product_mode", False)
     detail_image_mode = source.get("fetch_detail_image", False)
+    want_gallery = bool(product_mode and source.get("detail_images_selector"))
     if not (detail_selectors or product_mode or detail_image_mode):
         return
     # Metrics change all the time, so pages that read them are never skipped.
     if not detail_selectors and store is not None and not store.needs_detail(
         item["url"], product_mode=product_mode,
         refresh_hours=float(source.get("detail_refresh_hours", DEFAULT_DETAIL_REFRESH_HOURS)),
+        want_detail_images=want_gallery,
     ):
         return
     try:
@@ -240,6 +242,10 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
             text_root = detail_soup.select_one(text_selector) if text_selector else detail_soup
             full_text = visible_text(text_root) if text_root else ""
             item.update(extract_product_fields(source, full_text, image_url))
+            if want_gallery:
+                item["detailImageUrls"] = detail_images(
+                    detail_soup, detail_url, source, exclude=image_url,
+                )
         if image_url:
             item["imageUrl"] = image_url
         item["detailCheckedAt"] = datetime.now(timezone.utc)

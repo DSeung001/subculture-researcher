@@ -68,6 +68,31 @@ class NeedsDetailTests(unittest.TestCase):
         self.assertFalse(fresh.needs_detail(self.URL, product_mode=True, refresh_hours=72))
         self.assertTrue(stale.needs_detail(self.URL, product_mode=True, refresh_hours=72))
 
+    def test_missing_detail_gallery_forces_one_backfill(self):
+        fresh = store_with(stored(
+            self.URL, imageUrl="https://c.example.com/a.jpg", price=100,
+            productCheckedAt=NOW - timedelta(hours=2),
+        ))
+        filled = store_with(stored(
+            self.URL, imageUrl="https://c.example.com/a.jpg", price=100,
+            detailImageUrls=["https://c.example.com/d.jpg"],
+            productCheckedAt=NOW - timedelta(hours=2),
+        ))
+        empty_checked = store_with(stored(
+            self.URL, imageUrl="https://c.example.com/a.jpg", price=100,
+            detailImageUrls=[],
+            productCheckedAt=NOW - timedelta(hours=2),
+        ))
+        self.assertTrue(fresh.needs_detail(
+            self.URL, product_mode=True, refresh_hours=72, want_detail_images=True,
+        ))
+        self.assertFalse(filled.needs_detail(
+            self.URL, product_mode=True, refresh_hours=72, want_detail_images=True,
+        ))
+        self.assertFalse(empty_checked.needs_detail(
+            self.URL, product_mode=True, refresh_hours=72, want_detail_images=True,
+        ))
+
     def test_zero_refresh_hours_turns_skipping_off(self):
         store = store_with(stored(self.URL, imageUrl="https://c.example.com/a.jpg"))
         self.assertTrue(store.needs_detail(self.URL, refresh_hours=0))
@@ -77,6 +102,7 @@ class NeedsDetailTests(unittest.TestCase):
         store.db.collection_group.return_value.select.assert_called_once()
         fields = store.db.collection_group.return_value.select.call_args.args[0]
         self.assertIn("imageUrl", fields)
+        self.assertIn("detailImageUrls", fields)
         self.assertNotIn("summary", fields)
 
 

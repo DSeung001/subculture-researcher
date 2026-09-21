@@ -4,15 +4,17 @@ from datetime import date
 
 from sqlalchemy.exc import IntegrityError
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, send_file, url_for
 
 from subculture.drafts.infrastructure.ai_writer import AiWriterError, write_draft_posts
 from subculture.drafts.domain.rules import MAX_SOURCES, DraftError
 from subculture.drafts.application.drafts import create_draft
+from subculture.library.application.export_images import ExportError, export_images, zip_export
 from subculture.library.domain.taxonomy import FILTER_KEYS, TAXONOMIES
 from subculture.library.infrastructure.local_library import Library
 from subculture.library.infrastructure.database import SchemaError
 from subculture.shared.presentation import card_view
+from subculture.shared.paths import LOCAL_DIR
 
 
 library = Blueprint("library", __name__, url_prefix="/library")
@@ -229,6 +231,30 @@ def draft_create():
         return back()
     flash("글을 만들었습니다. 본문을 다듬어 저장하세요.", "success")
     return redirect(url_for("drafts_page", _anchor=f"draft-{draft_id}"))
+
+
+@library.post("/export-images")
+def export_item_images():
+    """Download main + detail images for the selected items as a ZIP (index.json inside)."""
+    from datetime import datetime, timezone
+
+    item_ids = request.form.getlist("item_ids")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    try:
+        root = export_images(
+            store(), item_ids,
+            directory=LOCAL_DIR / "image_exports" / stamp,
+        )
+        archive = zip_export(root)
+    except ExportError as exc:
+        flash(str(exc), "error")
+        return back()
+    return send_file(
+        archive,
+        as_attachment=True,
+        download_name=f"library-images-{stamp}.zip",
+        mimetype="application/zip",
+    )
 
 
 @library.errorhandler(ValueError)

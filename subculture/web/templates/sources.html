@@ -20,6 +20,7 @@
           <th>카테고리</th>
           <th>지역</th>
           <th>소스 티어</th>
+          <th>이미지</th>
           <th>상태</th>
         </tr>
       </thead>
@@ -31,6 +32,17 @@
           <td><span class="tag">{{ category_labels.get(s.category, s.category) }}</span></td>
           <td><span class="tag">{{ region_labels.get(s.region, s.region) }}</span></td>
           <td><span class="tag">{{ tier_labels.get(s.source_tier, s.source_tier) }}</span></td>
+          <td class="image-flags">
+            {% if s._image.main %}
+            <span class="status-badge status-enabled">대표</span>
+            {% endif %}
+            {% if s._image.detail %}
+            <span class="status-badge status-manual">상세</span>
+            {% endif %}
+            {% if not s._image.main and not s._image.detail %}
+            <span class="status-badge status-disabled">없음</span>
+            {% endif %}
+          </td>
           <td>
             {% if not s.get('enabled', True) %}
             <span class="status-badge status-disabled">비활성</span>
@@ -42,7 +54,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="empty-row">표시할 소스가 없습니다.</td></tr>
+        <tr><td colspan="7" class="empty-row">표시할 소스가 없습니다.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -16,14 +16,17 @@ SIGNAL_FIELDS = (
     "trending", "popularity", "favourites", "averageScore",
     "nextAiringAt", "episode", "signalCheckedAt",
 )
-# Also carries imageUrl/detailCheckedAt: these refresh on re-collection of an existing document.
+# Also carries imageUrl/detailImageUrls/detailCheckedAt: these refresh on re-collection.
 PRODUCT_FIELDS = (
     "entityType", "shop", "saleStatus", "preorderEndAt", "releaseWindowText",
-    "manufacturer", "sizeText", "price", "currency", "imageUrl", "productCheckedAt",
-    "detailCheckedAt",
+    "manufacturer", "sizeText", "price", "currency", "imageUrl", "detailImageUrls",
+    "productCheckedAt", "detailCheckedAt",
 )
 # Fields read into the per-run URL index so collectors can skip detail pages they need not refetch.
-INDEX_FIELDS = ("url", "status", "imageUrl", "price", "productCheckedAt", "detailCheckedAt")
+INDEX_FIELDS = (
+    "url", "status", "imageUrl", "detailImageUrls", "price",
+    "productCheckedAt", "detailCheckedAt",
+)
 DEFAULT_DETAIL_REFRESH_HOURS = 72.0
 
 

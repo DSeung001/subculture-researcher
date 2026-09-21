@@ -18,6 +18,7 @@ from subculture.drafts.application.drafts import create_draft, delete_draft, lis
 from subculture.library.infrastructure.database import SchemaError
 from subculture.library.infrastructure.local_library import Library
 from subculture.collection.infrastructure.sources_config import load_sources
+from subculture.collection.domain.image_collection import image_collection_flags
 
 load_dotenv()
 from subculture.shared.presentation import ANGLE_LABELS, CATEGORY_LABELS, REGION_LABELS, STATUS_LABELS, TIER_LABELS, card_view, format_date_kst, sort_items
@@ -354,6 +355,8 @@ def sources_page():
 
     all_sources = load_sources()
     sources = all_sources if status == "ALL" else [s for s in all_sources if _source_status(s) == status]
+    for source in sources:
+        source["_image"] = image_collection_flags(source)
 
     return render_template(
         "sources.html",

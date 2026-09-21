@@ -91,7 +91,9 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 ## 이미지 수집
 
-글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** `imageUrl`로 저장합니다(이미지 파일은 저장하지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `subculture/shared/image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
+글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** 저장합니다(Firestore에는 이미지 파일을 올리지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 대표 사진은 `imageUrl`, 상품 상세 본문·갤러리 사진은 `detailImageUrls`(배열)입니다. 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `subculture/shared/image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
+
+선택한 항목의 대표·상세 이미지를 **로컬로 받는** 기능은 Firestore와 별개입니다. 작품·기획의 「이미지 다운로드」 또는 `python export_images.py`가 `.local/image_exports/`에 파일과 `index.json`을 만듭니다.
 
 ## 소스 설정 키 (HTML 소스)
 
@@ -110,13 +112,14 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 | `list_image_selector` | 목록 카드 안의 이미지 셀렉터. 카드는 "다른 상품 링크가 나오기 직전까지의 상위 요소"로 자동 판별 |
 | `fetch_detail_image: true` | 상세 페이지를 열어 `og:image`(→ `twitter:image`) 사용. 목록에 이미지가 없을 때만 |
 | `image_selector` | 상세 페이지에서 `og:image` 대신 쓸 이미지 셀렉터 |
+| `detail_images_selector` | 상세 본문·갤러리의 **여러** `<img>`를 모아 `detailImageUrls`에 저장. `product_mode`에서만 쓰며, 없으면 갤러리를 긁지 않음 |
 | `image_deny_patterns` | 소스별로 추가 배제할 이미지 경로 정규식(예: 저화질 미리보기 `blur_\d+`) |
 | `image_field` / `image_html_field` | JSON API 소스: 이미지 URL 필드 / 본문 HTML 필드(첫 `<img>` 사용) |
 | `page_param` / `max_pages` | 목록 페이지네이션(HTML·JSON API). 1페이지는 `url` 그대로, 2페이지부터 쿼리 `page_param=N`. 새 링크가 없는 페이지·`max_items`·`max_pages`에서 멈추고, 2페이지 이후 robots.txt 거부는 앞 페이지 결과만 남기고 중단 |
 | `page_count_field` | JSON API: 응답의 전체 페이지 수 필드. 여기까지만 요청 |
-| `detail_refresh_hours` | 이미 저장된 URL의 상세 재요청 간격(기본 72시간, `0`이면 항상 요청). 상품(`product_mode`)은 이 간격마다 가격·예약 상태를 갱신, 사진 전용(`fetch_detail_image`)은 사진이 있으면 다시 열지 않고 없으면 이 간격으로만 재시도 |
+| `detail_refresh_hours` | 이미 저장된 URL의 상세 재요청 간격(기본 72시간, `0`이면 항상 요청). 상품(`product_mode`)은 이 간격마다 가격·예약 상태를 갱신, 사진 전용(`fetch_detail_image`)은 사진이 있으면 다시 열지 않고 없으면 이 간격으로만 재시도. `detail_images_selector`가 있는데 `detailImageUrls`가 아직 없으면 간격과 무관하게 한 번 상세를 다시 연다 |
 
-`type: local_browser`(브라우저 수동 수집) 전용 키: `local_only: true`(자동 수집 제외), `interactive_ready`·`interactive_message`·`ready_wait_min_seconds`/`ready_wait_max_seconds`(사용자가 화면을 준비하는 랜덤 대기), `scroll_steps`·`scroll_delay_seconds`, `persistent_profile: true`(기본은 시크릿 컨텍스트). 이 방식의 `product_mode`는 상세를 열지 않고 목록 카드 텍스트에서 가격·상태를 읽습니다.
+`type: local_browser`(브라우저 수동 수집) 전용 키: `local_only: true`(자동 수집 제외), `interactive_ready`·`interactive_message`·`ready_wait_min_seconds`/`ready_wait_max_seconds`(사용자가 화면을 준비하는 랜덤 대기), `scroll_steps`·`scroll_delay_seconds`, `persistent_profile: true`(기본은 시크릿 컨텍스트). 이 방식의 `product_mode`는 상세를 열지 않고 목록 카드 텍스트에서 가격·상태를 읽습니다(상세 갤러리 URL은 수집하지 않음).
 
 이미 저장된 항목은 다음 수집 때 같은 URL의 값(사진 포함)이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
 

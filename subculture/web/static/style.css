@@ -631,6 +631,13 @@ dialog.modal::backdrop {
 .status-manual { background: #eff6ff; color: var(--info); }
 .status-draft { background: #eff6ff; color: var(--info); }
 
+.sources-table td.image-flags {
+  white-space: nowrap;
+}
+.sources-table td.image-flags .status-badge + .status-badge {
+  margin-left: 4px;
+}
+
 .card-select {
   display: flex;
   align-items: flex-start;
