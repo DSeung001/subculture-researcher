@@ -508,6 +508,32 @@ class KeywordMatchTests(unittest.TestCase):
             rows, _ = library.items({"works": str(works["벽람항로"])})
             self.assertEqual([row["id"] for row in rows], ["FIGURE:a"])
 
+    def test_seed_sync_flag_syncs_the_inbox_before_linking(self):
+        from subculture.library.application import seed_works
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "library.sqlite3"
+            cloud = Mock()
+            cloud.collection_group.return_value.stream.return_value = iter([
+                SimpleNamespace(id="a", reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
+                                to_dict=lambda: {"url": "https://s.example.com/a", "title": "[원신] 클리어 파일", "source": "따빼몰"}),
+            ])
+            with patch("subculture.shared.firebase_client.get_db", return_value=cloud), \
+                    patch("sys.argv", ["seed_works.py", "--db", str(db_path), "--sync"]):
+                seed_works.main()
+            library = Library(db_path)
+            works = {w["name"]: w["id"] for w in library.terms()["works"]}
+            rows, _ = library.items({"works": str(works["원신"])})
+            self.assertEqual([row["id"] for row in rows], ["FIGURE:a"])
+
+    def test_seed_without_sync_flag_never_touches_firestore(self):
+        from subculture.library.application import seed_works
+        with tempfile.TemporaryDirectory() as directory:
+            db_path = Path(directory) / "library.sqlite3"
+            with patch("subculture.shared.firebase_client.get_db") as get_db, \
+                    patch("sys.argv", ["seed_works.py", "--db", str(db_path)]):
+                seed_works.main()
+            get_db.assert_not_called()
+
     def test_unmatched_report_summarises_unlinked_items_by_source(self):
         with tempfile.TemporaryDirectory() as directory:
             library = Library(Path(directory) / "library.sqlite3")

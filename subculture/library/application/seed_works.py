@@ -56,11 +56,19 @@ def main():
         "--unmatched", action="store_true",
         help="작품 링크가 없는 항목을 소스별로 요약해 출력만 함 (카탈로그 보강용, 변경 없음)",
     )
+    parser.add_argument(
+        "--sync", action="store_true",
+        help="seed 전에 Firestore → 로컬 동기화(sync_library.py와 같음)를 먼저 실행 (인박스에만 있는 새 항목도 연결)",
+    )
     args = parser.parse_args()
+    library = Library(args.db)
+    if args.sync:
+        from subculture.shared.firebase_client import get_db  # only needed (and credentialed) with --sync
+        print(f"{library.sync(get_db())}개 항목 동기화 완료")
     if args.unmatched:
-        print_unmatched(Library(args.db))
+        print_unmatched(library)
         return
-    count, linked = seed(Library(args.db), args.catalog, assign=not args.no_assign)
+    count, linked = seed(library, args.catalog, assign=not args.no_assign)
     print(f"작품 {count}개 반영, 새로 연결한 링크 {linked}개")
 
 
