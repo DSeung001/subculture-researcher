@@ -636,4 +636,256 @@ works:
   - name: 천막의 자두가르
     aliases:
       - Jadugar
+  - name: 은혼
+    aliases:
+      - 銀魂
+      - Gintama
+  - name: 나루토
+    aliases:
+      - NARUTO
+      - ナルト
+      - 나루토 질풍전
+      - NARUTO-SHIPPUDEN
+      - NARUTO - SHIPPUDEN
+  - name: 사카모토 데이즈
+    aliases:
+      - 사카모토데이즈
+      - SAKAMOTO DAYS
+      - サカモトデイズ
+  - name: 리버스 1999
+    aliases:
+      - 리버스1999
+      - Reverse 1999
+      - Reverse:1999
+  - name: 사이키 쿠스오의 재난
+    aliases:
+      - 사이키쿠스오의재난
+      - 사이키 쿠스오
+      - 사이키쿠스오
+      - 齊木楠雄のΨ難
+      - The Disastrous Life of Saiki K.
+  - name: 스트리트파이터
+    aliases:
+      - 스트리트 파이터
+      - Street Fighter
+      - ストリートファイター
+  - name: 데스노트
+    aliases:
+      - Death Note
+      - デスノート
+  - name: 에일리언 스테이지
+    aliases:
+      - 에일리언스테이지
+      - Alien Stage
+  - name: 팬티 & 스타킹 with 가터벨트
+    aliases:
+      - 팬스가
+      - 팬티&스타킹
+      - Panty & Stocking with Garterbelt
+  - name: 네코파라
+    aliases:
+      - NEKOPARA
+      - ネコぱら
+  - name: 단간론파
+    aliases:
+      - ダンガンロンパ
+      - Danganronpa
+  - name: 산리오캐릭터즈
+    aliases:
+      - 시나모롤
+      - 코리락쿠마
+      - 리락쿠마
+      - Cinnamoroll
+      - Rilakkuma
+      - サンリオキャラクターズ
+      - Sanrio Characters
+  - name: 토이 스토리
+    aliases:
+      - 토이스토리
+      - 토이스토리5
+      - Toy Story
+  - name: 모여봐요 동물의 숲
+    aliases:
+      - 동물의 숲
+      - Animal Crossing
+      - あつまれ どうぶつの森
+  - name: 카구라바치
+    aliases:
+      - 神楽物語
+      - カグラバチ
+      - Kagurabachi
+  - name: 봉신연의
+    aliases:
+      - 封神演義
+      - Hoshin Engi
+      - Fengshen Yanyi
+  - name: 천관사복
+    aliases:
+      - 천관사복전
+      - 天官賜福
+      - Heaven Official's Blessing
+      - Tian Guan Ci Fu
+  - name: 이 멋진 세계에 축복을!
+    aliases:
+      - 이 멋진 세계에 축복을
+      - このすばらしい世界に祝福を！
+      - KonoSuba
+  - name: 카드캡터 사쿠라
+    aliases:
+      - 카드캡터사쿠라
+      - カードキャプターさくら
+      - Cardcaptor Sakura
+  - name: 아오아시
+    aliases:
+      - アオアシ
+      - Aoashi
+  - name: 좀비 랜드 사가
+    aliases:
+      - 좀비랜드사가
+      - ゾンビランドサガ
+      - Zombie Land Saga
+  - name: 장갑기병 보톰즈
+    aliases:
+      - 装甲騎兵ボトムズ
+      - Armored Trooper Votoms
+  - name: 메이드 인 어비스
+    aliases:
+      - 메이드인어비스
+      - メイドインアビス
+      - Made in Abyss
+      - MadeInAbis
+  - name: "SPY×FAMILY"
+    aliases:
+      - 스파이 패밀리
+      - SPY FAMILY
+  - name: 도쿄 리벤저스
+    aliases:
+      - 도쿄리벤저스
+      - 東京卍リベンジャーズ
+      - Tokyo Revengers
+  - name: 헬로키티
+    aliases:
+      - 헬로 키티
+      - Hello Kitty
+      - ハローキティ
+  - name: 사이버펑크 엣지러너
+    aliases:
+      - 사이버펑크
+      - Cyberpunk
+  - name: 헬루바 보스
+    aliases:
+      - 헬루바보스
+      - Helluva Boss
+  - name: 가면라이더
+    aliases:
+      - 仮面ライダー
+      - Kamen Rider
+  - name: 울트라맨
+    aliases:
+      - ウルトラマン
+      - Ultraman
+  - name: 에픽세븐
+    aliases:
+      - Epic Seven
+      - エピックセブン
+  - name: 크레용 신짱
+    aliases:
+      - 짱구는 못말려
+      - クレヨンしんちゃん
+      - Crayon Shin-chan
+  - name: 이니셜D
+    aliases:
+      - 이니셜 D
+      - 頭文字D
+      - Initial D
+  - name: 유유백서
+    aliases:
+      - 幽☆遊☆白書
+      - Yu Yu Hakusho
+  - name: 마치카도 마조쿠
+    aliases:
+      - まちカドまぞく
+      - The Demon Girl Next Door
+  - name: 디지몬
+    aliases:
+      - 디지몬 어드벤쳐
+      - 디지몬어드벤쳐
+      - 디지몬 비트브레이크
+      - 디지몬비트브레이크
+      - Digimon
+      - Digimon Adventure
+      - Digimon Beatbreak
+      - Digimon Frontier
+      - デジモン
+  - name: 스즈미야 하루히의 우울
+    aliases:
+      - 스즈미야하루히의우울
+      - 스즈미야 하루히
+      - 涼宮ハルヒの憂鬱
+      - Haruhi Suzumiya
+  - name: 바이올렛 에버가든
+    aliases:
+      - 바이올렛에버가든
+      - ヴァイオレット・エヴァーガーデン
+      - Violet Evergarden
+  - name: 달링 인 더 프랑키스
+    aliases:
+      - 달링인더프랑키스
+      - ダーリン・イン・ザ・フランキス
+      - Darling in the Franxx
+  - name: 쵸비츠
+    aliases:
+      - ちょびっツ
+      - Chobits
+  - name: 철인28호
+    aliases:
+      - 철인 28호
+      - 鉄人28号
+      - Tetsujin 28
+  - name: 가메라
+    aliases:
+      - ガメラ
+      - Gamera
+  - name: SEKIRO
+    aliases:
+      - 세키로
+      - SEKIRO SHADOWS DIE TWICE
+  - name: 슈고 캐릭터!
+    aliases:
+      - 슈고 캐릭터
+      - しゅごキャラ！
+      - Shugo Chara
+  - name: 프레임암즈 걸
+    aliases:
+      - 프레임 암즈 걸
+      - フレームアームズ・ガール
+      - Frame Arms Girl
+  - name: 마크로스
+    aliases:
+      - マクロス
+      - Macross
+  - name: 세인트 세이야
+    aliases:
+      - 세인트세이야
+      - 세인트 세이야 황금성투사성의
+      - 聖闘士星矢
+      - Saint Seiya
+  - name: 킨니쿠맨
+    aliases:
+      - キン肉マン
+      - Kinnikuman
+  - name: 호기심 많은 조지
+    aliases:
+      - 오사루 노 조지
+      - 오사루노조지
+      - Curious George
+      - Osaru no George
+  - name: 스미코구라시
+    aliases:
+      - すみっコぐらし
+      - Sumikko Gurashi
+  - name: 스푸키즈
+    aliases:
+      - 스파키즈
+      - Spookiz
       - 天幕のジャードゥーガル
