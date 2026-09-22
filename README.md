@@ -51,7 +51,7 @@ Windows에서 가상환경 미활성화 시 `python`을 `.\.venv\Scripts\python.
 
 **초안(글)**: 작품·기획에서 소재를 선택하면 「글 만들기」(제목만)/「AI로 글 쓰기」(Gemini 작성) 버튼으로 글 화면으로 이동합니다. 로컬 DB(`drafts`·`draft_items`)에만 저장(Firestore 아님). 글은 **본문**(상품 정보만, 링크 없음, 260자 권장)과 **댓글**(`상품 페이지 참고 ↓` + 상품명·URL)로 나뉘며, 댓글의 URL은 코드가 재료의 실제 링크로 조립합니다(AI는 이름만 붙임). 세 경로: 로컬 혼합 초안(`draft.py`/`collect.py`/버튼), 작품별 초안(`draft.py --by-work`, 링크된 항목만), 인박스 수동 선택.
 
-**자동 실행**: GitHub Actions는 주 3회(월·수·금 08:00 KST) 수집만, 초안 없음(`--no-ai-draft`). Secrets: `FIREBASE_KEY`(서비스 계정 JSON), 선택적으로 `MYMEMORY_EMAIL`.
+**자동 실행**: GitHub Actions는 매일(08:00 KST) 수집만, 초안 없음(`--no-ai-draft`). Secrets: `FIREBASE_KEY`(서비스 계정 JSON), 선택적으로 `MYMEMORY_EMAIL`.
 
 ## 코드 구조
 
