@@ -12,11 +12,21 @@
 <article class="card item-card">
   <div class="card-row">
     {% if select %}<div class="card-select">{{ select }}</div>{% endif %}
-    {% if v.image_url %}
-    <a class="card-thumb" href="{{ v.url or v.image_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="{{ v.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
-    {% else %}
-    <div class="card-thumb card-thumb-empty" aria-hidden="true"><span>{{ v.category_label }}</span></div>
-    {% endif %}
+    <div class="card-thumb-col">
+      {% if v.image_url %}
+      <a class="card-thumb" href="{{ v.url or v.image_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="{{ v.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
+      {% else %}
+      <div class="card-thumb card-thumb-empty" aria-hidden="true"><span>{{ v.category_label }}</span></div>
+      {% endif %}
+      {% if v.detail_image_urls %}
+      <div class="card-detail-thumbs" title="상세 이미지 {{ v.detail_image_urls|length }}장" aria-hidden="true">
+        {% for img in v.detail_image_urls[:6] %}
+        <a class="card-detail-thumb" href="{{ img }}" target="_blank" rel="noopener" tabindex="-1"><img src="{{ img }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
+        {% endfor %}
+        {% if v.detail_image_urls|length > 6 %}<span class="card-detail-thumb-more">+{{ v.detail_image_urls|length - 6 }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
     <div class="card-main">
       <p class="card-title">
         {% if v.is_new_today %}<span class="new-badge" title="오늘 수집">N</span>{% endif %}<span class="title-variant title-translated">{% if v.title_date %}<span class="card-date">게시 {{ v.title_date }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}{% if v.lang_tag %}<span class="lang-tag">[{{ v.lang_tag }}]</span>{% endif %}<strong>{{ v.title_text }}</strong></span>{% if v.original_title %}<span class="title-variant title-original" hidden>{% if v.original_date %}<span class="card-date">게시 {{ v.original_date }}</span><span class="card-date-sep" aria-hidden="true">|</span>{% endif %}<strong>{{ v.original_text }}</strong></span><button type="button" class="original-toggle" aria-pressed="false">원어 제목</button>{% endif %}{% if v.url %}<a class="original-toggle" href="{{ v.url }}" target="_blank" rel="noopener">자세히보기</a>{% endif %}

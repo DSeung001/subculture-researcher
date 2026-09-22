@@ -322,6 +322,9 @@ def card_view(item: dict) -> dict:
         ),
         "url": http_url(data.get("url")) or "",
         "image_url": http_url(data.get("imageUrl")) or "",
+        "detail_image_urls": [
+            url for url in (http_url(value) for value in data.get("detailImageUrls") or []) if url
+        ],
         "category_label": CATEGORY_LABELS.get(category, category),
         "is_new_today": is_new_today(data),
         "meta": meta,

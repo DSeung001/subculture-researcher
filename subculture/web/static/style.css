@@ -1199,8 +1199,8 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
 /* ---------- 공용 항목 카드 (인박스 · 작품·기획 · 작품 편집) ---------- */
 .item-card .card-row { align-items: flex-start; }
 .item-card .card-select-label { display: flex; }
+.card-thumb-col { flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; width: 96px; }
 .card-thumb {
-  flex-shrink: 0;
   display: block;
   width: 96px;
   height: 96px;
@@ -1210,6 +1210,28 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
   background: var(--bg);
 }
 .card-thumb-img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card-detail-thumbs { display: flex; flex-wrap: wrap; gap: 3px; }
+.card-detail-thumb {
+  display: block;
+  width: 21px;
+  height: 21px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+.card-detail-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card-detail-thumb-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
 .card-thumb-empty {
   display: flex;
   align-items: center;
@@ -1227,6 +1249,7 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
 @media (max-width: 860px) {
   .item-card .card-row { flex-direction: row; flex-wrap: wrap; }
   .item-card .card-main { flex-basis: calc(100% - 130px); }
+  .item-card .card-thumb-col { width: 72px; }
   .item-card .card-thumb { width: 72px; height: 72px; }
   .item-card .card-actions { width: 100%; margin-top: 4px; }
 }

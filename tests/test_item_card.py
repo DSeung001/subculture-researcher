@@ -35,7 +35,8 @@ def snapshot(source_id="FIGURE:abc", **fields):
 
 def classes(html):
     """Class names of the card's building blocks, in document order, as a structure fingerprint."""
-    return re.findall(r'class="(card item-card|card-row|card-thumb(?: card-thumb-empty)?|card-main|card-title|'
+    return re.findall(r'class="(card item-card|card-row|card-thumb-col|card-thumb(?: card-thumb-empty)?|'
+                      r'card-detail-thumbs|card-main|card-title|'
                       r'card-meta-row|card-meta|card-summary)"', html)
 
 
@@ -57,6 +58,19 @@ class CardViewTests(unittest.TestCase):
     def test_translated_title_keeps_the_original_toggle(self):
         view = card_view({**DOC, "title": "原題", "titleKo": "번역 제목", "sourceLanguage": "ja"})
         self.assertEqual((view["title_text"], view["original_text"], view["lang_tag"]), ("번역 제목", "原題", "JA"))
+
+    def test_detail_image_urls_are_cleaned_and_unsafe_ones_dropped(self):
+        view = card_view({**DOC, "detailImageUrls": [
+            "https://cdn.example.com/p/1-detail-1.jpg",
+            "javascript:alert(1)",
+            "https://cdn.example.com/p/1-detail-2.jpg",
+        ]})
+        self.assertEqual(view["detail_image_urls"], [
+            "https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg",
+        ])
+
+    def test_missing_detail_image_urls_give_an_empty_list(self):
+        self.assertEqual(card_view(DOC)["detail_image_urls"], [])
 
 
 class SharedCardRenderingTests(unittest.TestCase):
@@ -101,6 +115,19 @@ class SharedCardRenderingTests(unittest.TestCase):
         self.assertIn("library-item-select", library)    # bulk selection: library
         self.assertNotIn("/items/FIGURE/abc/status", library)
         self.assertNotIn('name="source_ids"', library)
+
+    def test_detail_images_show_next_to_the_main_thumbnail_in_both(self):
+        item = snapshot(detailImageUrls=[
+            "https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg",
+        ])
+        for html in (first_card(self.inbox(item)), first_card(self.library(item))):
+            self.assertIn('class="card-detail-thumbs"', html)
+            self.assertIn('src="https://cdn.example.com/p/1-detail-1.jpg"', html)
+            self.assertIn('src="https://cdn.example.com/p/1-detail-2.jpg"', html)
+
+    def test_item_without_detail_images_shows_no_detail_strip(self):
+        for html in (first_card(self.inbox(snapshot())), first_card(self.library(snapshot()))):
+            self.assertNotIn("card-detail-thumbs", html)
 
     def test_item_without_a_photo_shows_the_category_placeholder_in_both(self):
         for html in (first_card(self.inbox(snapshot(imageUrl=None))),
