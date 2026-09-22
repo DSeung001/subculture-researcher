@@ -22,10 +22,26 @@ PRODUCT_FIELDS = (
     "manufacturer", "sizeText", "price", "currency", "imageUrl", "detailImageUrls",
     "productCheckedAt", "detailCheckedAt",
 )
-# Fields read into the per-run URL index so collectors can skip detail pages they need not refetch.
+# Source field -> derived per-hour-delta field, computed by ContentStore.save() when it
+# has both a previous and a new value. averageScore is a reputation score, not tracked.
+VELOCITY_FIELDS = {
+    "viewCount": "viewCountVelocity",
+    "likeCount": "likeCountVelocity",
+    "trending": "trendingVelocity",
+    "popularity": "popularityVelocity",
+    "favourites": "favouritesVelocity",
+}
+# Below this elapsed time since the last check, a re-collection is too close to the
+# previous one to compute a meaningful rate; the existing velocity value is left alone.
+MIN_VELOCITY_ELAPSED_HOURS = 1.0
+# Fields read into the per-run URL index so collectors can skip detail pages they need not
+# refetch, and so ContentStore.save() can diff metrics/signals for velocity without an
+# extra read.
 INDEX_FIELDS = (
     "url", "status", "imageUrl", "detailImageUrls", "price",
     "productCheckedAt", "detailCheckedAt",
+    "viewCount", "viewCountCheckedAt", "likeCount", "likeCountCheckedAt",
+    "trending", "popularity", "favourites", "signalCheckedAt",
 )
 DEFAULT_DETAIL_REFRESH_HOURS = 72.0
 

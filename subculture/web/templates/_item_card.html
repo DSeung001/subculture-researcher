@@ -35,6 +35,7 @@
         <p class="card-meta">
           <strong>추천 {{ v.signal_score }}</strong>
           {% for label in v.signal_labels %} · {{ label }}{% endfor %}
+          {% if v.score_breakdown %}<span class="card-score-reasons" title="점수 근거">{% for label, points in v.score_breakdown %} · {{ label }} +{{ points }}{% endfor %}</span>{% endif %}
           · {{ v.meta }}
         </p>
         {{ meta_end }}

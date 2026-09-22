@@ -84,7 +84,8 @@ class SharedCardRenderingTests(unittest.TestCase):
         self.client = review.app.test_client()
 
     def inbox(self, *snapshots):
-        with patch.object(review, "fetch_contents_page", return_value=(list(snapshots), False, "")):
+        with patch.object(review, "fetch_contents_page", return_value=(list(snapshots), False, "")), \
+                patch.object(review, "fetch_recommended_items", return_value=[]):
             return self.client.get("/inbox").get_data(as_text=True)
 
     def library(self, *snapshots, url="/library"):

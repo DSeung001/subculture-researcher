@@ -6,8 +6,8 @@ from firebase_admin import firestore
 from google.api_core.exceptions import AlreadyExists
 
 from subculture.collection.domain.content_rules import (
-    DEFAULT_DETAIL_REFRESH_HOURS, INDEX_FIELDS, METRICS, PRODUCT_FIELDS, SIGNAL_FIELDS,
-    doc_id, normalize_url,
+    DEFAULT_DETAIL_REFRESH_HOURS, INDEX_FIELDS, METRICS, MIN_VELOCITY_ELAPSED_HOURS,
+    PRODUCT_FIELDS, SIGNAL_FIELDS, VELOCITY_FIELDS, doc_id, normalize_url,
 )
 from subculture.collection.infrastructure.translate import enrich_translation
 from subculture.shared.content_model import category_collection
@@ -52,6 +52,14 @@ class ContentStore:
                     "detailImageUrls": data.get("detailImageUrls"),
                     "price": data.get("price"),
                     "checkedAt": data.get("detailCheckedAt") or data.get("productCheckedAt"),
+                    "viewCount": data.get("viewCount"),
+                    "viewCountCheckedAt": data.get("viewCountCheckedAt"),
+                    "likeCount": data.get("likeCount"),
+                    "likeCountCheckedAt": data.get("likeCountCheckedAt"),
+                    "trending": data.get("trending"),
+                    "popularity": data.get("popularity"),
+                    "favourites": data.get("favourites"),
+                    "signalCheckedAt": data.get("signalCheckedAt"),
                 })
 
     def item_ids(self) -> set[str]:
@@ -157,6 +165,31 @@ class ContentStore:
             if item.get(field) is not None
         }
 
+        # Per-hour rate of change for the scorer's trend signal, from the value/checked-at
+        # this run's index read already has for the same document (no extra read needed).
+        velocity_updates = {}
+        if target:
+            new_values = {**metrics, **signals}
+            for source_field, velocity_field in VELOCITY_FIELDS.items():
+                new_value = new_values.get(source_field)
+                old_value = target.get(source_field)
+                if (
+                    not isinstance(new_value, int) or isinstance(new_value, bool)
+                    or not isinstance(old_value, int) or isinstance(old_value, bool)
+                ):
+                    continue
+                checked_field = f"{source_field}CheckedAt" if source_field in METRICS else "signalCheckedAt"
+                old_checked = target.get(checked_field)
+                if not isinstance(old_checked, datetime):
+                    continue
+                if old_checked.tzinfo is None:
+                    old_checked = old_checked.replace(tzinfo=timezone.utc)
+                elapsed_hours = (datetime.now(timezone.utc) - old_checked).total_seconds() / 3600
+                if elapsed_hours < MIN_VELOCITY_ELAPSED_HOURS:
+                    continue
+                # A drop (provider correction/reset) never lowers the score; floor at 0.
+                velocity_updates[velocity_field] = max(0.0, (new_value - old_value) / elapsed_hours)
+
         data = {
             **{k: v for k, v in item.items() if not k.startswith("_")},
             "url": url,
@@ -185,7 +218,7 @@ class ContentStore:
                 except AlreadyExists:
                     # Another collector/manual submission created this URL first.
                     pass
-            updates = {**metrics, **signals, **product_fields}
+            updates = {**metrics, **signals, **product_fields, **velocity_updates}
             if not created and updates:
                 ref.update(updates)
 

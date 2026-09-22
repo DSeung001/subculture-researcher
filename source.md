@@ -145,6 +145,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 - 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작 시 `[로컬 동기화] 마지막 … · 미동기화 N · 로컬에만 M`을 출력합니다. 수집기가 이미 읽은 문서 ID를 쓰므로 Firestore를 더 읽지 않고, 로컬 DB가 꺼져 있어도 수집은 계속됩니다. 자동 수집(GitHub Actions)은 `CI` 환경변수로 이 확인을 건너뜁니다.
 - 임시글은 로컬 DB에만 있고 본문(`body`)과 댓글(`reply_body`, 상품 링크) 두 글로 저장됩니다. `reply_body` 컬럼이 추가되어(SQLite `0005_draft_reply_body`, PostgreSQL `pg0003_draft_reply_body`) 기존 임시글은 본문 그대로 두고 댓글을 빈 값으로 둡니다. 스키마가 바뀌었으므로 앱·동기화를 멈추고 `docker compose run --rm tools python migrate_library.py upgrade`로 업그레이드해야 글 화면이 열립니다(백업 자동). 발행하면 재료의 `postedAt`을 Firestore에도 기록합니다.
 - Firestore 문서에 `detailCheckedAt`(상세 페이지를 마지막으로 확인한 시각) 필드가 추가됩니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
+- Firestore 문서에 `viewCountVelocity`·`likeCountVelocity`·`trendingVelocity`·`popularityVelocity`·`favouritesVelocity`(시간당 증가량) 필드가 추가됩니다. `ContentStore.save`가 재수집 시 직전 값·확인 시각과 비교해 계산하며(1시간 미만 간격은 갱신하지 않고 이전 값을 유지, 값이 줄면 0으로 고정), 추천 점수의 "트렌드 상승" 신호로 쓰입니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
 
 ## 수집 원칙
 

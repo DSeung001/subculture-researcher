@@ -37,7 +37,8 @@ class WorkflowTests(unittest.TestCase):
 
     def test_review_forms_use_storage_category(self):
         snapshot = self.snapshot("FIGURE:abc", {"category": "GOODS", "title": "자료", "status": "NEW"})
-        with patch.object(review, "fetch_contents_page", return_value=([snapshot], False, "")):
+        with patch.object(review, "fetch_contents_page", return_value=([snapshot], False, "")), \
+                patch.object(review, "fetch_recommended_items", return_value=[]):
             response = review.app.test_client().get("/inbox")
         self.assertEqual(response.status_code, 200)
         self.assertIn('/items/FIGURE/abc/status', response.get_data(as_text=True))
@@ -347,7 +348,9 @@ class WorkflowTests(unittest.TestCase):
         published = datetime(2026, 1, 1, tzinfo=timezone.utc)
         item = {"publishedAt": published, "collectedAt": datetime(2026, 1, 3)}
         self.assertEqual(effective_date(item), published)
-        self.assertEqual(content_score(item, now=published), 36.0)
+        # Freshness-only baseline: no trend/magnitude/bonus signals, so this is exactly
+        # the freshness weight (100 * FRESHNESS_WEIGHT) - see presentation.score_components.
+        self.assertEqual(content_score(item, now=published), 35.0)
         self.assertIsNotNone(effective_date({"collectedAt": datetime(2026, 1, 3)}).tzinfo)
 
     def test_local_onclick_relative_link_and_absent_link(self):

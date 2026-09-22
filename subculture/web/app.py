@@ -134,6 +134,35 @@ def fetch_contents_page(after_token: str, category: str, days: str = "ALL"):
     return docs, len(docs) == PAGE_SIZE, (cursor_token(docs[-1]) if docs else "")
 
 
+RECOMMENDATION_POOL_DAYS = 14
+RECOMMENDATION_POOL_LIMIT = 200
+RECOMMENDATION_COUNT = 10
+
+
+def fetch_recommended_items(days: int = RECOMMENDATION_POOL_DAYS, limit: int = RECOMMENDATION_POOL_LIMIT):
+    """Top-scoring, not-yet-posted items across every category, independent of the page's
+    own filter chips - a fixed "what to post next" pool, not a view of the filtered list."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    query = (
+        db().collection_group("contents")
+        .where(filter=FieldFilter("collectedAt", ">=", cutoff))
+        .order_by("collectedAt", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+    )
+    candidates = []
+    for snapshot in query.stream():
+        item = snapshot.to_dict()
+        if item.get("status") == "IGNORE" or item.get("postedAt"):
+            continue
+        item["_id"] = snapshot.id
+        item["_ref"] = content_id(snapshot)
+        item["_category"] = item["_ref"].partition(":")[0]
+        item["_view"] = card_view(item)
+        candidates.append(item)
+    candidates.sort(key=lambda item: item["_view"]["signal_score"], reverse=True)
+    return candidates[:RECOMMENDATION_COUNT]
+
+
 @app.get("/")
 def home():
     """The app opens on 작품·기획; the inbox lives at /inbox."""
@@ -195,6 +224,8 @@ def index():
     return render_template(
         "index.html",
         items=items,
+        recommended_items=fetch_recommended_items(),
+        recommended_days=RECOMMENDATION_POOL_DAYS,
         filters=list_filters,
         categories=CATEGORIES,
         statuses=STATUSES,

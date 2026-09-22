@@ -8,6 +8,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from google.auth.credentials import AnonymousCredentials
+from google.cloud.firestore import Client
+
 from subculture.web import app as review
 from subculture.collection.application import image_backfill
 from subculture.collection.infrastructure.collectors import anilist, json_api
@@ -15,6 +18,7 @@ from subculture.collection.infrastructure.collectors.common import RobotsDenied
 from subculture.collection.infrastructure.collectors.html_links import html_items
 from subculture.collection.infrastructure.collectors.http import page_url
 from subculture.collection.infrastructure.collectors.youtube_feed import youtube_thumbnail
+from subculture.shared.content_model import content_ref
 from subculture.shared.untitled_content import UNTITLED_TITLE, is_untitled_laftel_home, is_untitled_leftover
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.collection.application.untitled_cleanup import delete_untitled_x_contents
@@ -104,6 +108,55 @@ class NeedsDetailTests(unittest.TestCase):
         self.assertIn("imageUrl", fields)
         self.assertIn("detailImageUrls", fields)
         self.assertNotIn("summary", fields)
+
+
+class ContentStoreVelocityTests(unittest.TestCase):
+    URL = "https://s.example.com/velocity"
+
+    def test_a_brand_new_url_writes_no_velocity_field(self):
+        store = store_with()  # nothing indexed yet for this URL: create(), not update()
+        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 100})
+        ref = store.by_url[self.URL][0]["ref"]
+        ref.update.assert_not_called()
+
+    def test_a_previously_seen_url_with_no_prior_metric_writes_no_velocity_field(self):
+        store = store_with(stored(self.URL))  # indexed, but never had a viewCount before
+        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 100})
+        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
+        self.assertNotIn("viewCountVelocity", updates)
+
+    def test_second_save_after_enough_elapsed_time_computes_the_hourly_delta(self):
+        store = store_with(stored(
+            self.URL, viewCount=100, viewCountCheckedAt=NOW - timedelta(hours=2),
+        ))
+        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 300})
+        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
+        self.assertIn("viewCountVelocity", updates)
+        self.assertAlmostEqual(updates["viewCountVelocity"], 100.0, delta=1.0)  # (300-100)/~2h
+
+    def test_resave_inside_the_minimum_window_leaves_velocity_untouched(self):
+        store = store_with(stored(
+            self.URL, viewCount=100, viewCountCheckedAt=NOW - timedelta(minutes=10),
+        ))
+        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 200})
+        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
+        self.assertNotIn("viewCountVelocity", updates)
+
+    def test_a_metric_decrease_clamps_velocity_to_zero(self):
+        store = store_with(stored(
+            self.URL, viewCount=500, viewCountCheckedAt=NOW - timedelta(hours=5),
+        ))
+        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 100})
+        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
+        self.assertEqual(updates["viewCountVelocity"], 0.0)
+
+    def test_anilist_trending_velocity_uses_the_shared_signal_checked_at(self):
+        store = store_with(stored(
+            self.URL, trending=10, signalCheckedAt=NOW - timedelta(hours=2),
+        ))
+        store.save({"url": self.URL, "category": "ANIME", "trending": 30})
+        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
+        self.assertAlmostEqual(updates["trendingVelocity"], 10.0, delta=1.0)  # (30-10)/~2h
 
 
 class DetailSkipInHtmlItemsTests(unittest.TestCase):
@@ -620,11 +673,77 @@ class InboxPeriodTests(unittest.TestCase):
         query.where.assert_not_called()
 
     def test_page_shows_period_chips(self):
-        with patch.object(review, "fetch_contents_page", return_value=([], False, "")) as fetch:
+        with patch.object(review, "fetch_contents_page", return_value=([], False, "")) as fetch, \
+                patch.object(review, "fetch_recommended_items", return_value=[]):
             html = review.app.test_client().get("/inbox").get_data(as_text=True)
         self.assertEqual(fetch.call_args.args[2], "14")
         for label in ("최근 7일", "최근 14일", "최근 30일", "전체 기간"):
             self.assertIn(label, html)
+
+
+class RecommendedItemsTests(unittest.TestCase):
+    """`fetch_recommended_items` is the inbox's filter-independent "post this next" pool."""
+
+    CLIENT = Client(project="offline-tests", credentials=AnonymousCredentials())
+
+    def make_snapshot(self, source_id, **fields):
+        ref = content_ref(self.CLIENT, source_id)
+        data = {
+            "title": "테스트 항목", "url": f"https://example.com/{ref.id}", "source": "테스트 소스",
+            "category": source_id.split(":")[0], "collectedAt": NOW, "postedAt": None, "status": "NEW",
+            **fields,
+        }
+        return SimpleNamespace(id=ref.id, reference=ref, to_dict=lambda: data)
+
+    def query_returning(self, *snapshots):
+        query = Mock()
+        query.where.return_value = query
+        query.order_by.return_value = query
+        query.limit.return_value = query
+        query.stream.return_value = list(snapshots)
+        db = Mock()
+        db.collection_group.return_value = query
+        return db, query
+
+    def test_excludes_ignored_and_already_posted_items(self):
+        keep = self.make_snapshot("FIGURE:keep", status="NEW")
+        ignored = self.make_snapshot("FIGURE:ignored", status="IGNORE")
+        posted = self.make_snapshot("FIGURE:posted", postedAt=NOW)
+        db, _ = self.query_returning(keep, ignored, posted)
+        with patch.object(review, "db", return_value=db):
+            items = review.fetch_recommended_items()
+        self.assertEqual([item["_id"] for item in items], ["keep"])
+
+    def test_sorted_by_score_descending_and_capped_at_the_recommended_count(self):
+        snapshots = [
+            # Freshness-only items, newest first in Firestore order - the boring baseline.
+            self.make_snapshot(f"FIGURE:{i}", collectedAt=NOW - timedelta(hours=i))
+            for i in range(review.RECOMMENDATION_COUNT + 5)
+        ]
+        # An older, last-in-Firestore-order item that still outscores every fresher one
+        # on real signal strength, so it must land first - proving this is a score sort,
+        # not just a pass-through of the collectedAt-descending Firestore order.
+        standout = self.make_snapshot(
+            "FIGURE:standout", collectedAt=NOW - timedelta(days=3), title="스탠드아웃 한정판 피규어",
+            sourceTier="OFFICIAL", region="KR", viewCount=1_000_000,
+            entityType="PRODUCT", saleStatus="PREORDER",
+        )
+        db, _ = self.query_returning(*snapshots, standout)
+        with patch.object(review, "db", return_value=db):
+            items = review.fetch_recommended_items()
+        self.assertEqual(len(items), review.RECOMMENDATION_COUNT)
+        self.assertEqual(items[0]["_id"], "standout")
+        scores = [item["_view"]["signal_score"] for item in items]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+
+    def test_query_is_bounded_by_days_and_limit_independent_of_page_filters(self):
+        db, query = self.query_returning()
+        with patch.object(review, "db", return_value=db):
+            review.fetch_recommended_items(days=9, limit=50)
+        query.limit.assert_called_once_with(50)
+        field_filter = query.where.call_args.kwargs["filter"]
+        self.assertEqual((field_filter.field_path, field_filter.op_string), ("collectedAt", ">="))
+        self.assertLess(abs((datetime.now(timezone.utc) - field_filter.value) - timedelta(days=9)), timedelta(minutes=1))
 
 
 if __name__ == "__main__":

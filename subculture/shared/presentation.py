@@ -103,58 +103,112 @@ def effective_date(item: dict) -> datetime:
     return datetime.min.replace(tzinfo=timezone.utc)
 
 
-def content_score(item: dict, *, now: datetime | None = None) -> float:
-    """Comparable editorial score for every source; no DB migration required."""
-    now = now or datetime.now(timezone.utc)
+# Weights for the three axes normalized to 0-100 (see _*_subscore below), so an item's
+# score never depends on how many metric *fields* its source happens to expose — only on
+# the strength of its single best signal on each axis. Sums to 0.90; flat bonuses (below)
+# add a little more on top, uncapped, same as before.
+FRESHNESS_WEIGHT = 0.35
+TREND_WEIGHT = 0.35
+MAGNITUDE_WEIGHT = 0.20
+
+# Per-field "fast growth"/"very popular" reference used to normalize a raw rate/count to
+# 0-100 on a log scale: reaching the reference value alone reaches 100. Rough starting
+# estimates - recalibrate against real collected ranges if scores cluster at the ends.
+VELOCITY_REFERENCES = {
+    "viewCountVelocity": 500.0,
+    "likeCountVelocity": 50.0,
+    "trendingVelocity": 20.0,
+    "popularityVelocity": 30.0,
+    "favouritesVelocity": 15.0,
+}
+MAGNITUDE_REFERENCES = {
+    "viewCount": 100_000,
+    "likeCount": 5_000,
+    "trending": 500,
+    "popularity": 50_000,
+    "favourites": 10_000,
+}
+
+
+def _freshness_subscore(item: dict, now: datetime) -> float:
     published = effective_date(item)
     age_hours = max(0.0, (now - published).total_seconds() / 3600)
-    recency = max(0.0, 36.0 - age_hours / 6.0)
+    return max(0.0, 100.0 - age_hours / 2.16)  # zero after 216h (9 days), same horizon as before
 
-    score = recency
+
+def _trend_subscore(item: dict) -> float:
+    """How fast an item's engagement is *changing* right now (0 until velocity data exists)."""
+    best = 0.0
+    for field, reference in VELOCITY_REFERENCES.items():
+        value = item.get(field)
+        if isinstance(value, (int, float)) and value > 0:
+            best = max(best, min(100.0, math.log10(value / reference + 1) / math.log10(2) * 100.0))
+    return best
+
+
+def _magnitude_subscore(item: dict) -> float:
+    """How strong an item's single best engagement signal is - never a sum of every
+    field a source happens to populate, so an AniList-backed anime item and a
+    figure/goods item with only view/like counts are judged on the same footing."""
+    best = 0.0
+    for field, reference in MAGNITUDE_REFERENCES.items():
+        value = item.get(field)
+        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+            best = max(best, min(100.0, math.log10(value + 1) / math.log10(reference + 1) * 100.0))
+    average_score = item.get("averageScore")
+    if isinstance(average_score, int) and not isinstance(average_score, bool):
+        best = max(best, max(0.0, min(100.0, float(average_score))))
+    return best
+
+
+def _flat_bonuses(item: dict) -> list[tuple[str, float]]:
+    """Small additive bonuses that don't suffer the cross-category data-availability bias:
+    each is a plain yes/no signal, not "how much data happens to exist"."""
+    bonuses = []
     if item.get("sourceTier") == "OFFICIAL":
-        score += 8.0
+        bonuses.append(("공식 소스", 6.0))
     if item.get("region") == "KR":
-        score += 6.0
-
+        bonuses.append(("국내", 4.0))
     if item.get("entityType") == "PRODUCT":
         # Preorders and limited runs are time-sensitive and sell out, so
         # they're worth surfacing over an always-available in-stock item.
         if item.get("saleStatus") == "PREORDER":
-            score += 5.0
+            bonuses.append(("예약 임박", 3.0))
         title_text = f"{item.get('title') or ''} {item.get('titleKo') or ''}"
         if any(keyword in title_text for keyword in LIMITED_KEYWORDS):
-            score += 5.0
+            bonuses.append(("한정판", 3.0))
+    return bonuses
 
-    for field, weight in (("viewCount", 3.0), ("likeCount", 4.0)):
-        value = item.get(field)
-        if isinstance(value, int) and value > 0:
-            score += min(18.0, math.log10(value + 1) * weight)
 
-    trending = item.get("trending")
-    if isinstance(trending, int) and trending > 0:
-        score += min(30.0, math.log10(trending + 1) * 8.0)
+def score_components(item: dict, *, now: datetime | None = None) -> list[tuple[str, float]]:
+    """(label, weighted points) for every non-zero contribution to `content_score`,
+    in a fixed order; `content_score` and `score_breakdown` both derive from this."""
+    now = now or datetime.now(timezone.utc)
+    components = [
+        ("신선도", _freshness_subscore(item, now) * FRESHNESS_WEIGHT),
+        ("트렌드 상승", _trend_subscore(item) * TREND_WEIGHT),
+        ("참여도", _magnitude_subscore(item) * MAGNITUDE_WEIGHT),
+        *_flat_bonuses(item),
+    ]
+    return [(label, round(points, 1)) for label, points in components if points > 0]
 
-    popularity = item.get("popularity")
-    if isinstance(popularity, int) and popularity > 0:
-        score += min(18.0, math.log10(popularity + 1) * 3.0)
 
-    favourites = item.get("favourites")
-    if isinstance(favourites, int) and favourites > 0:
-        score += min(10.0, math.log10(favourites + 1) * 2.0)
+def content_score(item: dict, *, now: datetime | None = None) -> float:
+    """Comparable editorial score for every source; no DB migration required."""
+    return round(sum(points for _, points in score_components(item, now=now)), 1)
 
-    average_score = item.get("averageScore")
-    if isinstance(average_score, int):
-        score += max(0.0, min(10.0, average_score / 10.0))
 
-    return round(score, 1)
+def score_breakdown(item: dict, *, now: datetime | None = None) -> list[tuple[str, float]]:
+    """`score_components`, sorted by contribution, for showing "why" on a card."""
+    return sorted(score_components(item, now=now), key=lambda pair: pair[1], reverse=True)
 
 
 def signal_labels(item: dict) -> list[str]:
     labels = []
     score = content_score(item)
-    if score >= 60:
+    if score >= 55:
         labels.append("HOT")
-    if item.get("trending"):
+    if item.get("trending") or item.get("trendingVelocity"):
         labels.append("TREND")
     if item.get("sourceTier") == "OFFICIAL":
         labels.append("OFFICIAL")
@@ -333,4 +387,5 @@ def card_view(item: dict) -> dict:
         "product_caption": product_caption(data),
         "signal_score": content_score(data),
         "signal_labels": signal_labels(data),
+        "score_breakdown": score_breakdown(data),
     }
