@@ -192,6 +192,89 @@ class AnimateNewArrivalTests(unittest.TestCase):
         self.assertEqual(clear_file["imageUrl"], "https://cdn.example.com/a.jpg")
 
 
+class AnimatePreorderTests(unittest.TestCase):
+    # cateCd=010006: the preorder mark is only the icon's alt text, outside the link.
+    LIST = """
+<ul>
+ <li class="goodsitem1"><div class="item_cont">
+  <div class="item_icon_box"><img src="https://cdn.example.com/goods_icon/yoyaku2_i.png" alt="★수주예약상품★" class="middle"></div>
+  <div class="item_photo_box"><a href="../goods/goods_view.php?goodsNo=1000092379"><img src="http://animate.godohosting.com/Goods/4534530642899.jpg" alt="【굿즈-재킷】 NEEDY GIRL OVERDOSE 트랙 재킷"></a></div>
+  <div class="item_info_cont"><div class="item_tit_box"><a href="../goods/goods_view.php?goodsNo=1000092379"><strong class="item_name">【굿즈-재킷】 NEEDY GIRL OVERDOSE 트랙 재킷</strong></a></div>
+  <div class="item_money_box"><strong class="item_price"><span>109,100
+   원</span></strong></div></div></div></li>
+</ul>"""
+
+    def test_icon_alt_marks_the_card_as_a_preorder(self):
+        source = SOURCES["애니메이트 코리아 예약상품"]
+        [item] = extract_links(self.LIST, source["url"], source)
+        self.assertEqual(item["url"], "https://www.animate-onlineshop.co.kr/goods/goods_view.php?goodsNo=1000092379")
+        self.assertEqual(item["title"], "【굿즈-재킷】 NEEDY GIRL OVERDOSE 트랙 재킷")
+        self.assertEqual((item["price"], item["saleStatus"]), (109100, "PREORDER"))
+        self.assertEqual(item["imageUrl"], "http://animate.godohosting.com/Goods/4534530642899.jpg")
+
+
+class NewsSourceTests(unittest.TestCase):
+    # alter-web.jp/products/: month headings, then one <figure> per product.
+    ALTER_LIST = """
+<h1 class="hl01 c-products">10<small>月<span>October</span></small></h1>
+<div class="page type-a"><div class="imgs img-04">
+<figure><a href="/products/652/"><img alt="" src="/uploads/products/20260805163144_c4JH2z94.jpg"><figcaption>花火</figcaption></a></figure>
+<figure><a href="/products/654/"><img alt="" src="/uploads/products/20260801144600_fd4Dfeyg.jpg"><figcaption>バーサーカー／モルガン　最終再臨Ver.</figcaption></a></figure>
+</div></div>
+<nav><a href="/products/?mm=1">1月</a><a href="/blog_alter/">BLOG</a></nav>"""
+
+    # gamemeca.com/news.php?ca=M: thumbnail link and title link per <li>, plus side-bar links elsewhere.
+    GAMEMECA_LIST = """
+<ul class="list_news">
+ <li class="">
+  <a href="/view.php?gid=1780978" class="link_thumb static-thumbnail"><span class="static-thumbnail-style"></span><img src="https://cdn.gamemeca.com/gmdata/0001/780/978/resize_gm749833_65465.webp" width="152" height="85" /></a>
+  <div class="cont_thumb"><strong class="tit_thumb"><a href="/view.php?gid=1780978">스마일게이트 MMO 이클립스 추석 맞이 &#039;만월제&#039; 시작</a></strong></div>
+  <div class="desc_thumb">요약 문장</div><div class="day_news">2026.09.23 15:15</div>
+ </li>
+ <li class="">
+  <a href="/view.php?gid=1780981" class="link_thumb static-thumbnail"><img src="https://cdn.gamemeca.com/gmdata/0001/780/981/resize_gm628835_thumb.webp" /></a>
+  <div class="cont_thumb"><strong class="tit_thumb"><a href="/view.php?gid=1780981">컴투스, SWC2026 유럽 컵 개최</a></strong></div>
+ </li>
+</ul>
+<ul class="rank"><li><a href="/view.php?gid=1780500">랭킹 기사</a></li></ul>
+<a href="http://news.dreamwiz.com/?uid=https%3A%2F%2Fwww.gamemeca.com/view.php?gid=1776797">외부</a>"""
+
+    def test_alter_cards_give_product_links_titles_and_photos(self):
+        source = SOURCES["ALTER 상품"]
+        items = list(extract_links(self.ALTER_LIST, source["url"], source))
+        self.assertEqual([(item["url"], item["title"]) for item in items], [
+            ("https://www.alter-web.jp/products/652/", "花火"),
+            ("https://www.alter-web.jp/products/654/", "バーサーカー／モルガン 最終再臨Ver."),  # full-width space folded
+        ])
+        self.assertEqual(items[0]["imageUrl"], "https://www.alter-web.jp/uploads/products/20260805163144_c4JH2z94.jpg")
+
+    def test_gamemeca_reads_only_the_main_list_titles_with_thumbnails(self):
+        source = SOURCES["게임메카 모바일 게임 뉴스"]
+        items = list(extract_links(self.GAMEMECA_LIST, source["url"], source))
+        self.assertEqual([item["url"] for item in items], [
+            "https://www.gamemeca.com/view.php?gid=1780978",
+            "https://www.gamemeca.com/view.php?gid=1780981",
+        ])
+        self.assertEqual(items[0]["title"], "스마일게이트 MMO 이클립스 추석 맞이 '만월제' 시작")
+        self.assertEqual(
+            items[0]["imageUrl"],
+            "https://cdn.gamemeca.com/gmdata/0001/780/978/resize_gm749833_65465.webp",
+        )
+
+    def test_news_sources_are_automatic_robots_checked_and_metric_free(self):
+        for name in ("애니플러스 뉴스", "ALTER 상품", "게임메카 모바일 게임 뉴스", "애니메이트 코리아 예약상품"):
+            source = SOURCES[name]
+            with self.subTest(name):
+                self.assertIn(source, automatic_sources())
+                self.assertTrue(source["respect_robots"])
+                self.assertNotIn("list_metrics", source)
+                self.assertNotIn("detail_metrics", source)
+                self.assertFalse(source.get("product_mode") or source.get("fetch_detail_image"))  # list only
+        self.assertTrue(SOURCES["애니플러스 뉴스"]["render_js"])  # the list is drawn client-side
+        # gamemeca.com robots.txt: Crawl-delay: 30
+        self.assertGreaterEqual(SOURCES["게임메카 모바일 게임 뉴스"]["request_delay_min_seconds"], 30)
+
+
 class FigurePressoTests(unittest.TestCase):
     def items(self):
         base = "https://m.figurepresso.com/product/preorder.html?cate_no=24"
@@ -579,7 +662,7 @@ class SourceListTests(unittest.TestCase):
     REMOVED = {
         "Good Smile Company 뉴스", "애니메이트 코리아 페어·이벤트", "animate 서울홍대점",
         "일러스타 페스", "코믹월드", "Kotobukiya 뉴스", "라프텔 인기·신작",
-        "AniList 트렌딩 애니", "PR TIMES 만화·애니", "애니플러스 뉴스",
+        "AniList 트렌딩 애니", "PR TIMES 만화·애니",
     }
 
     def test_unsuitable_sources_are_gone_and_names_are_unique(self):
@@ -594,7 +677,8 @@ class SourceListTests(unittest.TestCase):
         for source in load_sources():
             with self.subTest(source=source["name"]):
                 self.assertIn(source["type"], COLLECTORS)
-                self.assertNotEqual(source.get("category"), "ANIME")
+                if source["name"] != "애니플러스 뉴스":  # the only anime source, news links without metrics
+                    self.assertNotEqual(source.get("category"), "ANIME")
 
     def test_no_x_scraping_and_no_source_that_robots_forbids(self):
         for source in load_sources():

@@ -39,7 +39,7 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 ## Scope and operations
 
-- Collect metadata and links only, never full copyrighted articles. HTML collection checks robots.txt and is skipped if the check fails. The only exception is `local_only` `local_browser` sources (Naver stores) run by hand through `collect_manual.py`: headed, private Playwright context, list pages only, no bypass of challenges; `collect.py` never runs them. Do not add X scraping or community/VOC sources, or YouTube channels that upload the anime episodes themselves. Anime sources (AniList, PR TIMES 만화·애니, 애니플러스 뉴스), the `anilist`/`youtube_feed` collectors, AniList-metric scoring and the ANIME work draft were removed; existing `ANIME` documents stay.
+- Collect metadata and links only, never full copyrighted articles. HTML collection checks robots.txt and is skipped if the check fails. The only exception is `local_only` `local_browser` sources (Naver stores) run by hand through `collect_manual.py`: headed, private Playwright context, list pages only, no bypass of challenges; `collect.py` never runs them. Do not add X scraping or community/VOC sources, or YouTube channels that upload the anime episodes themselves. Anime sources AniList and PR TIMES 만화·애니, the `anilist`/`youtube_feed` collectors, AniList-metric scoring and the ANIME work draft were removed; existing `ANIME` documents stay. 애니플러스 뉴스 is collected again as the only `ANIME` source (list links, dates and photos, no metrics).
 - The Flask UI is local-only on `127.0.0.1:5001`. Do not add auth, extra backends, vector DBs or new schedulers unless asked.
 - Never commit credentials, `.env`, browser profiles, local DBs or backups, or test dependencies.
 

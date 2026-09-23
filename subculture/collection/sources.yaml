@@ -49,6 +49,70 @@ sources:
     respect_robots: true
     list_image_selector: img  # .c-item 카드의 기사별 이미지
 
+  # 국내 애니/굿즈 뉴스. 목록이 JS로 그려져 브라우저 렌더링이 필요하다. robots.txt는 /api/만 막는다.
+  # 좋아요 수 등 지표는 수집하지 않고 목록 카드의 기사 링크·제목·게시일·사진만 읽는다(상세는 열지 않음).
+  - name: 애니플러스 뉴스
+    type: html
+    url: https://news.aniplustv.com/news
+    render_js: true
+    render_timeout_seconds: 30
+    link_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
+    wait_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
+    title_selector: h3
+    published_selector: p
+    published_format: '%Y/%m/%d'
+    next_page_selector: 'button[aria-label="다음 페이지"]'
+    max_pages: 3
+    region: KR
+    category: ANIME
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://news\.aniplustv\.com/news/[0-9]+$'
+    max_items: 50
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_image_selector: img  # 카드(a) 안의 기사별 이미지
+
+  # ALTER 공식 상품 목록(발매월 최신순). 신작 공개 사진용으로 목록 카드(figure)만 읽는다.
+  # robots.txt가 404(없음)라 허용으로 본다.
+  - name: ALTER 상품
+    type: html
+    url: https://www.alter-web.jp/products/
+    link_selector: 'figure a[href^="/products/"]'
+    min_title_length: 1  # 「花火」처럼 짧은 일본어 상품명이 있어 기본(4자) 대신 1자
+    region: JP
+    category: FIGURE
+    content_angle: NEWS
+    source_tier: OFFICIAL
+    allow_patterns:
+      - '^https://www\.alter-web\.jp/products/\d+/?$'
+    max_items: 30
+    enabled: true
+    respect_robots: true
+    list_image_selector: img  # figure 안의 상품 대표 사진
+
+  # 게임메카 모바일 게임 뉴스. 서브컬처 게임 이벤트·콜라보 소식용이며 MMO 기사도 섞여 첫 페이지만 소량 읽는다.
+  # robots.txt의 Crawl-delay: 30을 지키도록 요청 간격을 30초 이상으로 둔다(목록 1페이지라 요청은 한 번).
+  - name: 게임메카 모바일 게임 뉴스
+    type: html
+    url: https://www.gamemeca.com/news.php?ca=M
+    link_selector: '.list_news .tit_thumb a[href*="view.php?gid="]'
+    region: KR
+    category: CHARACTER
+    content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://www\.gamemeca\.com/view\.php\?gid=\d+$'
+    max_items: 20
+    request_delay_min_seconds: 30.0
+    request_delay_max_seconds: 40.0
+    enabled: true
+    respect_robots: true
+    list_image_selector: img  # li 카드의 썸네일
+
   # AGF(Anime Game Festival) Korea 공식 공지사항 = 국내 대표 서브컬처 페스티벌 소식.
   # 목록이 React 클라이언트 라우팅이라 HTML 링크 추출이 불가능해
   # 페이지가 실제로 호출하는 공개 JSON API(getBoardList)를 직접 불러온다. robots.txt 없음, CORS 공개.
@@ -480,6 +544,31 @@ sources:
     region: KR
     category: GOODS
     content_angle: NEWS
+    source_tier: MEDIA
+    allow_patterns:
+      - 'goods_view\.php\?goodsNo=\d+'
+    max_items: 90
+    page_param: page  # ?page=N (페이지당 30건)
+    max_pages: 3
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: '.item_photo_box img'
+    shop: 애니메이트 코리아
+
+  # 애니메이트 코리아 예약상품 - 굿즈(cateCd=010006). 상위 예약상품(010)은 앞쪽이 대부분 서적이라 굿즈 하위 목록을 쓴다.
+  # 신상품과 같은 Godomall 카드이며 예약 표시가 아이콘 alt(★수주예약상품★)에만 있어 card_alt_text로 읽는다.
+  - name: 애니메이트 코리아 예약상품
+    type: html
+    url: https://www.animate-onlineshop.co.kr/goods/goods_list.php?cateCd=010006
+    link_selector: '.item_tit_box a[href*="goods_view.php?goodsNo="]'
+    title_selector: .item_name
+    title_deny_patterns:
+      - '^【(국내|일본)서적'
+    card_alt_text: true
+    region: KR
+    category: GOODS
+    content_angle: PRICE
     source_tier: MEDIA
     allow_patterns:
       - 'goods_view\.php\?goodsNo=\d+'
