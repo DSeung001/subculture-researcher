@@ -508,6 +508,47 @@ class KeywordMatchTests(unittest.TestCase):
             rows, _ = library.items({"works": str(works["벽람항로"])})
             self.assertEqual([row["id"] for row in rows], ["FIGURE:a"])
 
+    def test_catalog_links_spaced_variants_and_new_ips_without_false_hits(self):
+        from subculture.library.application import seed_works
+        titles = {
+            "love": "(26년 12월 발매) 공식 러브 라이브 찻집 시리즈 아크릴 스탠드 굿즈",
+            "titan": "[예약]진격의 거인 넨도로이드 라이너 브라운 (재판)",
+            "collab": "메가하우스 Lucrea 아이카츠 x 프리파라 THE MOVIE",
+            "zoid": "Zoid x Patraber – Code Name B.U.D.D.Y. - 1/35 스케일 잉그램",
+            "store": "히메노짱 × 빌리지 뱅가드 한정 콜라보레이션 굿즈 출시!!",
+            "stage": "에일리언 스테이지 아크릴 스탠드",
+        }
+        docs = [
+            SimpleNamespace(
+                id=key,
+                reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
+                to_dict=lambda key=key, title=title: {
+                    "url": f"https://s.example.com/{key}", "title": title, "source": "따빼몰"},
+            )
+            for key, title in titles.items()
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            library = Library(Path(directory) / "library.sqlite3")
+            cloud = Mock()
+            cloud.collection_group.return_value.stream.return_value = iter(docs)
+            library.sync(cloud)
+            seed_works.seed(library)
+            works = {w["name"]: w["id"] for w in library.terms()["works"]}
+
+            def linked(name):
+                rows, _ = library.items({"works": str(works[name])})
+                return {row["id"] for row in rows}
+
+            self.assertEqual(linked("러브라이브"), {"FIGURE:love"})
+            self.assertEqual(linked("진격의 거인"), {"FIGURE:titan"})
+            self.assertEqual(linked("아이카츠"), {"FIGURE:collab"})
+            self.assertEqual(linked("프리파라"), {"FIGURE:collab"})
+            self.assertEqual(linked("조이드"), {"FIGURE:zoid"})
+            self.assertEqual(linked("기동경찰 패트레이버"), {"FIGURE:zoid"})
+            self.assertEqual(linked("카드파이트!! 뱅가드"), set())
+            self.assertEqual(linked("에일리언 (영화)"), set())
+            self.assertEqual(linked("에일리언 스테이지"), {"FIGURE:stage"})
+
     def test_seed_sync_flag_syncs_the_inbox_before_linking(self):
         from subculture.library.application import seed_works
         with tempfile.TemporaryDirectory() as directory:

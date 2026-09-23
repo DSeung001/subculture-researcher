@@ -39,6 +39,9 @@ works:
   - name: 도굴왕
     aliases:
       - Tomb Raider King
+      - 盗掘王
+      - tombrainderking
+      - tombraderking
   - name: 유녀전기
     aliases:
       - 幼女戦記
@@ -119,6 +122,7 @@ works:
   - name: 슈퍼 뒤에서 담배를 피는 두 사람
     aliases:
       - スーパーの裏でヤニ吸うふたり
+      - 슈퍼 뒤에서 담배 피우는 두 사람
   - name: 부족하나 악녀입니다만
     aliases:
       - ふつつかな悪女ではございますが
@@ -146,6 +150,7 @@ works:
       - Honkai Star Rail
       - 崩壊スターレイル
       - Star Rail
+      - Starrail
   - name: 명조
     aliases:
       - Wuthering Waves
@@ -170,12 +175,19 @@ works:
       - 뱅드림
       - バンドリ
       - Girls Band Party
+      - Roselia
+      - 로젤리아
+      - Morfonica
+      - 모르포니카
+      - 모포니카
   - name: 보컬로이드
     aliases:
       - 하츠네 미쿠
       - Hatsune Miku
       - 初音ミク
       - Vocaloid
+      - 하츠네미쿠
+      - 카사네 테토
   - name: 체인소맨
     aliases:
       - 체인소 맨
@@ -306,6 +318,8 @@ works:
       - 마징가Z
       - マジンガーZ
       - Mazinger Z
+      - 마징카이저
+      - Mazinkaiser
   - name: 아카메가 벤다
     aliases:
       - アカメが斬る
@@ -317,6 +331,7 @@ works:
       - 이키즈라이브
       - 러브라이브 블루버드
       - イキヅライブ
+      - 러브 라이브
   - name: 다크 문 달의 제단
     aliases:
       - Dark Moon
@@ -399,6 +414,8 @@ works:
       - Fate/kaleid
       - FGO
       - 프리즈마 일리야
+      - 프리즈마이리야
+      - 프리즈마 이리야
   - name: 치이카와
     aliases:
       - 치카와
@@ -437,6 +454,8 @@ works:
       - 봇치 더 락
       - Bocchi the Rock
       - ぼっち・ざ・ろっく
+      - 봇치더락
+      - 봇치더록
   - name: HUNTER×HUNTER
     aliases:
       - 헌터X헌터
@@ -464,6 +483,8 @@ works:
     aliases:
       - Girls' Frontline
       - ドールズフロントライン
+      - 뉴럴 클라우드
+      - Neural Cloud
   - name: 사이버펑크 엣지러너
     aliases:
       - 사이버펑크엣지러너
@@ -570,6 +591,9 @@ works:
       - Idolmaster
       - THE IDOLM@STER
       - アイドルマスター
+      - 샤니마스
+      - シャニマス
+      - Shanimas
   - name: 학생회에도 구멍이 있어요
     aliases:
       - 학생회에도구멍은있다
@@ -578,6 +602,7 @@ works:
     aliases:
       - The Danger in My Heart
       - 僕の心のヤバイやつ
+      - 내마음의위험한녀석
   - name: 마법소녀를 동경해서
     aliases:
       - Gushing over Magical Girls
@@ -699,6 +724,10 @@ works:
       - Rilakkuma
       - サンリオキャラクターズ
       - Sanrio Characters
+      - 산리오
+      - Sanrio
+      - 쿠로미
+      - クロミ
   - name: 토이 스토리
     aliases:
       - 토이스토리
@@ -855,6 +884,9 @@ works:
       - 슈고 캐릭터
       - しゅごキャラ！
       - Shugo Chara
+      - 캐릭캐릭체인지
+      - 캐릭캐릭 체인지
+      - 수호캐릭터
   - name: 프레임암즈 걸
     aliases:
       - 프레임 암즈 걸
@@ -889,3 +921,253 @@ works:
       - 스파키즈
       - Spookiz
       - 天幕のジャードゥーガル
+  # Added from the 2026-09-23 review of unclassified items.
+  - name: 진격의 거인
+    aliases:
+      - 진격의거인
+      - 進撃の巨人
+      - Attack on Titan
+  - name: 이나즈마 일레븐
+    aliases:
+      - 이나즈마일레븐
+      - 썬더일레븐
+      - 썬더 일레븐
+      - イナズマイレブン
+      - Inazuma Eleven
+  - name: "가정교사 히트맨 REBORN!"
+    aliases:
+      - 가정교사 히트맨
+      - 家庭教師ヒットマン
+  - name: xxxHOLiC
+  - name: 호오즈키의 냉철
+    aliases:
+      - 鬼灯の冷徹
+  - name: 어떤 과학의 초전자포
+    aliases:
+      - 어떤과학의초전자포
+      - とある科学の超電磁砲
+  - name: 나에게 천사가 내려왔다
+    aliases:
+      - 나에게천사가내려왔다
+      - 私に天使が舞い降りた
+  - name: 역시 내 청춘 러브코메디는 잘못됐다
+    aliases:
+      - 역시내청춘러브코메디는잘못됐다
+      - 내청코
+      - やはり俺の青春ラブコメはまちがっている
+  - name: 악역영애 전생 아저씨
+    aliases:
+      - 악역영애전생아저씨
+      - 悪役令嬢転生おじさん
+  - name: 페어리 테일
+    aliases:
+      - 페어리테일
+      - FAIRY TAIL
+  - name: "딸기 100%"
+    aliases:
+      - "딸기100%"
+      - "いちご100%"
+  - name: 마법소녀의 마녀재판
+    aliases:
+      - 魔法少女ノ魔女裁判
+  - name: 바니가든
+    aliases:
+      - バニーガーデン
+      - Bunny Garden
+  - name: 뮤즈대쉬
+    aliases:
+      - 뮤즈 대쉬
+      - Muse Dash
+  - name: "몬길: 스타 다이브"
+    aliases:
+      - 몬길
+  - name: 카기나도
+  - name: 스노우브레이크
+    aliases:
+      - Snowbreak
+  - name: 리그 오브 레전드
+    aliases:
+      - 리그오브레전드
+      - League of Legends
+  - name: 메가미 디바이스
+    aliases:
+      - 메가미디바이스
+      - メガミデバイス
+      - Megami Device
+  - name: 창채소녀정원
+    aliases:
+      - 창작소녀정원
+      - 創彩少女庭園
+  - name: 30 MINUTES SISTERS
+    aliases:
+      - 30MS
+  - name: 꼬마마법사 레미
+    aliases:
+      - 꼬마 마법사 레미
+      - おジャ魔女どれみ
+  - name: 가끔씩 툭하고 러시아어로 부끄러워하는 옆자리의 아랴 양
+    aliases:
+      - 러시아어로 부끄러워하는
+      - ロシア語でデレる
+  - name: 걸즈 밴드 크라이
+    aliases:
+      - 걸즈밴드크라이
+      - ガールズバンドクライ
+      - Girls Band Cry
+  - name: 농담곰
+    aliases:
+      - 담곰이
+      - ナガノのくま
+  - name: 아이카츠
+    aliases:
+      - アイカツ
+      - Aikatsu
+  - name: 프리파라
+    aliases:
+      - プリパラ
+      - PriPara
+  - name: 골드라이탄
+    aliases:
+      - ゴールドライタン
+  - name: 파워레인저
+    aliases:
+      - Power Rangers
+  - name: 마블
+    aliases:
+      - Marvel
+      - 스파이더맨
+      - Spider-Man
+      - 울버린
+  - name: 에일리언 (영화)
+    aliases:
+      - 파워로더
+      - 엘렌리플리
+      - Ellen Ripley
+  - name: 로보텍
+    aliases:
+      - Robotech
+  - name: 조이드
+    aliases:
+      - ゾイド
+      - ZOIDS
+      - Zoid
+  - name: 기동경찰 패트레이버
+    aliases:
+      - 패트레이버
+      - パトレイバー
+      - Patlabor
+      - Patraber
+  - name: 데몬 엑스 마키나
+    aliases:
+      - Daemon X Machina
+  - name: 아머드 코어
+    aliases:
+      - ARMORED CORE
+  - name: 청춘 돼지 시리즈
+    aliases:
+      - 청춘 돼지
+      - 청춘돼지
+      - 青春ブタ野郎
+      - 어린 돼지는 산타클로스
+  - name: 스튜디오 지브리
+    aliases:
+      - 지브리
+      - ジブリ
+      - Ghibli
+      - 토토로
+      - 마녀배달부 키키
+      - 魔女の宅急便
+  - name: 드래곤볼
+    aliases:
+      - ドラゴンボール
+      - Dragon Ball
+  - name: 메달리스트
+    aliases:
+      - メダリスト
+  - name: 히카루가 죽은 여름
+    aliases:
+      - 光が死んだ夏
+  - name: 란마 1/2
+    aliases:
+      - 란마
+      - らんま
+      - Ranma
+  - name: 여기는 잘나가는 파출소
+    aliases:
+      - こち亀
+  - name: 이 세상의 한구석에
+    aliases:
+      - この世界の片隅に
+  - name: 허니 레몬 소다
+    aliases:
+      - ハニーレモンソーダ
+  - name: 블랙 클로버
+    aliases:
+      - 블랙클로버
+      - Black Clover
+  - name: 프리큐어
+    aliases:
+      - 프리티 큐어
+      - プリキュア
+      - Precure
+  - name: 아이프리
+    aliases:
+      - アイプリ
+  - name: 헤탈리아
+    aliases:
+      - ヘタリア
+      - Hetalia
+  - name: 도원암귀
+    aliases:
+      - 桃源暗鬼
+      - 토겐 모키
+  - name: 아이쉴드 21
+    aliases:
+      - 아이실드 21
+      - Eyeshield 21
+  - name: 스킵과 로퍼
+    aliases:
+      - 스킵 앤 로퍼
+      - スキップとローファー
+  - name: 게게게의 기타로
+    aliases:
+      - 鬼太郎
+      - 게게게
+  - name: 밀그램
+    aliases:
+      - MILGRAM
+  - name: HoneyWorks
+    aliases:
+      - 허니웍스
+  - name: 파워퍼프걸
+    aliases:
+      - Powerpuff
+  - name: 빌디바이드
+    aliases:
+      - ビルディバイド
+      - Build Divide
+      - Bildibyde
+  - name: 코테츠쿤
+    aliases:
+      - コテツくん
+  - name: FX 전사 쿠루미짱
+    aliases:
+      - FX戦士くるみちゃん
+      - Kurumichan
+  - name: 현자의 이세계 생활 일기
+  - name: 글로우 업 쇼
+    aliases:
+      - Grow Up Show
+  - name: 별 내리는 왕국의 니나
+    aliases:
+      - 星降る王国のニナ
+  - name: "카드파이트!! 뱅가드"
+    aliases:
+      - "카드 파이트!! 뱅가드"
+      - "カードファイト!! ヴァンガード"
+  - name: NTE
+    aliases:
+      - Neverness to Everness
+  - name: LINE FRIENDS
+    aliases:
+      - 라인프렌즈
