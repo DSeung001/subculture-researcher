@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
 
-from subculture.shared.image_urls import http_url
+from subculture.shared.image_urls import clean_image_url, http_url
 
 KST = ZoneInfo("Asia/Seoul")
 CATEGORY_LABELS = {
@@ -295,7 +295,9 @@ def card_view(item: dict) -> dict:
         "url": http_url(data.get("url")) or "",
         "image_url": http_url(data.get("imageUrl")) or "",
         "detail_image_urls": [
-            url for url in (http_url(value) for value in data.get("detailImageUrls") or []) if url
+            # Same photo rule as collection, so galleries stored before a rule change
+            # (e.g. unrendered `{$js-src}` placeholders) are not shown as broken images.
+            url for url in (clean_image_url(value) for value in data.get("detailImageUrls") or []) if url
         ],
         "category_label": CATEGORY_LABELS.get(category, category),
         "is_new_today": is_new_today(data),

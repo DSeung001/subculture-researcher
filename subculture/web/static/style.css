@@ -589,7 +589,23 @@ dialog.modal::backdrop {
   top: 0;
 }
 .sources-table tr:last-child td { border-bottom: none; }
-.sources-table tbody tr:nth-child(even) { background: var(--bg); }
+.sources-table tbody tr.source-row:nth-child(4n+3) { background: var(--bg); }
+.source-samples-toggle {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+.source-samples-toggle:hover { color: var(--text); }
+.source-samples-toggle.is-open { transform: rotate(180deg); color: var(--text); }
+.sources-table tbody tr.source-samples-row,
+.sources-table tbody tr.source-samples-row:hover { background: var(--accent-soft); }
+.source-samples-row td { white-space: normal; padding: 12px; }
+.source-samples-note { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
 .sources-table tbody tr:hover { background: var(--accent-soft); }
 .sources-table tr.disabled-row { color: var(--muted); }
 .sources-table td a { color: var(--info); }

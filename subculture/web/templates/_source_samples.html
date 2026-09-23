@@ -1,0 +1,16 @@
+{#- Fragment for /sources: the newest synced items of one source, as read-only item cards. -#}
+{% from "_item_card.html" import item_card %}
+<div class="source-samples">
+  {% if error %}
+  <p class="source-samples-note">{{ error }}</p>
+  {% elif items %}
+  <div class="items">
+    {% for item in items %}
+    {% call(slot) item_card(item['_view']) %}{% endcall %}
+    {% endfor %}
+  </div>
+  <p class="source-samples-note">최근 수집 {{ items|length }}개 · <a href="{{ url_for('library.index', q=name) }}">작품·기획에서 전체 보기</a></p>
+  {% else %}
+  <p class="source-samples-note">아직 로컬에 동기화된 아이템이 없습니다.</p>
+  {% endif %}
+</div>

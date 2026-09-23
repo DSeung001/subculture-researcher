@@ -26,8 +26,8 @@
       </thead>
       <tbody>
         {% for s in sources %}
-        <tr class="{% if not s.get('enabled', True) %}disabled-row{% endif %}">
-          <td>{{ s.name }}</td>
+        <tr class="source-row{% if not s.get('enabled', True) %} disabled-row{% endif %}">
+          <td class="source-name-cell">{{ s.name }} <button type="button" class="source-samples-toggle" aria-expanded="false" aria-label="{{ s.name }} 예시 아이템 보기" title="예시 아이템 보기" data-url="{{ url_for('source_samples', name=s.name) }}">▾</button></td>
           <td class="url-cell"><a href="{{ s.url }}" target="_blank" rel="noopener" title="{{ s.url }}">{{ s.url }}</a></td>
           <td><span class="tag">{{ category_labels.get(s.category, s.category) }}</span></td>
           <td><span class="tag">{{ region_labels.get(s.region, s.region) }}</span></td>
@@ -53,6 +53,7 @@
             {% endif %}
           </td>
         </tr>
+        <tr class="source-samples-row" hidden><td colspan="7"></td></tr>
         {% else %}
         <tr><td colspan="7" class="empty-row">표시할 소스가 없습니다.</td></tr>
         {% endfor %}

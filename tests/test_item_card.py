@@ -69,6 +69,13 @@ class CardViewTests(unittest.TestCase):
             "https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg",
         ])
 
+    def test_stored_template_placeholders_are_not_shown_as_detail_images(self):
+        view = card_view({**DOC, "detailImageUrls": [
+            "https://ttabbaemall.co.kr/product/%7B%24js-src%7D",
+            "https://ttabbaemall.co.kr/web/upload/NNEditor/20240822/a.jpg",
+        ]})
+        self.assertEqual(view["detail_image_urls"], ["https://ttabbaemall.co.kr/web/upload/NNEditor/20240822/a.jpg"])
+
     def test_missing_detail_image_urls_give_an_empty_list(self):
         self.assertEqual(card_view(DOC)["detail_image_urls"], [])
 

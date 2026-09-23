@@ -207,3 +207,26 @@ document.addEventListener("click", async (event) => {
   button.textContent = (await copyText((source.value ?? source.textContent).trim())) ? "복사됨" : "복사 실패";
   setTimeout(() => { button.textContent = original; }, 1500);
 });
+
+// 수집 목록: ▾ opens the row below with the source's newest items (fetched once).
+document.addEventListener("click", async (event) => {
+  const toggle = event.target.closest("button.source-samples-toggle");
+  if (!toggle) return;
+  const row = toggle.closest("tr")?.nextElementSibling;
+  if (!row?.classList.contains("source-samples-row")) return;
+  const opening = row.hidden;
+  row.hidden = !opening;
+  toggle.classList.toggle("is-open", opening);
+  toggle.setAttribute("aria-expanded", String(opening));
+  if (!opening || toggle.dataset.loaded) return;
+  const cell = row.querySelector("td");
+  cell.textContent = "불러오는 중…";
+  try {
+    const response = await fetch(toggle.dataset.url);
+    if (!response.ok) throw new Error("load failed");
+    cell.innerHTML = await response.text();
+    toggle.dataset.loaded = "1";
+  } catch {
+    cell.textContent = "불러오지 못했습니다. 다시 눌러 주세요.";
+  }
+});

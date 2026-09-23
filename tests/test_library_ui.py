@@ -133,5 +133,52 @@ class LibraryUiTests(unittest.TestCase):
         self.assertIn("library-works-panel", html)
 
 
+class SourceSamplesTests(unittest.TestCase):
+    """수집 목록의 소스별 예시 아이템: local items only, newest collected first, at most five."""
+
+    setUp = LibraryUiTests.setUp
+
+    SOURCE = "따빼몰 신규입고"
+
+    def sync_samples(self):
+        self.lib.sync(cloud(*[
+            snapshot(f"s{day}", f"따빼몰 상품 {day}", source=self.SOURCE,
+                     collectedAt=f"2026-09-{day:02d}T00:00:00+00:00")
+            for day in range(1, 7)
+        ], snapshot("other", "다른 소스 상품", source="마니아하우스 예약상품",
+                    collectedAt="2026-09-30T00:00:00+00:00")))
+
+    def test_library_returns_the_newest_five_of_one_source(self):
+        self.sync_samples()
+        samples = self.lib.source_samples(self.SOURCE)
+        self.assertEqual([item["_id"] for item in samples],
+                         ["FIGURE:s6", "FIGURE:s5", "FIGURE:s4", "FIGURE:s3", "FIGURE:s2"])
+        self.assertEqual(samples[0]["title"], "따빼몰 상품 6")
+        self.assertEqual(self.lib.source_samples("없는 소스"), [])
+
+    def test_fragment_renders_item_cards_without_the_cloud(self):
+        self.sync_samples()
+        response = self.client.get("/sources/samples", query_string={"name": self.SOURCE})
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertEqual(html.count('class="card item-card"'), 5)
+        self.assertIn("따빼몰 상품 6", html)
+        self.assertNotIn("따빼몰 상품 1<", html)
+        self.assertNotIn("다른 소스 상품", html)
+        self.assertIn("/library?q=", html)
+
+    def test_empty_and_unknown_sources(self):
+        empty = self.client.get("/sources/samples", query_string={"name": self.SOURCE}).get_data(as_text=True)
+        self.assertIn("아직 로컬에 동기화된 아이템이 없습니다", empty)
+        self.assertEqual(self.client.get("/sources/samples", query_string={"name": "없는 소스"}).status_code, 400)
+        self.assertEqual(self.client.get("/sources/samples").status_code, 400)
+
+    def test_sources_page_has_a_toggle_per_source(self):
+        html = self.client.get("/sources").get_data(as_text=True)
+        self.assertIn('class="source-samples-toggle"', html)
+        self.assertIn('data-url="/sources/samples?name=', html)
+        self.assertEqual(html.count('class="source-samples-toggle"'), html.count('class="source-samples-row"'))
+
+
 if __name__ == "__main__":
     unittest.main()

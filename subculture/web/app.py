@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
 
 from subculture.drafts.application.ai_drafts import create_trending_draft, create_work_drafts
 from subculture.drafts.infrastructure.ai_writer import AiWriterError
@@ -398,6 +399,26 @@ def sources_page():
         region_labels=REGION_LABELS,
         tier_labels=TIER_LABELS,
     )
+
+
+SOURCE_SAMPLE_COUNT = 5
+
+
+@app.get("/sources/samples")
+def source_samples():
+    """Newest locally synced items of one source as item cards (fragment for the sources page)."""
+    name = request.args.get("name", "").strip()
+    if not name or name not in {source["name"] for source in load_sources()}:
+        abort(400)
+    error = ""
+    items = []
+    try:
+        items = local_library().source_samples(name, limit=SOURCE_SAMPLE_COUNT)
+    except (SQLAlchemyError, OSError):
+        error = "로컬 DB를 열 수 없습니다. DB 실행과 동기화 상태를 확인하세요."
+    for item in items:
+        item["_view"] = card_view(item)
+    return render_template("_source_samples.html", name=name, items=items, error=error)
 
 
 @app.get("/erd")

@@ -232,6 +232,21 @@ class Library:
             result[item_id] = data
         return result
 
+    def source_samples(self, source, limit=5):
+        """The newest collected documents of one source (payload plus `_id`), for the sources page."""
+        query = (
+            select(Item.id, Item.payload).where(Item.source == source)
+            .order_by(self._collected_at().desc(), Item.id).limit(limit)
+        )
+        with self.connect() as session:
+            rows = session.execute(query).all()
+        result = []
+        for item_id, payload in rows:
+            data = json.loads(payload)
+            data["_id"] = item_id
+            result.append(data)
+        return result
+
     def work_names_for_items(self, item_ids):
         """Confirmed work names per item id. Collab items keep every linked name, ordered by name."""
         ids = list(dict.fromkeys(item_ids))
