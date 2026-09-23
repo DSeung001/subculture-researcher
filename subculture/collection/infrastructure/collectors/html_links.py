@@ -1,10 +1,9 @@
 import re
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
 
 from bs4 import BeautifulSoup
 
-from subculture.collection.domain.content_rules import DEFAULT_DETAIL_REFRESH_HOURS, METRICS, normalize_url
+from subculture.collection.domain.content_rules import DEFAULT_DETAIL_REFRESH_HOURS, normalize_url
 from subculture.collection.infrastructure.collectors.common import RobotsDenied, extract_product_fields, save_records
 from subculture.collection.infrastructure.collectors.http import RobotsPolicy, get_html, page_url
 from subculture.collection.infrastructure.collectors.images import card_of, detail_image, detail_images, list_image
@@ -32,37 +31,6 @@ def parse_relative_korean_date(text: str) -> str | None:
     amount, unit = match.groups()
     delta = RELATIVE_KOREAN_UNITS[unit](int(amount))
     return (datetime.now(timezone.utc) - delta).date().isoformat()
-
-
-def parse_count(text: str) -> int:
-    """Parse a count element, never arbitrary numbers from article/body text."""
-    match = re.fullmatch(r"\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*([kKmM만천]?)\s*(?:회|개)?\s*", text)
-    if not match:
-        raise ValueError(f"반응 수치를 해석할 수 없음: {text!r}")
-    number, unit = match.groups()
-    multiplier = {"": 1, "k": 1000, "m": 1000000, "만": 10000, "천": 1000}[unit.lower()]
-    value = Decimal(number.replace(",", "")) * multiplier
-    if value != value.to_integral_value():
-        raise ValueError(f"반응 수치가 정수가 아님: {text!r}")
-    return int(value)
-
-
-def extract_metrics(root, selectors: dict, *, required=False) -> tuple[dict, list[str]]:
-    values, errors = {}, []
-    for field, selector in selectors.items():
-        if field not in METRICS:
-            raise ValueError(f"지원하지 않는 수치 필드: {field}")
-        node = root.select_one(selector)
-        if node is None:
-            if required:
-                errors.append(f"{field} 요소를 찾을 수 없음: {selector}")
-            continue
-        try:
-            values[field] = parse_count(node.get_text(" ", strip=True))
-            values[f"{field}CheckedAt"] = datetime.now(timezone.utc)
-        except ValueError as exc:
-            errors.append(str(exc))
-    return values, errors
 
 
 HIDDEN_CLASS_HINTS = ("displaynone", "d-none", "hidden", "hide", "invisible")
@@ -160,9 +128,6 @@ def extract_links(html: str, base_url: str, source: dict):
                         item["publishedAt"] = relative
                     else:
                         item["_errors"].append(f"게시일 형식 오류: {date}")
-        values, errors = extract_metrics(anchor, source.get("list_metrics", {}))
-        item.update(values)
-        item["_errors"].extend(errors)
         yield item
 
 
@@ -209,15 +174,13 @@ def html_items(source: dict, store=None):
 
 
 def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> None:
-    """Add detail-page fields (metrics, photo, product info) to a listed item in place."""
-    detail_selectors = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
+    """Add detail-page fields (photo, product info) to a listed item in place."""
     product_mode = source.get("product_mode", False)
     detail_image_mode = source.get("fetch_detail_image", False)
     want_gallery = bool(product_mode and source.get("detail_images_selector"))
-    if not (detail_selectors or product_mode or detail_image_mode):
+    if not (product_mode or detail_image_mode):
         return
-    # Metrics change all the time, so pages that read them are never skipped.
-    if not detail_selectors and store is not None and not store.needs_detail(
+    if store is not None and not store.needs_detail(
         item["url"], product_mode=product_mode,
         refresh_hours=float(source.get("detail_refresh_hours", DEFAULT_DETAIL_REFRESH_HOURS)),
         want_detail_images=want_gallery,
@@ -228,10 +191,6 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
             item["url"], policy, source.get("timeout_seconds", 15), source,
         )
         detail_soup = BeautifulSoup(detail_html, "html.parser")
-        if detail_selectors:
-            values, errors = extract_metrics(detail_soup, detail_selectors, required=True)
-            item.update(values)
-            item["_errors"].extend(errors)
         # The detail page's own photo wins over the list thumbnail.
         image_url = detail_image(detail_soup, detail_url, source) if (product_mode or detail_image_mode) else None
         if product_mode:

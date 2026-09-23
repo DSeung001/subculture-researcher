@@ -51,8 +51,6 @@ SELECT_PROMPT_TEMPLATE = (
     "아래 소재 목록 중에서 X에 올렸을 때 반응(좋아요/리트윗/댓글)이 가장 좋을 만한 소재를 "
     "{size}개 골라줘. 화제성과 구체성(가격·사이즈·일정 등 정보가 있는지)을 중요하게 보고, "
     "[국내]로 표시된 국내(한국) 사이트 소재를 해외 소재보다 우선해줘. "
-    "애니메이션 소재는 AniList 지표(트렌딩·인기도·즐겨찾기·평균점수)가 높을수록 인지도가 높은 "
-    "작품이니 그런 소재를 우선해줘. "
     "구매정보에 예약중이거나 한정 수량이라고 나온 제품은 놓치면 못 사는 소재니까 우선해줘. "
     "번호만 쉼표로 구분해서 출력해 (예: 3,7,1). 다른 설명은 쓰지 마.\n\n"
     "소재:\n{material}"
@@ -110,8 +108,7 @@ PROMPT_TEMPLATE = (
     "- '놓치지 마세요', '다양한 라인업', '추천드립니다', '비교해 보세요' 같은 광고성 표현을 쓰지 마. "
     "'~까지.', '~입니다.'를 연속으로 쓰지 마. 과장하지 마.\n"
     "- 제공된 소재에 있는 사실만 쓰고, 없는 일정·가격·발매일·크기·특전·평가는 지어내지 마.\n"
-    "- AniList, 트렌딩, 순위/집계 사이트명, 출처 내부명은 쓰지 마. "
-    "인지도는 '인기 있는', '화제의', '지금 주목받는'처럼 자연스러운 표현으로 써줘.\n"
+    "- 순위/집계 사이트명, 출처 내부명은 쓰지 마.\n"
     "[products: 소재별 이름]\n"
     "- 소재마다 index(소재 번호)와 display_name을 하나씩 줘. 소재를 빠뜨리지 마.\n"
     "- display_name은 상품을 알아볼 수 있는 짧은 이름으로, '[예약]' 같은 쇼핑몰 태그, 제조사명, "
@@ -143,10 +140,6 @@ POSTS_SCHEMA = {
 }
 
 CATEGORY_HINTS = {
-    "ANIME": (
-        "화제·인기와 방영/공개 소식을 SNS 홍보 글로 자연스럽게 녹여줘. "
-        "집계 사이트나 트렌딩 순위는 언급하지 마."
-    ),
     "CHARACTER": "캐릭터의 매력 포인트(설정, 인기 이유)를 짚어줘.",
     "FIGURE": (
         "소재에 가격·사이즈·발매(입고)일 정보가 있으면 자연스럽게 녹여줘. "
@@ -160,8 +153,6 @@ CATEGORY_HINTS = {
     "FESTIVAL": "소재에 행사 일정·장소 정보가 있으면 자연스럽게 녹여줘.",
 }
 DEFAULT_CATEGORY_HINT = "핵심 정보를 짚어줘."
-# Source names that leak ranking/site jargon into the public post if passed through.
-_INTERNAL_SOURCE_MARKERS = ("AniList", "트렌딩")
 
 
 class AiWriterError(RuntimeError):
@@ -170,32 +161,6 @@ class AiWriterError(RuntimeError):
 
 def api_key() -> str:
     return (os.environ.get("GEMINI_API_KEY") or "").strip()
-
-
-def _is_public_source(source: str) -> bool:
-    """Shop/media names are fine in the write prompt; ranking feeds are not."""
-    return bool(source) and not any(marker in source for marker in _INTERNAL_SOURCE_MARKERS)
-
-
-def _popularity_hint(item: dict) -> str:
-    trending = item.get("trending")
-    popularity = item.get("popularity")
-    if (isinstance(trending, int) and trending > 0) or (
-        isinstance(popularity, int) and popularity > 0
-    ):
-        return "인기 있는 작품"
-    return ""
-
-
-def _airing_hint(item: dict) -> str:
-    parts = []
-    episode = item.get("episode")
-    if isinstance(episode, int) and episode > 0:
-        parts.append(f"{episode}화")
-    airing = item.get("nextAiringAt")
-    if airing:
-        parts.append(f"다음 방영 {airing}")
-    return " · ".join(parts)
 
 
 def _sale_type_hint(item: dict, today: str | None = None) -> str:
@@ -237,14 +202,8 @@ def _material_block(items: list[dict]) -> str:
         ]
         if works:
             lines.append(f"   작품: {', '.join(works)}")
-        if _is_public_source(source):
+        if source:
             lines.append(f"   출처: {source}")
-        vibe = _popularity_hint(item)
-        if vibe:
-            lines.append(f"   분위기: {vibe}")
-        airing = _airing_hint(item)
-        if airing:
-            lines.append(f"   방영: {airing}")
         # Structured product fields (price/예약 여부/사이즈/발매일 등), not just
         # whatever the scraped summary text happens to mention, so the model
         # can state reservation urgency accurately.
@@ -265,23 +224,9 @@ def _dominant_category(items: list[dict]) -> str:
     return counts.most_common(1)[0][0] if counts else "UNKNOWN"
 
 
-def _anilist_metrics(item: dict) -> str:
-    parts = []
-    for field, label in (
-        ("trending", "트렌딩"),
-        ("popularity", "인기도"),
-        ("favourites", "즐겨찾기"),
-        ("averageScore", "평균점수"),
-    ):
-        value = item.get(field)
-        if isinstance(value, int) and value > 0:
-            parts.append(f"{label} {value:,}")
-    return ", ".join(parts)
-
-
 def _selection_block(items: list[dict]) -> str:
     # Original title (not the Korean translation) here so a title's actual
-    # name/notation lines up with how it's known (e.g. AniList's titles).
+    # name/notation lines up with how it's known.
     lines = []
     for idx, item in enumerate(items, start=1):
         title = (item.get("title") or item.get("titleKo") or "").strip()
@@ -290,9 +235,6 @@ def _selection_block(items: list[dict]) -> str:
         lines.append(f"{idx}. [{region_label}] {title}")
         if summary:
             lines.append(f"   요약: {summary[:SUMMARY_CHARS]}")
-        metrics = _anilist_metrics(item)
-        if metrics:
-            lines.append(f"   AniList 지표: {metrics}")
         product = product_caption(item)
         if product:
             lines.append(f"   구매정보: {product}")

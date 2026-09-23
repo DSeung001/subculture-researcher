@@ -1,4 +1,3 @@
-import math
 import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -56,7 +55,7 @@ SALE_STATUS_LABELS = {
     "UNKNOWN": "상태 미확인",
 }
 # Firestore documents reach the local library as JSON, so timestamps arrive as ISO strings.
-DATETIME_FIELDS = ("collectedAt", "postedAt", "viewCountCheckedAt", "likeCountCheckedAt")
+DATETIME_FIELDS = ("collectedAt", "postedAt")
 _LEADING_DATE = re.compile(
     r"^(?P<date>\d{4}[./-]\d{1,2}[./-]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?)\s+(?P<title>.+)$"
 )
@@ -103,62 +102,15 @@ def effective_date(item: dict) -> datetime:
     return datetime.min.replace(tzinfo=timezone.utc)
 
 
-# Weights for the three axes normalized to 0-100 (see _*_subscore below), so an item's
-# score never depends on how many metric *fields* its source happens to expose — only on
-# the strength of its single best signal on each axis. Sums to 0.90; flat bonuses (below)
-# add a little more on top, uncapped, same as before.
+# Freshness is normalized to 0-100 and weighted; flat bonuses (below) add a little more
+# on top, uncapped.
 FRESHNESS_WEIGHT = 0.35
-TREND_WEIGHT = 0.35
-MAGNITUDE_WEIGHT = 0.20
-
-# Per-field "fast growth"/"very popular" reference used to normalize a raw rate/count to
-# 0-100 on a log scale: reaching the reference value alone reaches 100. Rough starting
-# estimates - recalibrate against real collected ranges if scores cluster at the ends.
-VELOCITY_REFERENCES = {
-    "viewCountVelocity": 500.0,
-    "likeCountVelocity": 50.0,
-    "trendingVelocity": 20.0,
-    "popularityVelocity": 30.0,
-    "favouritesVelocity": 15.0,
-}
-MAGNITUDE_REFERENCES = {
-    "viewCount": 100_000,
-    "likeCount": 5_000,
-    "trending": 500,
-    "popularity": 50_000,
-    "favourites": 10_000,
-}
 
 
 def _freshness_subscore(item: dict, now: datetime) -> float:
     published = effective_date(item)
     age_hours = max(0.0, (now - published).total_seconds() / 3600)
     return max(0.0, 100.0 - age_hours / 2.16)  # zero after 216h (9 days), same horizon as before
-
-
-def _trend_subscore(item: dict) -> float:
-    """How fast an item's engagement is *changing* right now (0 until velocity data exists)."""
-    best = 0.0
-    for field, reference in VELOCITY_REFERENCES.items():
-        value = item.get(field)
-        if isinstance(value, (int, float)) and value > 0:
-            best = max(best, min(100.0, math.log10(value / reference + 1) / math.log10(2) * 100.0))
-    return best
-
-
-def _magnitude_subscore(item: dict) -> float:
-    """How strong an item's single best engagement signal is - never a sum of every
-    field a source happens to populate, so an AniList-backed anime item and a
-    figure/goods item with only view/like counts are judged on the same footing."""
-    best = 0.0
-    for field, reference in MAGNITUDE_REFERENCES.items():
-        value = item.get(field)
-        if isinstance(value, int) and not isinstance(value, bool) and value > 0:
-            best = max(best, min(100.0, math.log10(value + 1) / math.log10(reference + 1) * 100.0))
-    average_score = item.get("averageScore")
-    if isinstance(average_score, int) and not isinstance(average_score, bool):
-        best = max(best, max(0.0, min(100.0, float(average_score))))
-    return best
 
 
 def _flat_bonuses(item: dict) -> list[tuple[str, float]]:
@@ -186,8 +138,6 @@ def score_components(item: dict, *, now: datetime | None = None) -> list[tuple[s
     now = now or datetime.now(timezone.utc)
     components = [
         ("신선도", _freshness_subscore(item, now) * FRESHNESS_WEIGHT),
-        ("트렌드 상승", _trend_subscore(item) * TREND_WEIGHT),
-        ("참여도", _magnitude_subscore(item) * MAGNITUDE_WEIGHT),
         *_flat_bonuses(item),
     ]
     return [(label, round(points, 1)) for label, points in components if points > 0]
@@ -205,11 +155,6 @@ def score_breakdown(item: dict, *, now: datetime | None = None) -> list[tuple[st
 
 def signal_labels(item: dict) -> list[str]:
     labels = []
-    score = content_score(item)
-    if score >= 55:
-        labels.append("HOT")
-    if item.get("trending") or item.get("trendingVelocity"):
-        labels.append("TREND")
     if item.get("sourceTier") == "OFFICIAL":
         labels.append("OFFICIAL")
     if is_new_today(item):
@@ -256,33 +201,6 @@ def summary_preview(item: dict, length: int = 120) -> str:
     if len(summary) <= length:
         return summary
     return summary[:length].rstrip() + "…"
-
-
-def metric_caption(item: dict) -> str:
-    parts = []
-    for field, label in (
-        ("trending", "AniList 트렌딩"),
-        ("popularity", "인기도"),
-        ("favourites", "즐겨찾기"),
-        ("averageScore", "평균점수"),
-    ):
-        value = item.get(field)
-        if value is not None:
-            parts.append(
-                f"{label} {value:,}" if isinstance(value, int)
-                else f"{label} {value}"
-            )
-    for field, label in (("viewCount", "조회수"), ("likeCount", "좋아요")):
-        value = item.get(field)
-        if value is None:
-            parts.append(f"{label} 미제공")
-            continue
-        checked = item.get(f"{field}CheckedAt")
-        if isinstance(checked, datetime):
-            checked = checked.astimezone(KST).strftime("%Y-%m-%d %H:%M KST")
-        suffix = f" · 확인 {checked}" if checked else " · 확인 시각 없음"
-        parts.append(f"{label} {value:,}{suffix}")
-    return " | ".join(parts)
 
 
 def price_text(item: dict) -> str:
@@ -383,7 +301,6 @@ def card_view(item: dict) -> dict:
         "is_new_today": is_new_today(data),
         "meta": meta,
         "summary": summary_preview(data),
-        "metric_caption": metric_caption(data),
         "product_caption": product_caption(data),
         "signal_score": content_score(data),
         "signal_labels": signal_labels(data),

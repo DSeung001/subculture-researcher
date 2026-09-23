@@ -111,20 +111,19 @@ class WorkflowTests(unittest.TestCase):
         library = Mock()
         library.linked_work_items.return_value = groups
         library.posted_item_ids.return_value = set()
-        with patch.object(ai_drafts, "create_draft", side_effect=["d1", "d2", "d3"]) as create, \
+        with patch.object(ai_drafts, "create_draft", side_effect=["d1", "d2"]) as create, \
              patch.object(ai_drafts, "write_draft_posts"):
             results = ai_drafts.create_work_drafts(library)
-        self.assertEqual([r[0] for r in results], ["FIGURE", "ANIME", "MIXED"])
-        self.assertEqual([r[1] for r in results], ["d1", "d2", "d3"])
+        self.assertEqual([r[0] for r in results], ["FIGURE", "MIXED"])
+        self.assertEqual([r[1] for r in results], ["d1", "d2"])
         calls = [call.args[1] for call in create.call_args_list]
         self.assertTrue(all(sid.startswith("FIGURE:") for sid in calls[0]))
         self.assertNotIn("FIGURE:ignored", calls[0])
         self.assertNotIn("FIGURE:posted", calls[0])
-        self.assertEqual(calls[1], ["ANIME:c"])
-        used = set(calls[0]) | set(calls[1])
-        self.assertTrue(set(calls[2]).isdisjoint(used))
-        mixed_cats = {sid.partition(":")[0] for sid in calls[2]}
+        self.assertTrue(set(calls[1]).isdisjoint(calls[0]))
+        mixed_cats = {sid.partition(":")[0] for sid in calls[1]}
         self.assertGreaterEqual(len(mixed_cats), 2)
+        self.assertNotIn("ANIME:c", {sid for ids in calls for sid in ids})  # no ANIME draft type
 
     def test_work_drafts_can_target_one_work(self):
         groups = [
@@ -148,12 +147,16 @@ class WorkflowTests(unittest.TestCase):
         library.posted_item_ids.return_value = set()
         with patch.object(ai_drafts, "create_draft", side_effect=["d1"]) as create, \
              patch.object(ai_drafts, "write_draft_posts"):
-            results = ai_drafts.create_work_drafts(library, work_id=2)
-        self.assertEqual(create.call_args_list[0].args[1], ["ANIME:c"])
+            results = ai_drafts.create_work_drafts(library, work_id=1)
+        self.assertEqual(create.call_args_list[0].args[1], ["FIGURE:a"])
         by_type = {draft_type: draft_id for draft_type, draft_id, _ in results}
-        self.assertEqual(by_type["ANIME"], "d1")
-        self.assertIsNone(by_type["FIGURE"])
-        self.assertIsNone(by_type["MIXED"])
+        self.assertEqual(by_type, {"FIGURE": "d1", "MIXED": None})
+
+        with patch.object(ai_drafts, "create_draft") as create, \
+             patch.object(ai_drafts, "write_draft_posts"):
+            results = ai_drafts.create_work_drafts(library, work_id=2)  # ANIME-only work
+        create.assert_not_called()
+        self.assertEqual({t: d for t, d, _ in results}, {"FIGURE": None, "MIXED": None})
 
     def test_collect_still_runs_mixed_trending_draft(self):
         from subculture.collection.interface import collect_cli as collect_mod
@@ -197,23 +200,34 @@ class WorkflowTests(unittest.TestCase):
     def test_manual_vs_automatic_source_filters(self):
         from subculture.collection.infrastructure.sources_config import automatic_sources, is_manual_source, manual_sources
 
-        youtube = {"name": "KADOKAWA Anime YouTube", "manual_only": True}
+        manual = {"name": "예시 수동 소스", "manual_only": True}
         browser = {"name": "예시 브라우저", "local_only": True}
         auto = {"name": "피규어팜 예약상품"}
-        sources = [youtube, browser, auto]
-        self.assertTrue(is_manual_source(youtube))
+        sources = [manual, browser, auto]
+        self.assertTrue(is_manual_source(manual))
         self.assertTrue(is_manual_source(browser))
         self.assertFalse(is_manual_source(auto))
         self.assertEqual(automatic_sources(sources), [auto])
-        self.assertEqual(manual_sources(sources), [youtube, browser])
+        self.assertEqual(manual_sources(sources), [manual, browser])
 
     def test_collect_rejects_manual_source_flag(self):
         from subculture.collection.interface import collect_cli as collect_mod
         with patch.object(collect_mod, "load_sources", return_value=[
-            {"name": "KADOKAWA Anime YouTube", "manual_only": True},
+            {"name": "예시 수동 소스", "manual_only": True},
         ]):
             with self.assertRaises(SystemExit):
-                collect_mod.main(["--source", "KADOKAWA Anime YouTube"])
+                collect_mod.main(["--source", "예시 수동 소스"])
+
+    def test_app_help_prints_usage_without_starting_the_server(self):
+        from subculture.web import app as web_app
+        with patch.object(web_app.app, "run") as run, patch("sys.stdout"):
+            with self.assertRaises(SystemExit) as exit_:
+                web_app.main(["--help"])
+        self.assertEqual(exit_.exception.code, 0)
+        run.assert_not_called()
+        with patch.object(web_app.app, "run") as run:
+            web_app.main([])
+        run.assert_called_once_with(host="127.0.0.1", port=5001, debug=True)
 
     def test_local_browser_ready_wait_uses_random_sleep(self):
         from subculture.collection.infrastructure.collectors import local_browser as lb

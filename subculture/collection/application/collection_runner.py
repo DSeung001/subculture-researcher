@@ -6,13 +6,11 @@ import json
 import random
 import time
 
-from subculture.collection.infrastructure.collectors.anilist import collect_anilist
 from subculture.collection.infrastructure.collectors.figurefarm import collect_figurefarm
 from subculture.collection.infrastructure.collectors.html_links import collect_html_links
 from subculture.collection.infrastructure.collectors.json_api import collect_json_api
 from subculture.collection.infrastructure.collectors.local_browser import collect_local_browser
 from subculture.collection.infrastructure.collectors.rss import collect_rss
-from subculture.collection.infrastructure.collectors.youtube_feed import collect_youtube_feed
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.collection.infrastructure.sources_config import is_manual_source
 from subculture.library.application.sync import report_local_sync
@@ -23,9 +21,7 @@ COLLECTORS = {
     "html": collect_html_links,
     "json_api": collect_json_api,
     "local_browser": collect_local_browser,
-    "anilist": collect_anilist,
     "figurefarm": collect_figurefarm,
-    "youtube_feed": collect_youtube_feed,
 }
 COUNTS = ("processed", "inserted", "existing", "updated", "failed")
 TABLE_HEADERS = ("소스", "처리", "신규", "기존", "갱신", "실패", "실패 사유")

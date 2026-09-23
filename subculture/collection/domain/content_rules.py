@@ -11,37 +11,17 @@ TRACKING_PARAMS = {
     "utm_id", "utm_source_platform", "utm_creative_format", "utm_marketing_tactic",
     "fbclid", "gclid", "dclid", "msclkid",
 }
-METRICS = ("viewCount", "likeCount")
-SIGNAL_FIELDS = (
-    "trending", "popularity", "favourites", "averageScore",
-    "nextAiringAt", "episode", "signalCheckedAt",
-)
 # Also carries imageUrl/detailImageUrls/detailCheckedAt: these refresh on re-collection.
 PRODUCT_FIELDS = (
     "entityType", "shop", "saleStatus", "preorderEndAt", "releaseWindowText",
     "manufacturer", "sizeText", "price", "currency", "imageUrl", "detailImageUrls",
     "productCheckedAt", "detailCheckedAt",
 )
-# Source field -> derived per-hour-delta field, computed by ContentStore.save() when it
-# has both a previous and a new value. averageScore is a reputation score, not tracked.
-VELOCITY_FIELDS = {
-    "viewCount": "viewCountVelocity",
-    "likeCount": "likeCountVelocity",
-    "trending": "trendingVelocity",
-    "popularity": "popularityVelocity",
-    "favourites": "favouritesVelocity",
-}
-# Below this elapsed time since the last check, a re-collection is too close to the
-# previous one to compute a meaningful rate; the existing velocity value is left alone.
-MIN_VELOCITY_ELAPSED_HOURS = 1.0
 # Fields read into the per-run URL index so collectors can skip detail pages they need not
-# refetch, and so ContentStore.save() can diff metrics/signals for velocity without an
-# extra read.
+# refetch.
 INDEX_FIELDS = (
     "url", "status", "imageUrl", "detailImageUrls", "price",
     "productCheckedAt", "detailCheckedAt",
-    "viewCount", "viewCountCheckedAt", "likeCount", "likeCountCheckedAt",
-    "trending", "popularity", "favourites", "signalCheckedAt",
 )
 DEFAULT_DETAIL_REFRESH_HOURS = 72.0
 

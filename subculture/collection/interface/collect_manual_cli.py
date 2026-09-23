@@ -1,4 +1,4 @@
-"""Manual collection entry point (YouTube RSS + local browser sources)."""
+"""Manual collection entry point (local browser sources)."""
 
 import argparse
 import os
@@ -18,7 +18,7 @@ INTER_SOURCE_DELAY = (3.0, 8.0)
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="수동 수집 (YouTube·로컬 브라우저). 준비는 랜덤 대기 후 자동 진행"
+        description="수동 수집 (로컬 브라우저). 준비는 랜덤 대기 후 자동 진행"
     )
     parser.add_argument("--dry-run", action="store_true", help="Firestore에 연결하지 않고 수집 결과 출력")
     parser.add_argument("--source", action="append", help="수집할 수동 소스 이름 (여러 번 지정 가능)")

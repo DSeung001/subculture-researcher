@@ -559,12 +559,22 @@ class SourceListTests(unittest.TestCase):
     REMOVED = {
         "Good Smile Company 뉴스", "애니메이트 코리아 페어·이벤트", "animate 서울홍대점",
         "일러스타 페스", "코믹월드", "Kotobukiya 뉴스", "라프텔 인기·신작",
+        "AniList 트렌딩 애니", "PR TIMES 만화·애니", "애니플러스 뉴스",
     }
 
     def test_unsuitable_sources_are_gone_and_names_are_unique(self):
         names = [source["name"] for source in load_sources()]
         self.assertEqual(len(names), len(set(names)))
         self.assertFalse(self.REMOVED & set(names))
+
+    def test_no_anime_sources_or_removed_collector_types(self):
+        from subculture.collection.application.collection_runner import COLLECTORS
+        self.assertNotIn("anilist", COLLECTORS)
+        self.assertNotIn("youtube_feed", COLLECTORS)
+        for source in load_sources():
+            with self.subTest(source=source["name"]):
+                self.assertIn(source["type"], COLLECTORS)
+                self.assertNotEqual(source.get("category"), "ANIME")
 
     def test_no_x_scraping_and_no_source_that_robots_forbids(self):
         for source in load_sources():

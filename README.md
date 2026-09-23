@@ -31,7 +31,6 @@ Windows에서 가상환경 미활성화 시 `python`을 `.\.venv\Scripts\python.
 | 앱 열기 (http://127.0.0.1:5001) | `python app.py` |
 | 자동 수집 | `python collect.py` |
 | AI 초안 없이 수집 | `python collect.py --no-ai-draft` (GitHub Actions는 항상 이 옵션) |
-| 수집 캐시 무시 | `python collect.py --force-refresh --source "소스이름"` |
 | 사진 없는 기존 문서 보완 | `python collect.py --backfill-images` |
 | 수집 후 동기화 건너뛰기 | `python collect.py --no-sync` (`collect_manual.py`도 동일) |
 | 수동 수집 (네이버 스토어, Playwright) | `python collect_manual.py` |

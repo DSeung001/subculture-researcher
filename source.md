@@ -43,10 +43,7 @@
 |---|---|
 | HOBBY Watch 피규어 | 목록 카드(기사 링크·사진) |
 | Animate Times 굿즈 | 목록 카드 (`.c-item`) |
-| 애니플러스 뉴스 | 브라우저 렌더링(JS 목록), 3페이지 |
-| PR TIMES 만화·애니 | 목록 → 상세 `og:image` |
 | McFarlane Toys 뉴스 | 목록 → 상세 `og:image` |
-| AniList 트렌딩 애니 | GraphQL API (트렌딩·인기·다음 방영일·표지) |
 | AGF Korea 공지사항 | 공개 JSON API (공지 본문 이미지) |
 
 ### 저장 규칙 (공통)
@@ -62,11 +59,10 @@
 
 소스 등록 없이 하는 수동 입력도 있습니다: 인박스 「+ 콘텐츠 추가」로 URL을 직접 저장하는 방식이며 네이버 스토어 수집의 보조 수단입니다(아래 코토부키야 몰·메가하우스 몰).
 
-### YouTube 채널
+### 애니메이션 소스 (제거됨)
 
-- 현재 등록된 YouTube 소스는 없습니다. KADOKAWA Anime / Aniplex / TOHO animation은 애니메이션 본편을 올리는 채널이라 소스에서 제외했습니다.
-- 애니메이션 본편을 올리는 채널은 소스로 추가하지 않습니다. 이미 수집된 문서는 지우지 않고 남깁니다.
-- `youtube_feed` 수집기는 그대로 둡니다(`channel_id`로 공식 Atom 피드만 읽고 영상 썸네일 저장, RSS가 간헐 404를 내므로 `manual_only: true`로 `collect_manual.py`에서만 실행).
+- AniList 트렌딩 애니, PR TIMES 만화·애니, 애니플러스 뉴스와 `anilist`·`youtube_feed` 수집기, AniList 지표(트렌딩·인기도·즐겨찾기·평균점수) 기반 점수·AI 프롬프트, 작품별 「애니」 초안을 제거했습니다. 이미 수집된 `ANIME` 문서는 지우지 않고 남깁니다.
+- 애니메이션 본편을 올리는 YouTube 채널(KADOKAWA Anime / Aniplex / TOHO animation 등)은 소스로 추가하지 않습니다.
 
 라프텔은 **스토어**(`store.laftel.net`)만 자동 HTML로 수집합니다. `laftel.net` 인기·신작 브라우저 수집은 쓰지 않습니다.
 
@@ -132,20 +128,18 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 | 작업 | 명령 |
 |---|---|
-| 캐시 무시하고 수집(AniList 등) | `python collect.py --force-refresh --source "AniList 트렌딩 애니"` |
 | 사진 없는 기존 문서 보완 | `python collect.py --backfill-images` |
 | 제목 없음 잔여 문서 정리(X 게시물, `laftel.net` 홈) | `python delete_untitled_x.py --dry-run` 후 `--dry-run` 없이 실행 |
 | 작품 링크 없는 항목 요약(카탈로그 보강용) | `python seed_works.py --unmatched` |
 | 원격에서 사라진 로컬 항목 정리 | `python prune_library.py --dry-run` 후 `--dry-run` 없이 실행 |
 | 수집 후 로컬 동기화 건너뛰기 | `python collect.py --no-sync` (`collect_manual.py`도 동일) |
 
-- AniList 결과 캐시는 `collector_state/anilist_trending`의 `version`이 코드의 `CACHE_VERSION`과 다르면 무시됩니다. 수집 필드를 바꿀 때 이 값을 올립니다.
-- `--backfill-images`는 `imageUrl`이 비어 있는 문서에만 씁니다(덮어쓰지 않음). YouTube URL은 영상 ID로 썸네일을 만들고, AniList는 미디어 ID를 50개씩 한 번에 조회하며, `fetch_detail_image` 소스는 상세 페이지를 최대 60건까지 robots.txt·요청 간격을 지키며 엽니다.
+- `--backfill-images`는 `imageUrl`이 비어 있는 문서에만 씁니다(덮어쓰지 않음). `fetch_detail_image` 소스의 상세 페이지를 최대 60건까지 robots.txt·요청 간격을 지키며 엽니다.
 - `prune_library.py`는 Firestore에 없는 로컬 항목 중 작품 링크·기획 묶음·임시글 재료로 쓰이지 **않는 것만** 삭제합니다(동기화가 FIGURE에 자동으로 붙이는 「피규어」 카테고리는 작업으로 보지 않음)(있는 항목은 목록만 출력). 삭제 전 백업(PostgreSQL은 `.local/backups`의 pg_dump, SQLite는 `.bak` 복사)에 실패하면 아무것도 지우지 않습니다.
 - 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작 시 `[로컬 동기화] 마지막 … · 미동기화 N · 로컬에만 M`을 출력합니다. 수집기가 이미 읽은 문서 ID를 쓰므로 Firestore를 더 읽지 않고, 로컬 DB가 꺼져 있어도 수집은 계속됩니다. 자동 수집(GitHub Actions)은 `CI` 환경변수로 이 확인을 건너뜁니다.
 - 임시글은 로컬 DB에만 있고 본문(`body`)과 댓글(`reply_body`, 상품 링크) 두 글로 저장됩니다. `reply_body` 컬럼이 추가되어(SQLite `0005_draft_reply_body`, PostgreSQL `pg0003_draft_reply_body`) 기존 임시글은 본문 그대로 두고 댓글을 빈 값으로 둡니다. 스키마가 바뀌었으므로 앱·동기화를 멈추고 `docker compose run --rm tools python migrate_library.py upgrade`로 업그레이드해야 글 화면이 열립니다(백업 자동). 발행하면 재료의 `postedAt`을 Firestore에도 기록합니다.
 - Firestore 문서에 `detailCheckedAt`(상세 페이지를 마지막으로 확인한 시각) 필드가 추가됩니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
-- Firestore 문서에 `viewCountVelocity`·`likeCountVelocity`·`trendingVelocity`·`popularityVelocity`·`favouritesVelocity`(시간당 증가량) 필드가 추가됩니다. `ContentStore.save`가 재수집 시 직전 값·확인 시각과 비교해 계산하며(1시간 미만 간격은 갱신하지 않고 이전 값을 유지, 값이 줄면 0으로 고정), 추천 점수의 "트렌드 상승" 신호로 쓰입니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
+- 조회수·좋아요(`viewCount`·`likeCount`)와 그 시간당 증가량(`*Velocity`)은 더 이상 수집·저장·점수 반영하지 않습니다(`list_metrics`·`detail_metrics` 설정 키도 제거). 추천 점수는 신선도와 공식·국내·예약·한정판 보너스로만 매깁니다. 기존 문서에 남은 필드는 무시됩니다.
 
 ## 수집 원칙
 

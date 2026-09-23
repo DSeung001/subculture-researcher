@@ -68,11 +68,11 @@ def run_local_trending_draft(db_path=None, category: str | None = None) -> str:
 def create_work_drafts(
     library: Library, size: int = DRAFT_SIZE, work_id: int | None = None,
 ) -> list[tuple[str, int | None, str | None]]:
-    """Create up to one FIGURE, ANIME, and MIXED draft from local work links.
+    """Create up to one FIGURE and one MIXED draft from local work links.
 
     When `work_id` is set, only that work's linked items are considered.
     Returns a list of `(draft_type, draft_id_or_None, error_or_None)`. Source
-    ids are not shared across the three drafts in one run, and sources of a
+    ids are not shared across the drafts in one run, and sources of a
     published draft are left out. Bodies are written by `create_draft` after selection.
     """
     groups = library.linked_work_items()
@@ -109,7 +109,7 @@ def create_work_drafts(
 
 
 def run_work_drafts(library: Library) -> str:
-    """CLI wrapper that prints one status line per FIGURE/ANIME/MIXED attempt."""
+    """CLI wrapper that prints one status line per FIGURE/MIXED attempt."""
     lines = []
     for draft_type, draft_id, error in create_work_drafts(library):
         label = WORK_DRAFT_LABELS[draft_type]

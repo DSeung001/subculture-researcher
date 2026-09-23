@@ -28,13 +28,12 @@ def write(items, response):
 
 
 class AiWriterPromptTests(unittest.TestCase):
-    def test_material_block_hides_anilist_source_and_adds_popularity_hint(self):
+    def test_material_block_has_no_anime_airing_or_popularity_hints(self):
         material = ai_writer._material_block(
             [
                 {
                     "title": "테스트 애니",
-                    "titleKo": "테스트 애니",
-                    "source": "AniList 트렌딩 애니",
+                    "source": "애니 소식",
                     "trending": 1200,
                     "popularity": 50000,
                     "episode": 5,
@@ -43,10 +42,14 @@ class AiWriterPromptTests(unittest.TestCase):
                 }
             ]
         )
-        self.assertNotIn("AniList", material)
-        self.assertNotIn("트렌딩", material)
-        self.assertIn("분위기: 인기 있는 작품", material)
-        self.assertIn("방영: 5화 · 다음 방영 2026-09-20T12:00:00+00:00", material)
+        self.assertNotIn("분위기:", material)
+        self.assertNotIn("방영:", material)
+        self.assertIn("출처: 애니 소식", material)
+
+    def test_selection_block_has_no_anilist_metrics(self):
+        block = ai_writer._selection_block([{"title": "작품", "trending": 100, "popularity": 5}])
+        self.assertNotIn("AniList", block)
+        self.assertNotIn("트렌딩", block)
 
     def test_material_block_keeps_shop_source(self):
         material = ai_writer._material_block(
@@ -76,31 +79,11 @@ class AiWriterPromptTests(unittest.TestCase):
         self.assertIn("   작품: 프리렌, 장송의 프리렌", material)
         self.assertEqual(material.count("   작품:"), 1)
 
-    def test_write_prompt_forbids_anilist_and_uses_sns_tone(self):
-        items = [
-            {
-                "title": "테스트 애니",
-                "source": "AniList 트렌딩 애니",
-                "trending": 100,
-                "category": "ANIME",
-                "url": "https://anilist.co/anime/1",
-            }
-        ]
-        category_hint = ai_writer.CATEGORY_HINTS["ANIME"]
-        material = ai_writer._material_block(items)
-        prompt = ai_writer.PROMPT_TEMPLATE.format(
-            angle="NEWS",
-            category_hint=category_hint,
-            body_target=260,
-            material=material,
-        )
-        # Material must not leak the internal source name; the forbid rule may name them.
-        self.assertNotIn("AniList", material)
-        self.assertNotIn("트렌딩", material)
-        self.assertIn("인기 있는", material)
-        self.assertNotIn("AniList 트렌딩", prompt)
-        self.assertIn("AniList, 트렌딩", prompt)
-        self.assertIn("집계 사이트", category_hint)
+    def test_prompts_and_hints_no_longer_mention_anilist_or_anime(self):
+        self.assertNotIn("ANIME", ai_writer.CATEGORY_HINTS)
+        for template in (ai_writer.SELECT_PROMPT_TEMPLATE, ai_writer.PROMPT_TEMPLATE):
+            self.assertNotIn("AniList", template)
+            self.assertNotIn("트렌딩", template)
 
     def test_prompt_asks_for_a_link_free_post_varied_openings_and_preorder_vs_regular(self):
         prompt = ai_writer.PROMPT_TEMPLATE.format(

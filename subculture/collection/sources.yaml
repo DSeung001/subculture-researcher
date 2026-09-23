@@ -15,40 +15,6 @@ sources:
     respect_robots: true
     detail_images_selector: '#prdDetail img, .prd_detail img, .goods_description img'
 
-  # 애니메이션 작품 자체의 인기/트렌드 신호. 기사 DB 복제가 아니라 소재 발견용으로 소량만 수집한다.
-  - name: AniList 트렌딩 애니
-    type: anilist
-    url: https://graphql.anilist.co
-    region: GLOBAL
-    category: ANIME
-    content_angle: NEWS
-    source_tier: MEDIA
-    max_items: 40
-    cache_hours: 24
-    enabled: true
-
-  # 일본 기업 보도자료의 만화/애니 카테고리.
-  - name: PR TIMES 만화·애니
-    type: html
-    url: https://prtimes.jp/main/html/searchbiscate/busi_cate_id/007/lv2/20
-    link_selector: 'a[href*="/main/html/rd/p/"]'
-    region: JP
-    category: ANIME
-    content_angle: NEWS
-    source_tier: OFFICIAL
-    allow_patterns:
-      - '^https://prtimes\.jp/main/html/rd/p/[0-9]+\.[0-9]+\.html$'
-    max_items: 50
-    request_delay_min_seconds: 2.0
-    request_delay_max_seconds: 4.5
-    enabled: true
-    respect_robots: true
-    fetch_detail_image: true  # 목록에는 이미지가 없어 상세 og:image(보도자료 대표 이미지)를 쓴다
-    image_deny_patterns:
-      - '^/common/'  # 이미지 없는 보도자료의 사이트 공통 og.png
-
-  # 애니메이션 본편을 올리는 YouTube 채널(KADOKAWA Anime·Aniplex·TOHO animation)은 소스에서 제외했다. 본편 채널은 소스로 두지 않는다.
-
   # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
   - name: HOBBY Watch 피규어
     type: html
@@ -82,36 +48,6 @@ sources:
     enabled: true
     respect_robots: true
     list_image_selector: img  # .c-item 카드의 기사별 이미지
-
-  # 국내 애니/굿즈 뉴스. 애니메이션 유입용 콘텐츠 후보를 수집한다.
-  - name: 애니플러스 뉴스
-    type: html
-    url: https://news.aniplustv.com/news
-    render_js: true
-    render_timeout_seconds: 30
-    link_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
-    wait_selector: '.grid a[href^="/news/"]:has(h3):has(p)'
-    title_selector: h3
-    published_selector: p
-    published_format: '%Y/%m/%d'
-    next_page_selector: 'button[aria-label="다음 페이지"]'
-    max_pages: 3
-    detail_wait_selector: 'div:has(> div > button[aria-label="좋아요"]) > span'
-    detail_metrics:
-      likeCount: 'div:has(> div > button[aria-label="좋아요"]) > span'
-    # 공개 화면에 조회수가 없어 viewCount 선택자는 지정하지 않는다.
-    region: KR
-    category: ANIME
-    content_angle: NEWS
-    source_tier: MEDIA
-    allow_patterns:
-      - '^https://news\.aniplustv\.com/news/[0-9]+$'
-    max_items: 50
-    request_delay_min_seconds: 2.0
-    request_delay_max_seconds: 4.5
-    enabled: true
-    respect_robots: true
-    list_image_selector: img  # 카드(a) 안의 기사별 이미지
 
   # AGF(Anime Game Festival) Korea 공식 공지사항 = 국내 대표 서브컬처 페스티벌 소식.
   # 목록이 React 클라이언트 라우팅이라 HTML 링크 추출이 불가능해

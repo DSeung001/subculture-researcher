@@ -197,8 +197,8 @@ class LibraryTests(unittest.TestCase):
         self.assertTrue(all(item_id.startswith("FIGURE:") for item_id in figure_ids))
         self.assertNotIn("ANIME:anime1", figure_ids)
 
-        anime_ids = pick_work_source_ids(groups, "ANIME", size=3)
-        self.assertEqual(anime_ids, ["ANIME:anime1"])
+        with self.assertRaises(ValueError):  # the ANIME work draft type was removed
+            pick_work_source_ids(groups, "ANIME", size=3)
 
         mixed_ids = pick_work_source_ids(groups, "MIXED", size=3)
         cats = {item_id.partition(":")[0] for item_id in mixed_ids}

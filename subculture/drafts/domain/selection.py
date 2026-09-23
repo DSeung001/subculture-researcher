@@ -6,8 +6,8 @@ from subculture.shared.presentation import content_score
 
 SELECTION_POOL_SIZE = 15
 DRAFT_SIZE = 3
-WORK_DRAFT_TYPES = ("FIGURE", "ANIME", "MIXED")
-WORK_DRAFT_LABELS = {"FIGURE": "피규어", "ANIME": "애니", "MIXED": "혼합"}
+WORK_DRAFT_TYPES = ("FIGURE", "MIXED")
+WORK_DRAFT_LABELS = {"FIGURE": "피규어", "MIXED": "혼합"}
 
 
 def _item_usable(item: dict) -> bool:
@@ -66,7 +66,7 @@ def pick_work_source_ids(
             item for item in group.get("items") or []
             if item["id"] not in exclude and _item_usable(item)
         ]
-        if draft_type in ("FIGURE", "ANIME"):
+        if draft_type == "FIGURE":
             usable = [item for item in usable if item["storage_category"] == draft_type]
             if not usable:
                 continue

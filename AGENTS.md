@@ -18,7 +18,7 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 ## Data and change rules
 
-- Collection path: `subculture/collection/sources.yaml → collectors → ContentStore → Firestore` (collectors in `subculture/collection/infrastructure/collectors/`). Automatic runs use `collect.py`; YouTube sources use `collect_manual.py`. Add sources through existing config and shared extractors; write a dedicated collector only when those are insufficient.
+- Collection path: `subculture/collection/sources.yaml → collectors → ContentStore → Firestore` (collectors in `subculture/collection/infrastructure/collectors/`). Automatic runs use `collect.py`; `local_only` browser sources use `collect_manual.py`. Add sources through existing config and shared extractors; write a dedicated collector only when those are insufficient.
 - Collectors and manual entry go through `ContentStore` for URL dedup. Share one URL index per collection run and preserve user-edited values on re-collection.
 - Use `subculture/shared/content_model.py` for remote categories, statuses, angles, tiers and references. An item ID is `STORAGE_CATEGORY:document_id` from the stored path; never recompute it from the editable category. Keep existing document IDs and CLI/UI behavior.
 - Local curation is a one-way `Firestore → local DB` sync. It refreshes source metadata only and preserves local work links, product categories and collections. Sync never deletes items missing remotely; only the explicitly run `prune_library.py` removes such items, and only those with no local work links, collection membership or draft use (backup first; the automatic 피규어 category does not count as local work). There is no shared modified-time field, so sync currently reads everything.
@@ -39,7 +39,7 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 ## Scope and operations
 
-- Collect metadata and links only, never full copyrighted articles. HTML collection checks robots.txt and is skipped if the check fails. The only exception is `local_only` `local_browser` sources (Naver stores) run by hand through `collect_manual.py`: headed, private Playwright context, list pages only, no bypass of challenges; `collect.py` never runs them. Do not add X scraping or community/VOC sources, or YouTube channels that upload the anime episodes themselves (KADOKAWA Anime, Aniplex and TOHO animation were removed).
+- Collect metadata and links only, never full copyrighted articles. HTML collection checks robots.txt and is skipped if the check fails. The only exception is `local_only` `local_browser` sources (Naver stores) run by hand through `collect_manual.py`: headed, private Playwright context, list pages only, no bypass of challenges; `collect.py` never runs them. Do not add X scraping or community/VOC sources, or YouTube channels that upload the anime episodes themselves. Anime sources (AniList, PR TIMES 만화·애니, 애니플러스 뉴스), the `anilist`/`youtube_feed` collectors, AniList-metric scoring and the ANIME work draft were removed; existing `ANIME` documents stay.
 - The Flask UI is local-only on `127.0.0.1:5001`. Do not add auth, extra backends, vector DBs or new schedulers unless asked.
 - Never commit credentials, `.env`, browser profiles, local DBs or backups, or test dependencies.
 

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 from bs4 import BeautifulSoup
 
-from subculture.collection.infrastructure.collectors import anilist, json_api, youtube_feed
+from subculture.collection.infrastructure.collectors import json_api
 from subculture.collection.infrastructure.collectors.common import extract_product_fields
 from subculture.collection.infrastructure.collectors.html_links import extract_links, html_items
 from subculture.collection.infrastructure.collectors.images import card_of, detail_image, detail_images, img_url
@@ -204,38 +204,7 @@ class DetailFetchTests(unittest.TestCase):
         )
 
 
-class FeedAndApiTests(unittest.TestCase):
-    FEED = """<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
- <entry><yt:videoId>abcdefghijk</yt:videoId><title>PV 하나</title><link rel="alternate" href="https://www.youtube.com/watch?v=abcdefghijk"/>
-  <published>2026-09-18T00:00:00+00:00</published>
-  <media:group><media:thumbnail url="https://i2.ytimg.com/vi/abcdefghijk/hqdefault.jpg" width="480" height="360"/></media:group></entry>
- <entry><yt:videoId>zyxwvutsrqp</yt:videoId><title>PV 둘</title><link rel="alternate" href="https://www.youtube.com/watch?v=zyxwvutsrqp"/>
-  <published>2026-09-17T00:00:00+00:00</published></entry>
-</feed>"""
-
-    def test_youtube_thumbnail_from_feed_or_video_id(self):
-        response = Mock(content=self.FEED.encode(), status_code=200)
-        response.raise_for_status = Mock()
-        with patch.object(youtube_feed.requests, "get", return_value=response):
-            items = list(youtube_feed.youtube_feed_items({"channel_id": "UC" + "a" * 22, "max_items": 5}))
-        self.assertEqual(items[0]["imageUrl"], "https://i2.ytimg.com/vi/abcdefghijk/hqdefault.jpg")
-        self.assertEqual(items[1]["imageUrl"], "https://i.ytimg.com/vi/zyxwvutsrqp/hqdefault.jpg")
-
-    def test_anilist_cover_image(self):
-        payload = {"data": {"Page": {"media": [
-            {"id": 1, "siteUrl": "https://anilist.co/anime/1", "title": {"native": "작품"},
-             "coverImage": {"large": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx1-x.jpg"}},
-            {"id": 2, "siteUrl": "https://anilist.co/anime/2", "title": {"native": "표지 없음"}, "coverImage": None},
-        ]}}}
-        response = Mock()
-        response.raise_for_status = Mock()
-        response.json.return_value = payload
-        with patch.object(anilist.requests, "post", return_value=response):
-            items = list(anilist.anilist_items({"max_items": 2}))
-        self.assertTrue(items[0]["imageUrl"].endswith("bx1-x.jpg"))
-        self.assertNotIn("imageUrl", items[1])
-
+class ApiImageTests(unittest.TestCase):
     def test_json_api_first_image_in_html_body_is_unescaped(self):
         payload = {"listData": [
             {"idx": 1, "title": "타임테이블", "content": '<p><img src="https://pbs.twimg.com/media/G6M?format=jpg&amp;name=large"></p>'},

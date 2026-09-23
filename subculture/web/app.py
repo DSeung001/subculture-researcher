@@ -1,3 +1,4 @@
+import argparse
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -448,7 +449,11 @@ def manual_add():
     return redirect(next_url)
 
 
-def main():
+def main(argv=None):
+    # Parse first so `--help` prints usage instead of starting (or failing to bind) the server.
+    argparse.ArgumentParser(
+        description="로컬 검토 UI (http://127.0.0.1:5001)",
+    ).parse_args(argv)
     app.run(host="127.0.0.1", port=5001, debug=True)
 
 

@@ -3,7 +3,7 @@
 from bs4 import BeautifulSoup
 
 from subculture.collection.infrastructure.collectors.common import extract_product_fields
-from subculture.collection.infrastructure.collectors.html_links import extract_links, extract_metrics
+from subculture.collection.infrastructure.collectors.html_links import extract_links
 from subculture.collection.infrastructure.collectors.http import USER_AGENT, pause_between_requests
 from subculture.collection.infrastructure.collectors.images import detail_image, detail_images
 
@@ -52,7 +52,7 @@ def rendered_items(source: dict, policy):
             listing = context.new_page()
             detail = (
                 context.new_page()
-                if source.get("detail_metrics") or source.get("product_mode") or source.get("fetch_detail_image")
+                if source.get("product_mode") or source.get("fetch_detail_image")
                 else None
             )
 
@@ -79,18 +79,13 @@ def rendered_items(source: dict, policy):
                     if item["url"] in seen:
                         continue
                     seen.add(item["url"])
-                    missing = {k: v for k, v in source.get("detail_metrics", {}).items() if k not in item}
                     product_mode = source.get("product_mode", False)
                     detail_image_mode = source.get("fetch_detail_image", False)
-                    if missing or product_mode or detail_image_mode:
+                    if product_mode or detail_image_mode:
                         try:
                             pause_between_requests(source)
                             navigate(detail, item["url"], source.get("detail_wait_selector", "h1"))
                             detail_soup = BeautifulSoup(detail.content(), "html.parser")
-                            if missing:
-                                values, errors = extract_metrics(detail_soup, missing, required=True)
-                                item.update(values)
-                                item["_errors"].extend(errors)
                             image_url = (
                                 detail_image(detail_soup, detail.url, source)
                                 if (product_mode or detail_image_mode) else None

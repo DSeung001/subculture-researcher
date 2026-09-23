@@ -1,7 +1,7 @@
 """Whether a sources.yaml entry can fill imageUrl / detailImageUrls (config only, no I/O)."""
 
 # Collectors that always set a main photo without a yaml image selector.
-_BUILTIN_MAIN_TYPES = frozenset({"figurefarm", "anilist", "youtube_feed"})
+_BUILTIN_MAIN_TYPES = frozenset({"figurefarm"})
 
 
 def image_collection_flags(source: dict) -> dict[str, bool]:

@@ -1,4 +1,4 @@
-"""Offline checks for detail skipping, pagination, cache versioning, image backfill,
+"""Offline checks for detail skipping, pagination, force refresh, image backfill,
 untitled leftover cleanup, keyword matching and the inbox period filter."""
 
 import tempfile
@@ -13,11 +13,10 @@ from google.cloud.firestore import Client
 
 from subculture.web import app as review
 from subculture.collection.application import image_backfill
-from subculture.collection.infrastructure.collectors import anilist, json_api
+from subculture.collection.infrastructure.collectors import json_api
 from subculture.collection.infrastructure.collectors.common import RobotsDenied
 from subculture.collection.infrastructure.collectors.html_links import html_items
 from subculture.collection.infrastructure.collectors.http import page_url
-from subculture.collection.infrastructure.collectors.youtube_feed import youtube_thumbnail
 from subculture.shared.content_model import content_ref
 from subculture.shared.untitled_content import UNTITLED_TITLE, is_untitled_laftel_home, is_untitled_leftover
 from subculture.collection.infrastructure.content_store import ContentStore
@@ -110,54 +109,25 @@ class NeedsDetailTests(unittest.TestCase):
         self.assertNotIn("summary", fields)
 
 
-class ContentStoreVelocityTests(unittest.TestCase):
+class ContentStoreEngagementFieldTests(unittest.TestCase):
+    """View/like counts, their velocities and AniList signals are no longer stored."""
     URL = "https://s.example.com/velocity"
+    DROPPED = ("viewCountVelocity", "likeCountVelocity", "viewCountCheckedAt", "likeCountCheckedAt",
+               "trendingVelocity", "popularityVelocity", "signalCheckedAt")
 
-    def test_a_brand_new_url_writes_no_velocity_field(self):
-        store = store_with()  # nothing indexed yet for this URL: create(), not update()
-        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 100})
-        ref = store.by_url[self.URL][0]["ref"]
-        ref.update.assert_not_called()
+    def test_resave_never_writes_counts_or_velocities(self):
+        store = store_with(stored(self.URL, viewCount=100, viewCountCheckedAt=NOW - timedelta(hours=2)))
+        result = store.save({"url": self.URL, "category": "FIGURE", "viewCount": 300, "likeCount": 5,
+                             "trending": 30})
+        store.by_url[self.URL][0]["ref"].update.assert_not_called()
+        self.assertEqual(result["updated"], 0)
 
-    def test_a_previously_seen_url_with_no_prior_metric_writes_no_velocity_field(self):
-        store = store_with(stored(self.URL))  # indexed, but never had a viewCount before
-        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 100})
-        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
-        self.assertNotIn("viewCountVelocity", updates)
-
-    def test_second_save_after_enough_elapsed_time_computes_the_hourly_delta(self):
-        store = store_with(stored(
-            self.URL, viewCount=100, viewCountCheckedAt=NOW - timedelta(hours=2),
-        ))
-        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 300})
-        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
-        self.assertIn("viewCountVelocity", updates)
-        self.assertAlmostEqual(updates["viewCountVelocity"], 100.0, delta=1.0)  # (300-100)/~2h
-
-    def test_resave_inside_the_minimum_window_leaves_velocity_untouched(self):
-        store = store_with(stored(
-            self.URL, viewCount=100, viewCountCheckedAt=NOW - timedelta(minutes=10),
-        ))
-        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 200})
-        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
-        self.assertNotIn("viewCountVelocity", updates)
-
-    def test_a_metric_decrease_clamps_velocity_to_zero(self):
-        store = store_with(stored(
-            self.URL, viewCount=500, viewCountCheckedAt=NOW - timedelta(hours=5),
-        ))
-        store.save({"url": self.URL, "category": "FIGURE", "viewCount": 100})
-        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
-        self.assertEqual(updates["viewCountVelocity"], 0.0)
-
-    def test_anilist_trending_velocity_uses_the_shared_signal_checked_at(self):
-        store = store_with(stored(
-            self.URL, trending=10, signalCheckedAt=NOW - timedelta(hours=2),
-        ))
-        store.save({"url": self.URL, "category": "ANIME", "trending": 30})
-        updates = store.by_url[self.URL][0]["ref"].update.call_args.args[0]
-        self.assertAlmostEqual(updates["trendingVelocity"], 10.0, delta=1.0)  # (30-10)/~2h
-
+    def test_a_new_document_gets_no_derived_engagement_fields(self):
+        store = ContentStore(None)
+        store.save({"url": self.URL, "category": "FIGURE", "title": "t"})
+        saved = store.preview[0]
+        for field in ("viewCount", "likeCount", *self.DROPPED):
+            self.assertNotIn(field, saved)
 
 class DetailSkipInHtmlItemsTests(unittest.TestCase):
     LISTING = "https://s.example.com/list"
@@ -344,47 +314,18 @@ class FigureFarmTests(unittest.TestCase):
         self.assertEqual(items[0]["title"], "[입고] 블루 아카이브 피규어")
 
 
-class PrTimesDefaultImageTests(unittest.TestCase):
+class ImageDenyPatternTests(unittest.TestCase):
     def test_site_wide_default_og_image_is_not_a_photo(self):
         from bs4 import BeautifulSoup
         from subculture.collection.infrastructure.collectors.images import detail_image
-        source = SOURCES["PR TIMES 만화·애니"]
+        source = {"image_deny_patterns": ["^/common/"]}
         page = BeautifulSoup('<meta property="og:image" content="https://prtimes.jp/common/pc_v4/og.png">', "html.parser")
         self.assertIsNone(detail_image(page, "https://prtimes.jp/main/html/rd/p/1.html", source))
         real = BeautifulSoup('<meta property="og:image" content="https://prcdn.freetls.fastly.net/release_image/1/a.jpg?format=jpeg">', "html.parser")
         self.assertTrue(detail_image(real, "https://prtimes.jp/main/html/rd/p/1.html", source).endswith("a.jpg?format=jpeg"))
 
 
-class AniListCacheTests(unittest.TestCase):
-    def db_with(self, **state):
-        db = Mock()
-        snapshot = db.collection.return_value.document.return_value.get.return_value
-        snapshot.exists = True
-        snapshot.to_dict.return_value = state
-        return db
-
-    def test_current_version_within_window_is_cached(self):
-        db = self.db_with(lastSuccessAt=NOW - timedelta(hours=1), version=anilist.CACHE_VERSION)
-        self.assertTrue(anilist._cache_is_fresh(db, {"cache_hours": 24})[0])
-
-    def test_older_cache_version_is_not_trusted(self):
-        for version in (None, anilist.CACHE_VERSION - 1):
-            with self.subTest(version=version):
-                db = self.db_with(lastSuccessAt=NOW - timedelta(hours=1), version=version)
-                self.assertFalse(anilist._cache_is_fresh(db, {"cache_hours": 24})[0])
-
-    def test_force_refresh_collects_despite_a_fresh_cache(self):
-        db = self.db_with(lastSuccessAt=NOW - timedelta(hours=1), version=anilist.CACHE_VERSION)
-        with patch.object(anilist, "save_records", return_value={"failed": 0, "processed": 1}) as save, \
-                patch.object(anilist, "anilist_items"):
-            skipped = anilist.collect_anilist(db, {"cache_hours": 24})
-            forced = anilist.collect_anilist(db, {"cache_hours": 24, "force_refresh": True})
-        self.assertEqual(skipped["skipped"], 1)
-        self.assertEqual(forced["processed"], 1)
-        save.assert_called_once()
-        written = db.collection.return_value.document.return_value.set.call_args.args[0]
-        self.assertEqual(written["version"], anilist.CACHE_VERSION)
-
+class ForceRefreshTests(unittest.TestCase):
     def test_run_collection_passes_force_refresh_to_collectors(self):
         from subculture.collection.application import collection_runner
         seen = []
@@ -406,30 +347,23 @@ def content(doc_id_, **fields):
 
 
 class ImageBackfillTests(unittest.TestCase):
-    def test_youtube_url_gives_a_thumbnail_without_network(self):
-        self.assertEqual(youtube_thumbnail("https://www.youtube.com/watch?v=abcdefghijk"),
-                         "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg")
-        self.assertIsNone(youtube_thumbnail("https://laftel.net/"))
-        self.assertIsNone(youtube_thumbnail("https://www.youtube.com/@aniplex"))
-
     def test_only_missing_photos_are_filled(self):
-        have = content("a", url="https://x.example/1", imageUrl="https://cdn.example.com/keep.jpg",
-                       source="AniList 트렌딩 애니", externalId="anilist:1")
-        video = content("b", url="https://www.youtube.com/watch?v=abcdefghijk", title="PV")
-        cover = content("c", url="https://anilist.co/anime/7", title="작품", source="AniList 트렌딩 애니",
-                        externalId="anilist:7")
+        source = {"name": "뉴스", "type": "html", "fetch_detail_image": True, "respect_robots": False}
+        have = content("a", url="https://x.example/1", imageUrl="https://cdn.example.com/keep.jpg", source="뉴스")
+        missing = content("b", url="https://x.example/2", title="기사", source="뉴스")
+        video = content("c", url="https://www.youtube.com/watch?v=abcdefghijk", title="PV")  # no longer derived
         nothing = content("d", url="https://x.example/n", title="사진 없음", source="수동 입력")
         db = Mock()
-        db.collection_group.return_value.stream.return_value = iter([have, video, cover, nothing])
-        sources = [{"name": "AniList 트렌딩 애니", "type": "anilist"}]
-        with patch.object(image_backfill, "anilist_covers", return_value={7: "https://s4.anilist.co/c7.jpg"}) as covers:
-            counts = image_backfill.backfill_images(db, sources)
+        db.collection_group.return_value.stream.return_value = iter([have, missing, video, nothing])
+        page = '<meta property="og:image" content="https://cdn.example.com/2.jpg">'
+        with patch.object(image_backfill, "get_html", side_effect=lambda url, *a, **k: (page, url)) as get:
+            counts = image_backfill.backfill_images(db, [source])
         have.reference.update.assert_not_called()
-        video.reference.update.assert_called_once_with({"imageUrl": "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg"})
-        cover.reference.update.assert_called_once_with({"imageUrl": "https://s4.anilist.co/c7.jpg"})
+        missing.reference.update.assert_called_once_with({"imageUrl": "https://cdn.example.com/2.jpg"})
+        video.reference.update.assert_not_called()
         nothing.reference.update.assert_not_called()
-        covers.assert_called_once_with([7], sources[0])  # one batched lookup
-        self.assertEqual((counts["updated"], counts["still_missing"]), (2, 1))
+        self.assertEqual(get.call_count, 1)
+        self.assertEqual((counts["updated"], counts["still_missing"]), (1, 2))
 
     def test_detail_pages_respect_the_limit_and_missing_photos(self):
         source = {"name": "PR TIMES", "type": "html", "fetch_detail_image": True, "respect_robots": False}
@@ -447,19 +381,6 @@ class ImageBackfillTests(unittest.TestCase):
         docs[1].reference.update.assert_not_called()
         docs[2].reference.update.assert_not_called()  # beyond the limit
         self.assertEqual((counts["updated"], counts["still_missing"]), (1, 2))
-
-    def test_anilist_covers_maps_ids_and_skips_missing_covers(self):
-        response = Mock()
-        response.raise_for_status = Mock()
-        response.json.return_value = {"data": {"Page": {"media": [
-            {"id": 1, "coverImage": {"large": "https://s4.anilist.co/1.jpg"}},
-            {"id": 2, "coverImage": None},
-        ]}}}
-        with patch.object(anilist.requests, "post", return_value=response) as post, \
-                patch.object(anilist, "pause_between_requests"):
-            covers = anilist.anilist_covers([1, 2])
-        self.assertEqual(covers, {1: "https://s4.anilist.co/1.jpg"})
-        self.assertEqual(post.call_args.kwargs["json"]["variables"]["ids"], [1, 2])
 
     def test_collect_cli_has_the_backfill_mode(self):
         from subculture.collection.interface import collect_cli as collect
@@ -725,7 +646,7 @@ class RecommendedItemsTests(unittest.TestCase):
         # not just a pass-through of the collectedAt-descending Firestore order.
         standout = self.make_snapshot(
             "FIGURE:standout", collectedAt=NOW - timedelta(days=3), title="스탠드아웃 한정판 피규어",
-            sourceTier="OFFICIAL", region="KR", viewCount=1_000_000,
+            sourceTier="OFFICIAL", region="KR",
             entityType="PRODUCT", saleStatus="PREORDER",
         )
         db, _ = self.query_returning(*snapshots, standout)

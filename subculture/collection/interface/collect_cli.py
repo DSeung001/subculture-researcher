@@ -32,12 +32,12 @@ def main(argv=None):
     )
     mode.add_argument(
         "--backfill-images", action="store_true",
-        help="imageUrl이 없는 기존 문서만 썸네일·표지·상세 대표 이미지로 보완 (기존 이미지는 덮어쓰지 않음)",
+        help="imageUrl이 없는 기존 문서만 상세 대표 이미지로 보완 (기존 이미지는 덮어쓰지 않음)",
     )
     parser.add_argument("--source", action="append", help="수집할 자동 소스 이름 (여러 번 지정 가능)")
     parser.add_argument(
         "--force-refresh", action="store_true",
-        help="수집 결과 캐시(AniList 등)를 무시하고 다시 수집",
+        help="결과를 캐시하는 수집기의 캐시를 무시하고 다시 수집 (현재 캐시하는 수집기 없음)",
     )
     parser.add_argument(
         "--no-sync", action="store_true",

@@ -27,12 +27,10 @@ class ImageCollectionFlagsTests(unittest.TestCase):
         self.assertEqual(flags, {"main": True, "detail": False})
 
     def test_builtin_collector_types(self):
-        for kind in ("figurefarm", "anilist", "youtube_feed"):
+        self.assertEqual(image_collection_flags({"type": "figurefarm"}), {"main": True, "detail": False})
+        for kind in ("anilist", "youtube_feed"):  # removed collectors
             with self.subTest(kind=kind):
-                self.assertEqual(
-                    image_collection_flags({"type": kind}),
-                    {"main": True, "detail": False},
-                )
+                self.assertEqual(image_collection_flags({"type": kind}), {"main": False, "detail": False})
 
     def test_no_image_config(self):
         self.assertEqual(image_collection_flags({"type": "rss"}), {"main": False, "detail": False})
@@ -49,7 +47,7 @@ class ImageCollectionFlagsTests(unittest.TestCase):
             {"main": True, "detail": False},
         )
         self.assertEqual(
-            image_collection_flags(by_name["PR TIMES 만화·애니"]),
+            image_collection_flags(by_name["McFarlane Toys 뉴스"]),
             {"main": True, "detail": False},
         )
         self.assertEqual(
