@@ -10,7 +10,7 @@ import json
 import re
 import time
 import zipfile
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -105,8 +105,6 @@ def export_images(
     *,
     directory: Path | None = None,
     options: ExportOptions | None = None,
-    pause_seconds: float | None = None,
-    timeout: float | None = None,
     fetch=None,
     ledger: DownloadLedger | None = None,
     progress=None,
@@ -119,12 +117,6 @@ def export_images(
     lets a later export skip URLs already saved. Returns the export folder.
     """
     options = options or ExportOptions()
-    if pause_seconds is not None or timeout is not None:
-        options = replace(
-            options,
-            pause_seconds=options.pause_seconds if pause_seconds is None else pause_seconds,
-            timeout=options.timeout if timeout is None else timeout,
-        )
     ids = list(dict.fromkeys(item_ids))
     if options.max_items is not None:
         ids = ids[:options.max_items]

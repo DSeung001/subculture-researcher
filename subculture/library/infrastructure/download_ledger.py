@@ -15,7 +15,7 @@ class DownloadLedger:
 
     One JSON object per line: `url`, `path` (relative to the exports folder, e.g.
     `<stamp>/items/FIGURE_x/00_main.jpg`), `sha256`, `bytes`, `format`, `downloadedAt`.
-    A missing ledger is seeded once from the `ok` files of existing `*/index.json` exports.
+    A missing ledger starts empty.
     """
 
     def __init__(self, exports_dir: Path):
@@ -42,16 +42,11 @@ class DownloadLedger:
         }
         with self._lock:
             self._records()[url] = entry
-            self._append([entry])
+            self._append(entry)
 
     def _records(self) -> dict[str, dict]:
         if self._by_url is None:
-            if self.path.is_file():
-                self._by_url = self._read()
-            else:
-                self._by_url = self._seed_from_exports()
-                if self._by_url:
-                    self._append(self._by_url.values())
+            self._by_url = self._read() if self.path.is_file() else {}
         return self._by_url
 
     def _read(self) -> dict[str, dict]:
@@ -65,31 +60,8 @@ class DownloadLedger:
                 by_url[entry["url"]] = entry
         return by_url
 
-    def _seed_from_exports(self) -> dict[str, dict]:
-        by_url = {}
-        for index_path in sorted(self.exports_dir.glob("*/index.json")):
-            try:
-                entries = json.loads(index_path.read_text(encoding="utf-8"))
-            except ValueError:
-                continue
-            stamp = index_path.parent.name
-            for entry in entries if isinstance(entries, list) else []:
-                for file in entry.get("files") or []:
-                    if file.get("status") != "ok" or not file.get("url") or not file.get("path"):
-                        continue
-                    by_url[file["url"]] = {
-                        "url": file["url"],
-                        "path": f"{stamp}/{file['path']}",
-                        "sha256": file.get("sha256"),
-                        "bytes": file.get("bytes"),
-                        "format": file.get("format"),
-                        "downloadedAt": None,
-                    }
-        return by_url
-
-    def _append(self, entries) -> None:
+    def _append(self, entry: dict) -> None:
         self.exports_dir.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
-            for entry in entries:
-                handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
             handle.flush()

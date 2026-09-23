@@ -74,7 +74,7 @@ class ExportImagesTests(unittest.TestCase):
 
         root = export_images(
             self.lib, ["FIGURE:a", "FIGURE:b"],
-            directory=self.out, pause_seconds=0, fetch=fetch,
+            directory=self.out, options=ExportOptions(pause_seconds=0), fetch=fetch,
         )
         index = json.loads((root / "index.json").read_text(encoding="utf-8"))
         self.assertEqual(len(index), 2)
@@ -108,7 +108,7 @@ class ExportImagesTests(unittest.TestCase):
             "https://cdn.example.com/a/d2.png": (HTML, "image/png"),
         }
         root = export_images(
-            self.lib, ["FIGURE:a"], directory=self.out, pause_seconds=0,
+            self.lib, ["FIGURE:a"], directory=self.out, options=ExportOptions(pause_seconds=0),
             fetch=lambda url, *, timeout: bodies[url],
         )
         files = json.loads((root / "index.json").read_text(encoding="utf-8"))[0]["files"]
@@ -128,7 +128,7 @@ class ExportImagesTests(unittest.TestCase):
 
         with patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name}):
             root = export_images(
-                self.lib, ["FIGURE:b"], pause_seconds=0,
+                self.lib, ["FIGURE:b"], options=ExportOptions(pause_seconds=0),
                 fetch=lambda url, *, timeout: (_ for _ in ()).throw(AssertionError("no fetch")),
             )
         self.assertEqual(root.parent, Path(self.temp.name) / "exports")
@@ -146,7 +146,7 @@ class ExportImagesTests(unittest.TestCase):
 
     def test_zip_contains_index(self):
         export_images(
-            self.lib, ["FIGURE:b"], directory=self.out, pause_seconds=0,
+            self.lib, ["FIGURE:b"], directory=self.out, options=ExportOptions(pause_seconds=0),
             fetch=lambda url, *, timeout: (_ for _ in ()).throw(AssertionError("no fetch")),
         )
         archive = zip_export(self.out)
@@ -264,18 +264,16 @@ class ExportOptionTests(unittest.TestCase):
                                   options=ExportOptions(pause_seconds=0, skip_downloaded=False))
         self.assertEqual(self.meta(no_skip)["okCount"], 12)
 
-    def test_ledger_is_seeded_from_existing_v2_exports(self):
+    def test_old_exports_without_a_ledger_are_not_read(self):
         old = self.exports / "old"
         (old / "items" / "FIGURE_a").mkdir(parents=True)
         (old / "items" / "FIGURE_a" / "00_main.jpg").write_bytes(JPEG)
         (old / "index.json").write_text(json.dumps([{"id": "FIGURE:a", "files": [{
-            "url": "https://cdn.example.com/a/main.jpg", "path": "items/FIGURE_a/00_main.jpg",
-            "status": "ok", "sha256": "x", "bytes": len(JPEG), "format": "jpeg",
+            "url": "https://cdn.example.com/a/main.jpg", "path": "items/FIGURE_a/00_main.jpg", "status": "ok",
         }]}]), encoding="utf-8")
         ledger = DownloadLedger(self.exports)
-        self.assertEqual(ledger.lookup("https://cdn.example.com/a/main.jpg")["path"], "old/items/FIGURE_a/00_main.jpg")
-        self.assertTrue((self.exports / "ledger.jsonl").is_file())
-        self.assertIsNone(ledger.lookup("https://cdn.example.com/a/d0.jpg"))
+        self.assertIsNone(ledger.lookup("https://cdn.example.com/a/main.jpg"))
+        self.assertFalse((self.exports / "ledger.jsonl").exists())
 
 
 class ExportJobsTests(unittest.TestCase):

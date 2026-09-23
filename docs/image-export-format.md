@@ -58,7 +58,7 @@ exports/
 
 | 필드 | 타입 | 의미 |
 |---|---|---|
-| `formatVersion` | int | 양식 버전. 이 문서는 `3`. 파일이 없으면 v1(구 형식) |
+| `formatVersion` | int | 양식 버전. 항상 `3` |
 | `createdAt` | string | UTC ISO 8601 |
 | `itemCount` | int | `index.json` 원소 수 |
 | `fileCount` | int | 모든 `files[]` 원소 수 |
@@ -209,10 +209,10 @@ exports/
 | `url` | string | 이미지 URL (스킵 판단 키) |
 | `path` | string | `exports` 폴더 기준 상대 경로 |
 | `sha256` / `bytes` / `format` | | 저장한 파일 정보 |
-| `downloadedAt` | string \| null | UTC ISO 8601. 기존 export에서 채운 줄은 `null` |
+| `downloadedAt` | string | UTC ISO 8601 |
 
 - `skip_downloaded`가 켜져 있고, URL이 장부에 있으며, 그 `path` 파일이 아직 있으면 받지 않고 `skipped`로 기록합니다. 파일을 지웠으면 다시 받습니다.
-- 장부가 없으면 처음 열 때 기존 `exports/*/index.json`의 `ok` 파일로 채웁니다.
+- 장부가 없으면 빈 장부로 시작합니다. 장부 밖의 옛 export 폴더는 읽지 않습니다.
 - 한 export 안에서 여러 항목이 같은 이미지 URL을 쓰면 처음 한 번만 받고 나머지는 `skipped`입니다.
 
 ## 5. 결과를 읽을 때
@@ -222,4 +222,4 @@ exports/
 - `status: "ok"`는 매직 바이트까지 확인한 것입니다. 디코딩 가능 여부(잘린 파일 등)는 확인하지 않았습니다.
 - 같은 URL은 장부 덕분에 한 번만 저장됩니다. URL이 달라도 내용이 같은 이미지는 따로 저장되니 `sha256`으로 중복을 찾습니다.
 - 분류 기준으로는 `id` 앞부분(저장 카테고리)과 `category`(사용자가 고친 현재 카테고리) 중 무엇을 쓸지 정해야 합니다. 둘이 다를 수 있습니다.
-- `export.json`이 없으면 v1(폴더명에 `:`, `key`·`format`·`sha256` 없음, HTML이 `ok`로 저장될 수 있음), `formatVersion: 2`면 `skipped`·`stopReason`·장부가 없는 형식입니다.
+- `export.json`이 없거나 `formatVersion`이 3이 아닌 결과는 지원하지 않습니다.
