@@ -436,8 +436,8 @@ class Library:
             payload = type_coerce(Item.payload, JSON)
         return func.coalesce(payload["collectedAt"].as_string(), "")
 
-    def items(self, filters, page=1, collection_id=None):
-        query = select(Item)
+    def _filtered_query(self, query, filters, collection_id=None):
+        """`query` narrowed by the library filters, plus the list order (the screen's order)."""
         for table in TAXONOMIES:
             link = LINK_MODELS[table]
             if filters.get(table):
@@ -461,8 +461,19 @@ class Library:
         if collection_id:
             query = query.join(CollectionItem, CollectionItem.item_id == Item.id).where(
                 CollectionItem.collection_id == collection_id)
-            query = query.add_columns(CollectionItem.note, CollectionItem.position)
             order = (CollectionItem.position, Item.id)
+        return query, order
+
+    def item_ids(self, filters, collection_id=None) -> list[str]:
+        """Every item id matching the filters, in list order, without paging."""
+        query, order = self._filtered_query(select(Item.id), filters, collection_id)
+        with self.connect() as session:
+            return [row[0] for row in session.execute(query.order_by(*order)).all()]
+
+    def items(self, filters, page=1, collection_id=None):
+        query, order = self._filtered_query(select(Item), filters, collection_id)
+        if collection_id:
+            query = query.add_columns(CollectionItem.note, CollectionItem.position)
         with self.connect() as session:
             total = session.scalar(select(func.count()).select_from(query.subquery()))
             records = session.execute(query.order_by(*order).limit(50).offset((max(1, page) - 1) * 50))

@@ -41,7 +41,7 @@ Windows에서 가상환경 미활성화 시 `python`을 `.\.venv\Scripts\python.
 | 작품별 AI 초안 | `python draft.py --by-work` |
 | 작품 사전 시드·자동 연결 | `python seed_works.py` (`--sync`: 미동기화 신규 항목까지) |
 | 작품 링크 없는 항목 요약 | `python seed_works.py --unmatched` |
-| 선택 항목 이미지 벌크 저장 | `python export_images.py --ids FIGURE:… / --work-id N / --collection-id N` (UI 「이미지 다운로드」와 동일) |
+| 이미지 벌크 저장 | `python export_images.py --ids FIGURE:… / --work-id N / --collection-id N` (이미 받은 URL은 건너뜀, `--no-skip`으로 끔). UI는 작품·기획 「이미지 내보내기…」 팝업 |
 | Firestore 임시글 삭제 | `python delete_firestore_drafts.py --dry-run` 후 `--dry-run` 없이 (삭제 전 `.local/backups`에 JSON 백업) |
 
 첫 화면은 작품·기획(`/inbox`는 인박스). 시작 순서: **작품·기획 → 클라우드에서 동기화 → 분류 사전**. `python seed_works.py`로 `work_catalog.yaml` 기준 작품 사전을 채우고 자동 연결한 뒤, 분류 사전에서 키워드를 다듬을 수 있습니다. 로컬 전용 앱이라 외부에 공개하지 않습니다.

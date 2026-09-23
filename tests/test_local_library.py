@@ -207,6 +207,22 @@ class LibraryTests(unittest.TestCase):
         remaining_figure = pick_work_source_ids(groups, "FIGURE", exclude_ids=set(figure_ids))
         self.assertEqual(remaining_figure, [])
 
+    def test_item_ids_match_the_list_order_without_paging(self):
+        self.lib.sync(cloud(*[
+            snapshot(f"n{i:02d}", title=f"상품 {i}", collectedAt=f"2026-09-{1 + i % 28:02d}T00:00:00+00:00")
+            for i in range(60)
+        ]))
+        first, total = self.lib.items({})
+        second, _ = self.lib.items({}, page=2)
+        ids = self.lib.item_ids({})
+        self.assertEqual(total, 60)
+        self.assertEqual(ids, [row["id"] for row in first + second])
+
+        self.assertEqual(self.lib.item_ids({"q": "상품 5"}), [row["id"] for row in self.lib.items({"q": "상품 5"})[0]])
+        group = self.lib.save_collection("기획")
+        self.lib.add_to_collection(group, ["FIGURE:n10", "FIGURE:n03"])
+        self.assertEqual(self.lib.item_ids({}, group), ["FIGURE:n10", "FIGURE:n03"])
+
 
 
 class LibraryRouteTests(unittest.TestCase):

@@ -89,7 +89,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** 저장합니다(Firestore에는 이미지 파일을 올리지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 대표 사진은 `imageUrl`, 상품 상세 본문·갤러리 사진은 `detailImageUrls`(배열)입니다. 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `subculture/shared/image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
 
-선택한 항목의 대표·상세 이미지를 **로컬로 받는** 기능은 Firestore와 별개입니다. 작품·기획의 「이미지 다운로드」 또는 `python export_images.py`가 `~/figure_project/exports/<stamp>/`(`.env`의 `FIGURE_PROJECT_DIR`로 변경)에 파일과 `index.json`을 만듭니다. figure-cutout이 같은 경로에서 읽습니다.
+항목의 대표·상세 이미지를 **로컬로 받는** 기능은 Firestore와 별개입니다. 작품·기획의 「이미지 내보내기…」 팝업(현재 조건 전체 또는 선택 항목, 개수 제한 없음, 백그라운드 진행) 또는 `python export_images.py`가 `~/figure_project/exports/<stamp>/`(`.env`의 `FIGURE_PROJECT_DIR`로 변경)에 파일과 `index.json`을 만듭니다. 팝업에서 받을 항목 수·항목당 이미지 수·요청 간격·대표/상세 포함·총용량 상한을 정하고, 이미 받은 이미지 URL은 `exports/ledger.jsonl` 기준으로 건너뜁니다. 웹은 ZIP을 만들지 않습니다. figure-cutout이 같은 경로에서 읽습니다. 형식은 [docs/image-export-format.md](docs/image-export-format.md).
 
 ## 소스 설정 키 (HTML 소스)
 

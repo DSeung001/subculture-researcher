@@ -4,17 +4,17 @@ from datetime import date
 
 from sqlalchemy.exc import IntegrityError
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 
 from subculture.drafts.infrastructure.ai_writer import AiWriterError, write_draft_posts
 from subculture.drafts.domain.rules import MAX_SOURCES, DraftError
 from subculture.drafts.application.drafts import create_draft
-from subculture.library.application.export_images import ExportError, export_images, zip_export
+from subculture.library.application.export_images import ExportError, ExportOptions
+from subculture.library.application.export_jobs import ExportJobs
 from subculture.library.domain.taxonomy import FILTER_KEYS, TAXONOMIES
 from subculture.library.infrastructure.local_library import Library
 from subculture.library.infrastructure.database import SchemaError
 from subculture.shared.presentation import card_view
-from subculture.shared.paths import image_export_dir
 
 
 library = Blueprint("library", __name__, url_prefix="/library")
@@ -28,6 +28,8 @@ SALE_STATUS = {
     "UNKNOWN": ("상태 미확인", "status-disabled"),
 }
 FILTER_LABELS = {"q": "검색", "deadline_from": "마감 시작", "deadline_to": "마감 끝"}
+MAX_PAUSE_SECONDS = 10.0
+export_jobs = ExportJobs()
 
 
 def store():
@@ -233,28 +235,73 @@ def draft_create():
     return redirect(url_for("drafts_page", _anchor=f"draft-{draft_id}"))
 
 
-@library.post("/export-images")
-def export_item_images():
-    """Download main + detail images for the selected items as a ZIP (index.json inside)."""
-    from datetime import datetime, timezone
-
-    item_ids = request.form.getlist("item_ids")
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+def _positive_int(form, name, label):
+    raw = (form.get(name) or "").strip()
+    if not raw:
+        return None
     try:
-        root = export_images(
-            store(), item_ids,
-            directory=image_export_dir() / stamp,
-        )
-        archive = zip_export(root)
-    except ExportError as exc:
-        flash(str(exc), "error")
-        return back()
-    return send_file(
-        archive,
-        as_attachment=True,
-        download_name=f"library-images-{stamp}.zip",
-        mimetype="application/zip",
+        value = int(raw)
+    except ValueError:
+        raise ExportError(f"{label}은(는) 정수로 입력해주세요.") from None
+    if value < 1:
+        raise ExportError(f"{label}은(는) 1 이상이어야 합니다.")
+    return value
+
+
+def export_options_from(form) -> ExportOptions:
+    """Popup fields -> ExportOptions. Blank numbers mean no limit; checkboxes are on when sent."""
+    raw_pause = (form.get("pause") or "").strip()
+    try:
+        pause = float(raw_pause) if raw_pause else ExportOptions.pause_seconds
+    except ValueError:
+        raise ExportError("요청 간격은 숫자로 입력해주세요.") from None
+    if not 0 <= pause <= MAX_PAUSE_SECONDS:
+        raise ExportError(f"요청 간격은 0~{MAX_PAUSE_SECONDS:g}초로 입력해주세요.")
+    max_mb = _positive_int(form, "max_total_mb", "총용량 상한(MB)")
+    return ExportOptions(
+        max_items=_positive_int(form, "max_items", "받을 항목 수"),
+        max_images_per_item=_positive_int(form, "max_images", "항목당 이미지 수"),
+        include_main=bool(form.get("include_main")),
+        include_detail=bool(form.get("include_detail")),
+        pause_seconds=pause,
+        max_total_bytes=max_mb * 1024 * 1024 if max_mb else None,
+        skip_downloaded=bool(form.get("skip_downloaded")),
     )
+
+
+@library.post("/export-images/jobs")
+def export_job_start():
+    """Start a background image export for the current filter result or the checked items."""
+    try:
+        options = export_options_from(request.form)
+        if request.form.get("scope") == "selected":
+            item_ids = list(dict.fromkeys(request.form.getlist("item_ids")))
+        else:
+            collection_id = request.form.get("collection", type=int)
+            item_ids = store().item_ids(filters_from(request.form), collection_id)
+        path = current_app.config.get("LIBRARY_PATH")
+        job_id = export_jobs.start(lambda: Library(path), item_ids, options)
+    except ExportError as exc:
+        return jsonify(error=str(exc)), 400
+    except ValueError:
+        return jsonify(error="탐색 조건이 올바르지 않습니다."), 400
+    return jsonify(export_jobs.status(job_id))
+
+
+@library.get("/export-images/jobs/<job_id>")
+def export_job_status(job_id):
+    status = export_jobs.status(job_id)
+    if status is None:
+        return jsonify(error="내보내기 작업을 찾을 수 없습니다."), 404
+    return jsonify(status)
+
+
+@library.post("/export-images/jobs/<job_id>/cancel")
+def export_job_cancel(job_id):
+    if export_jobs.status(job_id) is None:
+        return jsonify(error="내보내기 작업을 찾을 수 없습니다."), 404
+    export_jobs.cancel(job_id)
+    return jsonify(export_jobs.status(job_id))
 
 
 @library.errorhandler(ValueError)

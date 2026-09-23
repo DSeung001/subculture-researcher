@@ -1253,3 +1253,20 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
   .item-card .card-thumb { width: 72px; height: 72px; }
   .item-card .card-actions { width: 100%; margin-top: 4px; }
 }
+
+.export-fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.export-fields legend { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.export-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.export-status progress { width: 100%; }
+.export-status p { margin: 4px 0 0; font-size: 13px; }
+.export-result { color: var(--muted); word-break: break-all; }
+.export-error { color: var(--error); font-size: 13px; margin: 0; }
+@media (max-width: 560px) {
+  .export-grid { grid-template-columns: 1fr; }
+}

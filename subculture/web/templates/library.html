@@ -89,6 +89,7 @@
           <div class="library-row tight">
             <span class="bulk-count" id="library-selected-count" aria-live="polite">선택 없음</span>
             <label class="library-checkbox"><input type="checkbox" id="library-select-all">이 페이지 전체 선택</label>
+            <button type="button" class="btn" data-dialog-target="image-export-dialog">이미지 내보내기…</button>
           </div>
         </div>
         <form id="library-bulk" method="post" action="{{ url_for('library.assign') }}" class="bulk-bar">
@@ -104,7 +105,6 @@
           <div class="bulk-controls">
             <label>기획 묶음<select name="collection_id"><option value="">선택하세요</option>{% for group in collections %}<option value="{{ group.id }}">{{ group.name }}</option>{% endfor %}</select></label>
             <button class="btn btn-primary" formaction="{{ url_for('library.collection_add') }}">선택 항목 담기</button>
-            <button class="btn" formaction="{{ url_for('library.export_item_images') }}">이미지 다운로드</button>
           </div>
         </form>
       </section>
@@ -152,6 +152,43 @@
   <button type="submit" form="library-bulk" formaction="{{ url_for('library.draft_create') }}" name="mode" value="plain" class="btn btn-primary">글 만들기</button>
   <button type="submit" form="library-bulk" formaction="{{ url_for('library.draft_create') }}" name="mode" value="ai" class="btn" data-ai-busy>AI로 글 쓰기</button>
 </div>
+<dialog id="image-export-dialog" class="modal">
+  <form id="image-export-form" class="stacked-form" data-start-url="{{ url_for('library.export_job_start') }}" data-status-url="{{ url_for('library.export_job_status', job_id='__JOB__') }}" data-cancel-url="{{ url_for('library.export_job_cancel', job_id='__JOB__') }}">
+    <div class="modal-header">
+      <h2>이미지 내보내기</h2>
+      <button type="button" class="modal-close" data-dialog-close aria-label="닫기">✕</button>
+    </div>
+    {% for key, value in filters.items() %}{% if value %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+    {% if collection %}<input type="hidden" name="collection" value="{{ collection.id }}">{% endif %}
+    <fieldset class="export-fields">
+      <legend>대상</legend>
+      <label class="library-checkbox"><input type="radio" name="scope" value="filter" checked>현재 조건 전체 ({{ total }}개)</label>
+      <label class="library-checkbox"><input type="radio" name="scope" value="selected" id="image-export-selected" disabled><span id="image-export-selected-label">선택한 항목 (0개)</span></label>
+    </fieldset>
+    <fieldset class="export-fields export-grid">
+      <label>받을 항목 수<input type="number" name="max_items" min="1" step="1" placeholder="전체"></label>
+      <label>항목당 이미지 수<input type="number" name="max_images" min="1" step="1" placeholder="전부"></label>
+      <label>요청 간격(초)<input type="number" name="pause" min="0" max="10" step="0.05" value="0.35"></label>
+      <label>총용량 상한(MB)<input type="number" name="max_total_mb" min="1" step="1" placeholder="제한 없음"></label>
+    </fieldset>
+    <fieldset class="export-fields">
+      <label class="library-checkbox"><input type="checkbox" name="include_main" value="1" checked>대표 이미지</label>
+      <label class="library-checkbox"><input type="checkbox" name="include_detail" value="1" checked>상세 이미지</label>
+      <label class="library-checkbox"><input type="checkbox" name="skip_downloaded" value="1" checked>이미 받은 이미지 건너뛰기</label>
+    </fieldset>
+    <p class="subtitle">이미지는 figure_project의 exports 폴더에 저장됩니다. 창을 닫아도 내보내기는 계속됩니다.</p>
+    <div class="export-status" id="image-export-status" hidden>
+      <progress id="image-export-progress" max="1" value="0"></progress>
+      <p id="image-export-summary" aria-live="polite"></p>
+      <p id="image-export-result" class="export-result"></p>
+    </div>
+    <p id="image-export-error" class="export-error" role="alert" hidden></p>
+    <div class="library-row tight">
+      <button type="submit" class="btn btn-primary" id="image-export-start">시작</button>
+      <button type="button" class="btn" id="image-export-cancel" hidden>취소</button>
+    </div>
+  </form>
+</dialog>
 {% include "_ai_busy.html" %}
 <script src="{{ url_for('static', filename='library.js') }}" defer></script>
 {% endblock %}

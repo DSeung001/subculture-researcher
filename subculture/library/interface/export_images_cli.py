@@ -5,7 +5,7 @@ import argparse
 from dotenv import load_dotenv
 
 from subculture.library.application.export_images import (
-    ExportError, export_images, resolve_item_ids, zip_export,
+    ExportError, ExportOptions, export_images, resolve_item_ids, zip_export,
 )
 from subculture.library.infrastructure.local_library import Library
 
@@ -20,6 +20,10 @@ def main():
     parser.add_argument("--out", help="Output directory (default: $FIGURE_PROJECT_DIR/exports/<stamp>, ~/figure_project if unset)")
     parser.add_argument("--zip", action="store_true", help="Also write a .zip next to the folder")
     parser.add_argument("--pause", type=float, default=0.35, help="Seconds between items (default 0.35)")
+    parser.add_argument(
+        "--no-skip", action="store_true",
+        help="Download again even when ledger.jsonl says an image URL was already saved",
+    )
     args = parser.parse_args()
     library = Library(args.db)
     try:
@@ -28,7 +32,8 @@ def main():
         )
         root = export_images(
             library, item_ids,
-            directory=args.out, pause_seconds=args.pause,
+            directory=args.out,
+            options=ExportOptions(pause_seconds=args.pause, skip_downloaded=not args.no_skip),
         )
     except ExportError as exc:
         raise SystemExit(str(exc)) from exc
