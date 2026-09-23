@@ -101,14 +101,14 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 | `title_strip_pattern` | 제목 뒤에 붙은 가격·배지 텍스트를 지우는 정규식 |
 | `title_deny_patterns` | 제목이 이 정규식과 맞으면 항목 제외(예: 서적) |
 | `product_mode: true` | 상세 페이지를 열어 가격·예약 상태·마감일 추출 (한국 쇼핑몰용) |
-| `list_product_mode: true` | 상세 요청 없이 **목록 카드 텍스트**에서 가격·예약 상태 추출 |
+| `list_product_mode: true` | **목록 카드 텍스트**에서 가격·예약 상태 추출. 상세는 `detail_images_selector`가 있을 때만 상세이미지를 위해 새 상품당 한 번 열고, 카드 값은 바꾸지 않음 |
 | `price_pattern` | 가격 추출용 정규식(그룹 1 = 금액). 없으면 텍스트의 첫 1,000원 이상 금액. 소비자가·판매가가 함께 있는 카드용(예: `판매가\s*:\s*([\d,]+)\s*원`) |
 | `card_alt_text` | `true`면 목록 카드 안 이미지의 `alt` 텍스트도 상태 판단(품절·예약)에 씀. 품절을 아이콘 `alt`로만 표시하는 몰용(기본 꺼짐) |
 | `preorder_words` | 예약 상태로 볼 문구 목록. 기본 문구(`예약`, `PRE-ORDER` 등)에 더해지고 품절 문구가 있으면 품절이 우선 |
 | `list_image_selector` | 목록 카드 안의 이미지 셀렉터. 카드는 "다른 상품 링크가 나오기 직전까지의 상위 요소"로 자동 판별 |
 | `fetch_detail_image: true` | 상세 페이지를 열어 `og:image`(→ `twitter:image`) 사용. 목록에 이미지가 없을 때만 |
 | `image_selector` | 상세 페이지에서 `og:image` 대신 쓸 이미지 셀렉터 |
-| `detail_images_selector` | 상세 본문·갤러리의 **여러** `<img>`를 모아 `detailImageUrls`에 저장. `product_mode`에서만 쓰며, 없으면 갤러리를 긁지 않음 |
+| `detail_images_selector` | 상세 본문·갤러리의 **여러** `<img>`를 모아 `detailImageUrls`에 저장. `product_mode`·`list_product_mode`(정적 HTML)에서 쓰며, 없으면 갤러리를 긁지 않음. Cafe24 본문의 `ec-data-src`도 읽고 `{$...}` 템플릿 자리표시는 버림 |
 | `image_deny_patterns` | 소스별로 추가 배제할 이미지 경로 정규식(예: 저화질 미리보기 `blur_\d+`) |
 | `image_field` / `image_html_field` | JSON API 소스: 이미지 URL 필드 / 본문 HTML 필드(첫 `<img>` 사용) |
 | `page_param` / `max_pages` | 목록 페이지네이션(HTML·JSON API). 1페이지는 `url` 그대로, 2페이지부터 쿼리 `page_param=N`. 새 링크가 없는 페이지·`max_items`·`max_pages`에서 멈추고, 2페이지 이후 robots.txt 거부는 앞 페이지 결과만 남기고 중단 |

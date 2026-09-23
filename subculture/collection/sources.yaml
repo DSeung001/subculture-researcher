@@ -13,7 +13,7 @@ sources:
     figure_only: true
     enabled: true
     respect_robots: true
-    detail_images_selector: '#prdDetail img, .prd_detail img, .goods_description img'
+    detail_images_selector: '#ffDetailSection .img_wrapper img'  # 상세 본문(상단 공통 배너 .original_bnr 제외)
 
   # 일본 피규어/하비 뉴스. 카테고리 페이지에서 기사 링크만 수집한다.
   - name: HOBBY Watch 피규어
@@ -222,7 +222,7 @@ sources:
     shop: 마니아하우스
 
   # 코믹스아트(Cafe24 피규어샵) 신작 상품(cate_no=1215). 신작 예약이 최신순으로 나온다(페이지당 56건).
-  # 상세 페이지 본문에는 모든 상품에 "예약주문" 버튼 문구가 있어 상태가 오염되므로 목록 카드 텍스트만 쓴다.
+  # 상세 페이지 본문에는 모든 상품에 "예약주문" 버튼 문구가 있어 상태가 오염되므로 목록 카드 텍스트만 쓴다. 상세는 새 상품당 1회 상세이미지만 받는다.
   # 카드에는 "예약" 단어 없이 발매·마감만 있어 그 라벨을 예약 신호로 넣는다. 마감은 연도가 없어 preorderEndAt은 비운다.
   - name: 코믹스아트 신작 상품
     type: html
@@ -244,6 +244,7 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: '.prdImg img'
+    detail_images_selector: '.xans-product-additional .continner img:not(.delivery img)'  # 상세 본문(배송 안내 이미지 제외)
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'  # 할인 카드에는 소비자가가 먼저 나온다
     preorder_words:
       - '발매 :'
@@ -271,6 +272,7 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: '.prdImg img'
+    detail_images_selector: '.xans-product-additional .continner img:not(.delivery img)'  # 상세 본문(배송 안내 이미지 제외)
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'  # 할인 카드에는 소비자가가 먼저 나온다
     shop: 코믹스아트
 
@@ -297,6 +299,7 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: '.prdImg img'
+    detail_images_selector: '.edibot-product-detail img'  # #prdDetail 없이 에디봇 상세 블록에 본문 이미지가 있다
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
     preorder_words:
       - '발매 :'
@@ -325,6 +328,9 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: img
+    detail_images_selector: '#prdDetail img'
+    image_deny_patterns:
+      - '/web/upload/category/editor/'  # 상세 끝의 공통 안내 배너
     card_alt_text: true
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
     preorder_words:
@@ -381,6 +387,7 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: '.thumbnail img'
+    detail_images_selector: '#prdDetail img'
     card_alt_text: true
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
     preorder_words:
@@ -411,6 +418,7 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: '.thumbnail img'
+    detail_images_selector: '#prdDetail img'
     card_alt_text: true
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
     shop: 이딴가게
@@ -433,10 +441,14 @@ sources:
     respect_robots: true
     product_mode: true
     detail_images_selector: '#prdDetail img'
+    image_deny_patterns:  # 상세 상단의 공지·팝업·이벤트 배너
+      - '/web/presso/'
+      - 'notice'
+      - 'popup_'
     shop: 피규어프레소
 
   # 라프텔 스토어 신상품(NEW 배지). 로그인 없이 공개 HTML이며 robots.txt가 허용한다.
-  # 목록 카드 텍스트에서 가격·예약 상태를 읽어 상세 요청은 하지 않는다(예약마감일은 상세에만 있어 수집하지 않음).
+  # 목록 카드 텍스트에서 가격·예약 상태를 읽는다(예약마감일은 상세에만 있어 수집하지 않음). 상세는 새 상품당 1회 상세이미지만 받는다.
   # 홈의 상품 46개 중 NEW 배지 14개만 잡는 것이 의도(신상품 소스)라 max_items를 올려도 늘지 않는다.
   - name: 라프텔 스토어
     type: html
@@ -454,6 +466,7 @@ sources:
     respect_robots: true
     list_product_mode: true
     list_image_selector: img
+    detail_images_selector: 'img[src*="/web/product/extra/"], .edibot-product-detail img'  # 추가 이미지 + 상세 본문(추천 상품은 /big/)
     shop: Laftel
 
   # 애니메이트 코리아 온라인샵 신상품(cateCd=008). 피규어 전용 카테고리는 없고 굿즈 중심이며 서적은 제외한다.

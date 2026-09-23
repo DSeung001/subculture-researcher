@@ -11,7 +11,10 @@ from urllib.parse import urljoin, urlsplit
 
 MAX_URL_LENGTH = 2000
 # Lazy-loading pages keep the real photo in data-* and a placeholder in src.
-LAZY_ATTRS = ("data-src", "data-original", "data-lazy-src", "data-lazy", "data-echo", "src")
+# Cafe24 editor bodies use `ec-data-src`.
+LAZY_ATTRS = ("data-src", "data-original", "data-lazy-src", "data-lazy", "data-echo", "ec-data-src", "src")
+# Unrendered shop template tokens such as `{$js-src}` (raw or URL-encoded).
+TEMPLATE_TOKEN = re.compile(r"\{\$|%7B%24", re.I)
 # Path/query tokens that mark UI assets, trackers and default share images.
 NOT_A_PHOTO = re.compile(
     r"(?:^|[/_.\-=])(?:logo|icon|ico|favicon|sprite|blank|spacer|pixel|placeholder|"
@@ -49,6 +52,8 @@ def clean_image_url(value, base_url: str = "", deny=()) -> str | None:
         return None
     value = unescape(value.strip())
     if not value or value.lower().startswith(("data:", "javascript:", "blob:")):
+        return None
+    if TEMPLATE_TOKEN.search(value):
         return None
     url = http_url(urljoin(base_url, value))
     if url is None:

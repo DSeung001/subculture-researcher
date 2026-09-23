@@ -66,6 +66,11 @@ class UrlRuleTests(unittest.TestCase):
         self.assertIsNone(http_url("javascript:alert(1)"))
         self.assertIsNone(http_url("https://" + "a" * 2100))
 
+    def test_unrendered_template_placeholders_are_not_photos(self):
+        for raw in ("{$js-src}", "%7B%24js-src%7D", "/web/upload/{$image}"):
+            with self.subTest(raw=raw):
+                self.assertIsNone(clean_image_url(raw, "https://ttabbaemall.co.kr/product/"))
+
 
 class DomExtractionTests(unittest.TestCase):
     def test_lazy_src_beats_placeholder_and_tiny_images_are_skipped(self):
@@ -76,6 +81,10 @@ class DomExtractionTests(unittest.TestCase):
         self.assertEqual(img_url(first, BASE), "https://shop.example.com/p/real.jpg")
         self.assertIsNone(img_url(badge, BASE))
         self.assertEqual(img_url(srcset, BASE), "https://shop.example.com/p/s.jpg")
+
+    def test_cafe24_ec_data_src_beats_the_placeholder_src(self):
+        (img,) = BeautifulSoup('<img src="%7B%24js-src%7D" ec-data-src="/web/upload/NNEditor/a.jpg">', "html.parser").find_all("img")
+        self.assertEqual(img_url(img, BASE), "https://shop.example.com/web/upload/NNEditor/a.jpg")
 
     def test_each_list_card_gets_its_own_photo_never_a_neighbours(self):
         source = {"link_selector": 'a[href*="/docs/news/"]', "list_image_selector": "img"}
@@ -202,6 +211,34 @@ class DetailFetchTests(unittest.TestCase):
             item["detailImageUrls"],
             ["https://cdn.example.com/d1.jpg", "https://cdn.example.com/d2.jpg"],
         )
+
+
+    def test_list_only_shop_fetches_the_detail_page_for_its_gallery_only(self):
+        listing = "https://s.example.com/list"
+        pages = {
+            listing: '<li><img src="https://cdn.example.com/card.jpg"><a href="/p/1">상품 이름 하나</a> 판매가 : 12,000원</li>',
+            "https://s.example.com/p/1": (
+                '<meta property="og:image" content="https://cdn.example.com/og.jpg">'
+                '<div id="prdDetail"><img src="https://cdn.example.com/card.jpg">'
+                '<img src="https://cdn.example.com/d1.jpg"></div>예약주문 품절 99,000원'
+            ),
+        }
+        source = {
+            "name": "shop", "url": listing, "link_selector": "a", "list_product_mode": True,
+            "list_image_selector": "img", "detail_images_selector": "#prdDetail img", "respect_robots": False,
+        }
+        (item,) = self.run_items(source, pages)
+        self.assertEqual(item["detailImageUrls"], ["https://cdn.example.com/d1.jpg"])
+        # Price, status and photo still come from the card, not the detail page.
+        self.assertEqual(item["imageUrl"], "https://cdn.example.com/card.jpg")
+        self.assertEqual((item["price"], item["saleStatus"]), (12000, "IN_STOCK"))
+
+    def test_list_only_shop_without_gallery_selector_makes_no_detail_request(self):
+        listing = "https://s.example.com/list"
+        pages = {listing: '<li><a href="/p/1">상품 이름 하나</a> 판매가 : 12,000원</li>'}
+        source = {"name": "shop", "url": listing, "link_selector": "a", "list_product_mode": True, "respect_robots": False}
+        (item,) = self.run_items(source, pages)  # a detail request would raise KeyError
+        self.assertNotIn("detailImageUrls", item)
 
 
 class ApiImageTests(unittest.TestCase):

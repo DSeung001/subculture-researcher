@@ -177,8 +177,13 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
     """Add detail-page fields (photo, product info) to a listed item in place."""
     product_mode = source.get("product_mode", False)
     detail_image_mode = source.get("fetch_detail_image", False)
-    want_gallery = bool(product_mode and source.get("detail_images_selector"))
-    if not (product_mode or detail_image_mode):
+    # List-only shops fetch the detail page just for its gallery; the card keeps
+    # price, status and photo because detail text can mislead them.
+    want_gallery = bool(
+        source.get("detail_images_selector")
+        and (product_mode or source.get("list_product_mode"))
+    )
+    if not (product_mode or detail_image_mode or want_gallery):
         return
     if store is not None and not store.needs_detail(
         item["url"], product_mode=product_mode,
@@ -201,10 +206,10 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
             text_root = detail_soup.select_one(text_selector) if text_selector else detail_soup
             full_text = visible_text(text_root) if text_root else ""
             item.update(extract_product_fields(source, full_text, image_url))
-            if want_gallery:
-                item["detailImageUrls"] = detail_images(
-                    detail_soup, detail_url, source, exclude=image_url,
-                )
+        if want_gallery:
+            item["detailImageUrls"] = detail_images(
+                detail_soup, detail_url, source, exclude=image_url or item.get("imageUrl"),
+            )
         if image_url:
             item["imageUrl"] = image_url
         item["detailCheckedAt"] = datetime.now(timezone.utc)

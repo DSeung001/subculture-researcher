@@ -119,6 +119,15 @@ COMICS_ART_LIST = """
 </ul>"""
 
 
+# store.laftel.net product page: extra photos, the editor body, then other products (/big/) as recommendations.
+LAFTEL_DETAIL = """
+<div><img src="https://laftelstore.cafe24.com/web/product/big/202609/main.png">
+ <img src="https://laftelstore.cafe24.com/web/product/extra/big/202609/e1.jpg"></div>
+<div class="edibot-product-detail"><div class="edb-img-tag-w"><img src="https://laftelstore.cafe24.com/web/upload/NNEditor/20260910/detail.jpg"></div></div>
+<p>품절 예약구매 99,000원</p>
+<section><img src="https://laftelstore.cafe24.com/web/product/big/202607/other.jpg"></section>"""
+
+
 class LaftelStoreTests(unittest.TestCase):
     def items(self):
         # Through html_items, which also drops repeated links (a product shows up in several carousels).
@@ -143,12 +152,23 @@ class LaftelStoreTests(unittest.TestCase):
         self.assertEqual(preorder["imageUrl"], "https://laftelstore.cafe24.com/web/product/small/202609/a.png")
         self.assertEqual(in_stock["imageUrl"], "https://laftelstore.cafe24.com/web/product/small/202609/b.png")
 
-    def test_no_detail_page_is_requested(self):
-        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", return_value=(LAFTEL_HOME, "https://store.laftel.net/")) as fetch, \
+    def test_detail_page_adds_only_the_gallery_and_keeps_the_card_fields(self):
+        pages = {"https://store.laftel.net/": LAFTEL_HOME}
+
+        def fake_get_html(url, policy, timeout=15, source=None):
+            return pages.get(url, LAFTEL_DETAIL), url
+
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html) as fetch, \
                 patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
-            items = list(html_items(LAFTEL))
-        self.assertEqual(len(items), 2)
-        self.assertEqual(fetch.call_count, 1)  # the list page only
+            preorder, in_stock = list(html_items(LAFTEL))
+        self.assertEqual(fetch.call_count, 3)  # the list page, then one detail page per product
+        self.assertEqual(preorder["detailImageUrls"], [
+            "https://laftelstore.cafe24.com/web/product/extra/big/202609/e1.jpg",
+            "https://laftelstore.cafe24.com/web/upload/NNEditor/20260910/detail.jpg",
+        ])
+        # The detail text ("품절") never overrides what the card says.
+        self.assertEqual((in_stock["saleStatus"], in_stock["price"]), ("IN_STOCK", 9000))
+        self.assertEqual(preorder["imageUrl"], "https://laftelstore.cafe24.com/web/product/small/202609/a.png")
 
 
 class AnimateNewArrivalTests(unittest.TestCase):
@@ -667,6 +687,72 @@ class ManualShopTests(unittest.TestCase):
     def test_non_http_photo_address_is_rejected(self):
         with self.assertRaises(ValueError):
             add_manual_content(None, "https://example.com/a", "t", "FIGURE", "NEWS", "MEDIA", "javascript:alert(1)")
+
+
+
+class DetailGallerySelectorTests(unittest.TestCase):
+    """Real sources.yaml selectors against trimmed copies of each shop's detail page."""
+
+    def gallery(self, source, html, base):
+        from bs4 import BeautifulSoup
+        from subculture.collection.infrastructure.collectors.images import detail_images
+        return detail_images(BeautifulSoup(html, "html.parser"), base, source)
+
+    def test_figurefarm_takes_the_body_not_the_shop_banners(self):
+        html = """<div id="detail"><div class="wrap_info"><div id="ffDetailSection">
+          <div class="original_bnr"><img src="https://toyntech.wisacdn.com/_data/banner/b1.png"></div>
+          <div class="detail_info"><div><div class="img_wrapper"><img src="https://toyntech.wisacdn.com/__manage__/product_1/a.jpg"></div>
+          <div class="img_wrapper"><img src="https://toyntech.wisacdn.com/_data/attach/202510/29/b.png"></div></div></div></div></div></div>"""
+        self.assertEqual(self.gallery(SOURCES["피규어팜 예약상품"], html, "https://m.figurefarm.net/shop/detail.php"), [
+            "https://toyntech.wisacdn.com/__manage__/product_1/a.jpg",
+            "https://toyntech.wisacdn.com/_data/attach/202510/29/b.png",
+        ])
+
+    def test_cafe24_lazy_editor_images_and_unrendered_template_placeholders(self):
+        html = """<div id="prdDetail"><img src="%7B%24js-src%7D"><img src="{$js-src}">
+          <img ec-data-src="/web/upload/NNEditor/20240822/a.jpg"></div>"""
+        self.assertEqual(self.gallery(TTABBAE_NEW_ARRIVAL, html, "https://ttabbaemall.co.kr/product/detail.html"),
+                         ["https://ttabbaemall.co.kr/web/upload/NNEditor/20240822/a.jpg"])
+
+    def test_comics_art_body_without_the_delivery_notice(self):
+        html = """<div class="xans-product-additional"><div class="cont"><div class="continner">
+          <p><img ec-data-src="/web/upload/NNEditor/20260922/a.jpg"></p>
+          <ul class="delivery"><li><img ec-data-src="/web/upload/NNEditor/20220401/delivery.jpg"></li></ul></div></div>
+          <img src="https://comics11.cafe24.com/inhwa/2026/202609.jpg"></div>"""
+        for source in (COMICS_ART_NEW, COMICS_ART_IN_STOCK):
+            with self.subTest(source=source["name"]):
+                self.assertEqual(self.gallery(source, html, "https://comics-art.co.kr/product/detail.html"),
+                                 ["https://comics-art.co.kr/web/upload/NNEditor/20260922/a.jpg"])
+
+    def test_herotime_editor_block(self):
+        html = """<div class="event"><img src="/web/upload/NNEditor/20240913/event.jpg"></div>
+          <div class="cont"><div class="edibot-product-detail"><div class="edb-img-tag-w">
+          <img src="/web/upload/NNEditor/20250731/a.jpg"></div></div></div>"""
+        self.assertEqual(self.gallery(HEROTIME, html, "https://herotime.co.kr/product/detail.html"),
+                         ["https://herotime.co.kr/web/upload/NNEditor/20250731/a.jpg"])
+
+    def test_figurepresso_skips_notice_popup_and_event_banners(self):
+        base = "https://cafe24.poxo.com/ec01/figurepresso89/x/_"
+        html = f"""<div id="prdDetail"><img src="{base}/web/presso/as_top_notice_m_03.png">
+          <img src="{base}/web/upload/NNEditor/20250528/mega_notice-2506.png">
+          <img src="{base}/web/upload/NNEditor/20260617/popup_delivery_12-2.png">
+          <img src="{base}/web/presso/top5_event_06.jpg">
+          <img ec-data-src="{base}/web/upload/NNEditor/20260914/4573628569182.jpg"></div>"""
+        self.assertEqual(self.gallery(FIGUREPRESSO, html, "https://m.figurepresso.com/product/detail.html"),
+                         [f"{base}/web/upload/NNEditor/20260914/4573628569182.jpg"])
+
+    def test_dokidoki_skips_the_shared_footer_banner(self):
+        html = """<div id="prdDetail"><img src="/web/upload/NNEditor/20251014/a.jpg">
+          <img src="/web/upload/category/editor/2026/08/18/banner.png"></div>"""
+        self.assertEqual(self.gallery(DOKI, html, "https://dokidokigoods.co.kr/product/detail.html"),
+                         ["https://dokidokigoods.co.kr/web/upload/NNEditor/20251014/a.jpg"])
+
+    def test_artplex_and_ittan_use_the_cafe24_detail_body(self):
+        html = '<div id="prdDetail"><img ec-data-src="/web/upload/NNEditor/20260922/a.png"></div>'
+        for source, host in ((ARTPLEX, "artplex.co.kr"), (ITTAN, "ittanstore.com")):
+            with self.subTest(source=source["name"]):
+                self.assertEqual(self.gallery(source, html, f"https://{host}/product/detail.html"),
+                                 [f"https://{host}/web/upload/NNEditor/20260922/a.png"])
 
 
 if __name__ == "__main__":
