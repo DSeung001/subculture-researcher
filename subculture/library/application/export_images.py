@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
-import mimetypes
 import re
 import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
-
 import requests
 from sqlalchemy import exists, select
 
@@ -23,15 +21,9 @@ EXPORT_ROOT = LOCAL_DIR / "image_exports"
 USER_AGENT = "SubcultureResearcher/0.1 (+https://github.com/DSeung001/subculture-researcher)"
 DEFAULT_TIMEOUT = 30
 DEFAULT_PAUSE = 0.35
-_SAFE_ID = re.compile(r"[^A-Za-z0-9._:-]+")
-_EXT_FROM_TYPE = {
-    "image/jpeg": ".jpg",
-    "image/jpg": ".jpg",
-    "image/png": ".png",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
-    "image/bmp": ".bmp",
-}
+FORMAT_VERSION = 2
+_SAFE_ID = re.compile(r"[^A-Za-z0-9._-]+")
+_EXT_FROM_FORMAT = {"jpeg": ".jpg", "png": ".png", "gif": ".gif", "webp": ".webp", "bmp": ".bmp"}
 
 
 class ExportError(ValueError):
@@ -88,17 +80,33 @@ def export_images(
     items_dir.mkdir(exist_ok=True)
     getter = fetch or _download
     index = []
+    used_folders: set[str] = set()
     for position, item_id in enumerate(ids):
         data = by_id.get(item_id)
         if data is None:
             index.append({"id": item_id, "error": "not_in_library", "files": []})
             continue
         entry, files = _export_one(
-            data, items_dir, getter=getter, timeout=timeout,
+            data, items_dir, used_folders, getter=getter, timeout=timeout,
         )
         index.append(entry)
         if pause_seconds > 0 and position + 1 < len(ids) and files:
             time.sleep(pause_seconds)
+    records = [record for entry in index for record in entry["files"]]
+    # export.json goes first: index.json stays the last file written (completion marker).
+    (root / "export.json").write_text(
+        json.dumps(
+            {
+                "formatVersion": FORMAT_VERSION,
+                "createdAt": datetime.now(timezone.utc).isoformat(),
+                "itemCount": len(index),
+                "fileCount": len(records),
+                "okCount": sum(1 for record in records if record["status"] == "ok"),
+            },
+            ensure_ascii=False, indent=2,
+        ),
+        encoding="utf-8",
+    )
     (root / "index.json").write_text(
         json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8",
     )
@@ -116,9 +124,11 @@ def zip_export(directory: Path, zip_path: Path | None = None) -> Path:
     return archive
 
 
-def _export_one(data: dict, items_dir: Path, *, getter, timeout: float) -> tuple[dict, list[dict]]:
+def _export_one(
+    data: dict, items_dir: Path, used_folders: set[str], *, getter, timeout: float,
+) -> tuple[dict, list[dict]]:
     item_id = data.get("_id") or ""
-    folder_name = _SAFE_ID.sub("_", item_id) or "item"
+    folder_name = _folder_name(item_id, used_folders)
     dest = items_dir / folder_name
     dest.mkdir(parents=True, exist_ok=True)
     main = http_url(data.get("imageUrl"))
@@ -139,14 +149,32 @@ def _export_one(data: dict, items_dir: Path, *, getter, timeout: float) -> tuple
     files = []
     for index, (role, url) in enumerate(jobs):
         stem = f"{index:02d}_{role}"
-        record = {"role": role, "url": url, "path": None, "status": "error", "error": None}
+        record = {
+            "key": f"{folder_name}-{index:02d}",
+            "role": role,
+            "url": url,
+            "path": None,
+            "status": "error",
+            "error": None,
+            "format": None,
+            "sha256": None,
+            "bytes": None,
+        }
         try:
             body, content_type = getter(url, timeout=timeout)
-            ext = _extension(url, content_type)
-            absolute = dest / f"{stem}{ext}"
-            absolute.write_bytes(body)
-            record["path"] = f"items/{folder_name}/{stem}{ext}"
-            record["status"] = "ok"
+            image_format = _sniff_format(body)
+            if image_format is None:
+                # CDNs may answer 200 with an HTML error page; never save it as an image.
+                raise ValueError(f"not_image: {content_type or 'unknown content type'}")
+            ext = _EXT_FROM_FORMAT[image_format]
+            (dest / f"{stem}{ext}").write_bytes(body)
+            record.update(
+                path=f"items/{folder_name}/{stem}{ext}",
+                status="ok",
+                format=image_format,
+                sha256=hashlib.sha256(body).hexdigest(),
+                bytes=len(body),
+            )
         except Exception as exc:
             record["error"] = str(exc)
         files.append(record)
@@ -175,16 +203,26 @@ def _download(url: str, *, timeout: float) -> tuple[bytes, str | None]:
     return response.content, response.headers.get("Content-Type")
 
 
-def _extension(url: str, content_type: str | None) -> str:
-    if content_type:
-        mime = content_type.split(";", 1)[0].strip().lower()
-        if mime in _EXT_FROM_TYPE:
-            return _EXT_FROM_TYPE[mime]
-        guessed = mimetypes.guess_extension(mime)
-        if guessed:
-            return ".jpg" if guessed == ".jpe" else guessed
-    path = unquote(urlsplit(url).path)
-    suffix = Path(path).suffix.lower()
-    if suffix in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}:
-        return ".jpg" if suffix == ".jpeg" else suffix
-    return ".jpg"
+def _folder_name(item_id: str, used: set[str]) -> str:
+    """Filesystem-safe folder name (no `:`), unique within one export."""
+    base = _SAFE_ID.sub("_", item_id) or "item"
+    name, suffix = base, 2
+    while name in used:
+        name, suffix = f"{base}-{suffix}", suffix + 1
+    used.add(name)
+    return name
+
+
+def _sniff_format(body: bytes) -> str | None:
+    """Image format from magic bytes; None when the body is not a supported image."""
+    if body.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if body.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if body.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    if body[:4] == b"RIFF" and body[8:12] == b"WEBP":
+        return "webp"
+    if body.startswith(b"BM"):
+        return "bmp"
+    return None

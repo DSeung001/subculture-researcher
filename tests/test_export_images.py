@@ -13,6 +13,10 @@ from subculture.library.application.export_images import (
 )
 from subculture.library.infrastructure.local_library import Library
 
+JPEG = b"\xff\xd8\xff\xe0JPEG"
+PNG = b"\x89PNG\r\n\x1a\nPNG"
+HTML = b"<!doctype html><title>404</title>"
+
 
 def snapshot(doc_id, title="상품", category="FIGURE", **fields):
     return SimpleNamespace(
@@ -57,9 +61,9 @@ class ExportImagesTests(unittest.TestCase):
 
     def test_writes_files_and_index(self):
         bodies = {
-            "https://cdn.example.com/a/main.jpg": (b"MAIN", "image/jpeg"),
-            "https://cdn.example.com/a/d1.jpg": (b"D1", "image/jpeg"),
-            "https://cdn.example.com/a/d2.png": (b"D2", "image/png"),
+            "https://cdn.example.com/a/main.jpg": (JPEG, "image/jpeg"),
+            "https://cdn.example.com/a/d1.jpg": (JPEG + b"1", "image/jpeg"),
+            "https://cdn.example.com/a/d2.png": (PNG, "image/png"),
         }
 
         def fetch(url, *, timeout):
@@ -79,9 +83,47 @@ class ExportImagesTests(unittest.TestCase):
             ["https://cdn.example.com/a/d1.jpg", "https://cdn.example.com/a/d2.png"],
         )
         self.assertEqual([f["status"] for f in entry["files"]], ["ok", "ok", "ok"])
-        self.assertEqual((root / entry["files"][0]["path"]).read_bytes(), b"MAIN")
+        first = entry["files"][0]
+        self.assertEqual((root / first["path"]).read_bytes(), JPEG)
+        self.assertEqual(first["path"], "items/FIGURE_a/00_main.jpg")
+        self.assertEqual(first["key"], "FIGURE_a-00")
+        self.assertEqual(first["format"], "jpeg")
+        self.assertEqual(first["bytes"], len(JPEG))
+        self.assertEqual(len(first["sha256"]), 64)
         self.assertTrue(entry["files"][2]["path"].endswith(".png"))
         self.assertEqual(index[1]["files"], [])
+        meta = json.loads((root / "export.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["formatVersion"], 2)
+        self.assertEqual((meta["itemCount"], meta["fileCount"], meta["okCount"]), (2, 3, 3))
+
+    def test_extension_follows_content_not_headers(self):
+        bodies = {
+            "https://cdn.example.com/a/main.jpg": (PNG, "image/jpeg"),
+            "https://cdn.example.com/a/d1.jpg": (HTML, "text/html"),
+            "https://cdn.example.com/a/d2.png": (HTML, "image/png"),
+        }
+        root = export_images(
+            self.lib, ["FIGURE:a"], directory=self.out, pause_seconds=0,
+            fetch=lambda url, *, timeout: bodies[url],
+        )
+        files = json.loads((root / "index.json").read_text(encoding="utf-8"))[0]["files"]
+        self.assertEqual(files[0]["path"], "items/FIGURE_a/00_main.png")
+        self.assertEqual(files[0]["format"], "png")
+        for record in files[1:]:
+            self.assertEqual(record["status"], "error")
+            self.assertIsNone(record["path"])
+            self.assertIsNone(record["sha256"])
+            self.assertTrue(record["error"].startswith("not_image"))
+        self.assertEqual(sorted(p.name for p in (root / "items" / "FIGURE_a").iterdir()), ["00_main.png"])
+        self.assertEqual(json.loads((root / "export.json").read_text(encoding="utf-8"))["okCount"], 1)
+
+    def test_folder_names_unique_after_sanitizing(self):
+        from subculture.library.application.export_images import _folder_name
+
+        used = set()
+        self.assertEqual(_folder_name("FIGURE:x", used), "FIGURE_x")
+        self.assertEqual(_folder_name("FIGURE_x", used), "FIGURE_x-2")
+        self.assertEqual(_folder_name("", used), "item")
 
     def test_zip_contains_index(self):
         export_images(
@@ -122,7 +164,7 @@ class LibraryExportRouteTests(unittest.TestCase):
         self.assertIn("/library/export-images", html)
 
         def fetch(url, *, timeout):
-            return b"IMG", "image/jpeg"
+            return JPEG, "image/jpeg"
 
         from unittest.mock import patch
         with patch(
