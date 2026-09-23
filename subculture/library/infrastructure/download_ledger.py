@@ -1,4 +1,4 @@
-"""Append-only record of image URLs already saved under the exports folder (`ledger.jsonl`)."""
+"""Append-only URL ledger relative to its storage root (shared images)."""
 
 from __future__ import annotations
 
@@ -13,23 +13,28 @@ LEDGER_NAME = "ledger.jsonl"
 class DownloadLedger:
     """URL -> where that image was saved, so later exports can skip re-downloading it.
 
-    One JSON object per line: `url`, `path` (relative to the exports folder, e.g.
-    `<stamp>/items/FIGURE_x/00_main.jpg`), `sha256`, `bytes`, `format`, `downloadedAt`.
+    One JSON object per line: `url`, `path` (relative to this ledger's root), `sha256`, `bytes`, `format`, `downloadedAt`.
     A missing ledger starts empty.
     """
 
-    def __init__(self, exports_dir: Path):
-        self.exports_dir = Path(exports_dir)
-        self.path = self.exports_dir / LEDGER_NAME
+    def __init__(self, root: Path):
+        self.root = Path(root)
+        self.path = self.root / LEDGER_NAME
         self._lock = threading.Lock()
         self._by_url: dict[str, dict] | None = None
 
     def lookup(self, url: str) -> dict | None:
         """The recorded download for `url`, only while its file still exists."""
         record = self._records().get(url)
-        if record and (self.exports_dir / record["path"]).is_file():
+        if record and self._valid_file(record["path"]):
             return record
         return None
+
+    def _valid_file(self, value: str) -> bool:
+        if not isinstance(value, str) or Path(value).is_absolute():
+            return False
+        path = (self.root / value).resolve()
+        return path.is_relative_to(self.root.resolve()) and path.is_file()
 
     def record(self, url: str, path: str, *, sha256: str, size: int, image_format: str) -> None:
         entry = {
@@ -41,8 +46,8 @@ class DownloadLedger:
             "downloadedAt": datetime.now(timezone.utc).isoformat(),
         }
         with self._lock:
-            self._records()[url] = entry
             self._append(entry)
+            self._records()[url] = entry
 
     def _records(self) -> dict[str, dict]:
         if self._by_url is None:
@@ -61,7 +66,7 @@ class DownloadLedger:
         return by_url
 
     def _append(self, entry: dict) -> None:
-        self.exports_dir.mkdir(parents=True, exist_ok=True)
+        self.root.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
             handle.flush()

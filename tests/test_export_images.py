@@ -1,5 +1,6 @@
 """Offline checks for bulk image export (files + index.json, no real HTTP)."""
 
+import hashlib
 import json
 import os
 import tempfile
@@ -7,7 +8,7 @@ import unittest
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from subculture.library.application.export_images import (
     ExportError, ExportOptions, export_images, resolve_item_ids, zip_export,
@@ -44,6 +45,9 @@ class ExportImagesTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        env = patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name})
+        env.start()
+        self.addCleanup(env.stop)
         self.path = Path(self.temp.name) / "library.sqlite3"
         self.lib = Library(self.path)
         self.lib.sync(cloud(
@@ -87,8 +91,10 @@ class ExportImagesTests(unittest.TestCase):
         )
         self.assertEqual([f["status"] for f in entry["files"]], ["ok", "ok", "ok"])
         first = entry["files"][0]
-        self.assertEqual((root / first["path"]).read_bytes(), JPEG)
-        self.assertEqual(first["path"], "items/FIGURE_a/00_main.jpg")
+        self.assertEqual((Path(self.temp.name) / "images" / first["path"]).read_bytes(), JPEG)
+        self.assertEqual(first["path"], f"{first['sha256'][:2]}/{first['sha256']}.jpg")
+        self.assertEqual(first["storage"], "shared")
+        self.assertFalse((root / "items").exists())
         self.assertEqual(first["key"], "FIGURE_a-00")
         self.assertEqual(first["format"], "jpeg")
         self.assertEqual(first["bytes"], len(JPEG))
@@ -96,7 +102,7 @@ class ExportImagesTests(unittest.TestCase):
         self.assertTrue(entry["files"][2]["path"].endswith(".png"))
         self.assertEqual(index[1]["files"], [])
         meta = json.loads((root / "export.json").read_text(encoding="utf-8"))
-        self.assertEqual(meta["formatVersion"], 3)
+        self.assertEqual(meta["formatVersion"], 4)
         self.assertEqual((meta["itemCount"], meta["fileCount"], meta["okCount"]), (2, 3, 3))
         self.assertEqual((meta["skippedCount"], meta["errorCount"], meta["stopReason"]), (0, 0, None))
         self.assertEqual(meta["bytes"], len(JPEG) * 2 + 1 + len(PNG))
@@ -112,14 +118,14 @@ class ExportImagesTests(unittest.TestCase):
             fetch=lambda url, *, timeout: bodies[url],
         )
         files = json.loads((root / "index.json").read_text(encoding="utf-8"))[0]["files"]
-        self.assertEqual(files[0]["path"], "items/FIGURE_a/00_main.png")
+        self.assertEqual(files[0]["path"], f"{files[0]['sha256'][:2]}/{files[0]['sha256']}.png")
         self.assertEqual(files[0]["format"], "png")
         for record in files[1:]:
             self.assertEqual(record["status"], "error")
             self.assertIsNone(record["path"])
             self.assertIsNone(record["sha256"])
             self.assertTrue(record["error"].startswith("not_image"))
-        self.assertEqual(sorted(p.name for p in (root / "items" / "FIGURE_a").iterdir()), ["00_main.png"])
+        self.assertEqual(len(list((Path(self.temp.name) / "images").rglob("*.png"))), 1)
         self.assertEqual(json.loads((root / "export.json").read_text(encoding="utf-8"))["okCount"], 1)
 
     def test_default_directory_follows_figure_project_dir(self):
@@ -169,6 +175,9 @@ class ExportOptionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        env = patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name})
+        env.start()
+        self.addCleanup(env.stop)
         self.lib = Library(Path(self.temp.name) / "library.sqlite3")
         self.lib.sync(cloud(*[
             snapshot(
@@ -202,7 +211,7 @@ class ExportOptionTests(unittest.TestCase):
         details = self.run_export("details", options=ExportOptions(
             include_main=False, pause_seconds=0, skip_downloaded=False))
         self.assertEqual({f["role"] for e in self.index(details) for f in e["files"]}, {"detail"})
-        self.assertEqual(self.index(details)[0]["files"][0]["path"], "items/FIGURE_a/00_detail.jpg")
+        self.assertEqual(self.index(details)[0]["files"][0]["storage"], "shared")
 
         main = self.run_export("main", options=ExportOptions(
             include_detail=False, pause_seconds=0, skip_downloaded=False))
@@ -223,7 +232,7 @@ class ExportOptionTests(unittest.TestCase):
         self.assertEqual([f["status"] for f in index[0]["files"]], ["ok"] * 4)
         overflow = index[1]["files"]
         self.assertEqual((len(overflow), overflow[0]["status"], overflow[0]["error"]), (1, "error", "size_limit"))
-        self.assertFalse(any((root / "items" / "FIGURE_b").iterdir()))
+        self.assertFalse((root / "items").exists())
         meta = self.meta(root)
         self.assertEqual((meta["stopReason"], meta["bytes"]), ("size_limit", len(JPEG) * 4))
 
@@ -250,12 +259,12 @@ class ExportOptionTests(unittest.TestCase):
         self.assertEqual(calls, [])
         record = self.index(second)[0]["files"][0]
         self.assertEqual(record["status"], "skipped")
-        self.assertIsNone(record["path"])
-        self.assertEqual(record["previousPath"], "first/items/FIGURE_a/00_main.jpg")
+        self.assertEqual(record["path"], self.index(first)[0]["files"][0]["path"])
+        self.assertEqual(record["storage"], "shared")
         self.assertEqual(record["sha256"], self.index(first)[0]["files"][0]["sha256"])
         self.assertEqual((self.meta(second)["skippedCount"], self.meta(second)["okCount"]), (12, 0))
 
-        (first / "items" / "FIGURE_a" / "00_main.jpg").unlink()  # deleted file -> download again
+        (Path(self.temp.name) / "images" / record["path"]).unlink()  # deleted file -> download again
         third = self.run_export("third", fetch=counting, options=ExportOptions(pause_seconds=0))
         self.assertEqual(calls, ["https://cdn.example.com/a/main.jpg"])
         self.assertEqual(self.index(third)[0]["files"][0]["status"], "ok")
@@ -280,6 +289,9 @@ class ExportJobsTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        env = patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name})
+        env.start()
+        self.addCleanup(env.stop)
         self.path = Path(self.temp.name) / "library.sqlite3"
         Library(self.path).sync(cloud(snapshot("a", imageUrl="https://cdn.example.com/a.jpg")))
 
@@ -319,6 +331,9 @@ class LibraryExportRouteTests(unittest.TestCase):
         from subculture.web.app import app
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
+        env = patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name})
+        env.start()
+        self.addCleanup(env.stop)
         self.path = Path(self.temp.name) / "library.sqlite3"
         self.old = {k: app.config.get(k) for k in ("LIBRARY_PATH", "LIBRARY_CLOUD_DB", "TESTING")}
         self.addCleanup(lambda: app.config.update(self.old))

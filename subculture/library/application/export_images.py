@@ -1,13 +1,15 @@
-"""Download main + detail image URLs from local library items into a folder with index.json.
+"""Download main + detail image URLs from local library items into the shared image store.
 
-URLs already saved by an earlier export (see `DownloadLedger`) are skipped, not re-downloaded.
+Originals go to `$FIGURE_PROJECT_DIR/images` (see `ImageStore`); each export folder holds only
+export.json + index.json (formatVersion 4). URLs already in the shared ledger are skipped.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
+import os
 import re
+import tempfile
 import time
 import zipfile
 from dataclasses import asdict, dataclass
@@ -17,18 +19,17 @@ from pathlib import Path
 import requests
 from sqlalchemy import exists, select
 
-from subculture.library.infrastructure.download_ledger import DownloadLedger
+from subculture.library.infrastructure.image_store import ImageStore, contained_path
 from subculture.library.infrastructure.local_library import Library
 from subculture.library.infrastructure.models import CollectionItem, Item, ItemWork
 from subculture.shared.image_urls import http_url
-from subculture.shared.paths import image_export_dir
+from subculture.shared.paths import figure_project_dir, image_export_dir
 
 USER_AGENT = "SubcultureResearcher/0.1 (+https://github.com/DSeung001/subculture-researcher)"
 DEFAULT_TIMEOUT = 30
 DEFAULT_PAUSE = 0.35
-FORMAT_VERSION = 3
+FORMAT_VERSION = 4
 _SAFE_ID = re.compile(r"[^A-Za-z0-9._-]+")
-_EXT_FROM_FORMAT = {"jpeg": ".jpg", "png": ".png", "gif": ".gif", "webp": ".webp", "bmp": ".bmp"}
 
 
 class ExportError(ValueError):
@@ -106,15 +107,13 @@ def export_images(
     directory: Path | None = None,
     options: ExportOptions | None = None,
     fetch=None,
-    ledger: DownloadLedger | None = None,
     progress=None,
     should_stop=None,
 ) -> Path:
-    """Write image files + export.json + index.json under `directory` (default stamped folder).
+    """Store shared originals and write export.json + index.json under `directory`.
 
     `progress(ExportProgress)` is called after each item; `should_stop()` is checked
-    before each item. The ledger (default: `ledger.jsonl` next to the export folder)
-    lets a later export skip URLs already saved. Returns the export folder.
+    before each item. The shared image ledger skips saved URLs. Returns the export folder.
     """
     options = options or ExportOptions()
     ids = list(dict.fromkeys(item_ids))
@@ -129,11 +128,9 @@ def export_images(
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     root = Path(directory) if directory is not None else image_export_dir() / stamp
     root.mkdir(parents=True, exist_ok=True)
-    items_dir = root / "items"
-    items_dir.mkdir(exist_ok=True)
-    ledger = ledger or DownloadLedger(root.parent)
+    store = ImageStore(figure_project_dir() / "images")
     run = _ExportRun(
-        root=root, options=options, getter=fetch or _download, ledger=ledger,
+        options=options, getter=fetch or _download, store=store,
         state=ExportProgress(items_total=len(ids)),
     )
     index = []
@@ -146,7 +143,7 @@ def export_images(
         if data is None:
             index.append({"id": item_id, "error": "not_in_library", "files": []})
         else:
-            entry, fetched = run.export_one(data, items_dir, used_folders)
+            entry, fetched = run.export_one(data, used_folders)
             index.append(entry)
             if options.pause_seconds > 0 and position + 1 < len(ids) and fetched and not run.state.stop_reason:
                 time.sleep(options.pause_seconds)
@@ -188,10 +185,40 @@ def zip_export(directory: Path, zip_path: Path | None = None) -> Path:
     """Zip an export folder; default sibling `.zip` next to the folder."""
     directory = Path(directory)
     archive = Path(zip_path) if zip_path is not None else directory.with_suffix(".zip")
-    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for path in sorted(directory.rglob("*")):
-            if path.is_file():
-                zf.write(path, path.relative_to(directory).as_posix())
+    index = json.loads((directory / "index.json").read_text(encoding="utf-8"))
+    meta = json.loads((directory / "export.json").read_text(encoding="utf-8"))
+    if meta.get("formatVersion") != FORMAT_VERSION:
+        raise ExportError("Only export formatVersion 4 is supported. Re-export the images.")
+    with tempfile.NamedTemporaryFile(dir=archive.parent, prefix=".export-", delete=False) as handle:
+        temporary = Path(handle.name)
+    try:
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for entry in index:
+                for record in entry["files"]:
+                    if record["status"] not in ("ok", "skipped"):
+                        continue
+                    storage = record["storage"]
+                    if storage not in ("shared", "export"):
+                        raise ValueError("Unknown image storage")
+                    base = figure_project_dir() / "images" if storage == "shared" else directory
+                    source = contained_path(base, record["path"])
+                    key = record["key"]
+                    if not isinstance(key, str) or not key or _SAFE_ID.search(key) or key in (".", ".."):
+                        raise ValueError("Invalid sample key")
+                    if record["role"] not in ("main", "detail"):
+                        raise ValueError("Invalid image role")
+                    name = f"images/{key}_{record['role']}{source.suffix}"
+                    contained_path(directory, name)
+                    zf.write(source, name)
+                    record.update(storage="export", path=name)
+            for path in sorted(directory.rglob("*")):
+                if (path.is_file() and path not in (directory / "index.json", archive, temporary)
+                        and "images" not in path.relative_to(directory).parts):
+                    zf.write(path, path.relative_to(directory).as_posix())
+            zf.writestr("index.json", json.dumps(index, ensure_ascii=False, indent=2))
+        os.replace(temporary, archive)
+    finally:
+        temporary.unlink(missing_ok=True)
     return archive
 
 
@@ -199,18 +226,15 @@ def zip_export(directory: Path, zip_path: Path | None = None) -> Path:
 class _ExportRun:
     """Per-export state shared by every item: options, fetcher, ledger and running totals."""
 
-    root: Path
     options: ExportOptions
     getter: object
-    ledger: DownloadLedger
+    store: ImageStore
     state: ExportProgress
 
-    def export_one(self, data: dict, items_dir: Path, used_folders: set[str]) -> tuple[dict, int]:
+    def export_one(self, data: dict, used_folders: set[str]) -> tuple[dict, int]:
         """(index entry, number of network fetches) for one item."""
         item_id = data.get("_id") or ""
         folder_name = _folder_name(item_id, used_folders)
-        dest = items_dir / folder_name
-        dest.mkdir(parents=True, exist_ok=True)
         main = http_url(data.get("imageUrl"))
         details = []
         raw_details = data.get("detailImageUrls")
@@ -236,6 +260,7 @@ class _ExportRun:
                 "role": role,
                 "url": url,
                 "path": None,
+                "storage": None,
                 "status": "error",
                 "error": None,
                 "format": None,
@@ -243,10 +268,15 @@ class _ExportRun:
                 "bytes": None,
             }
             files.append(record)
-            previous = self.ledger.lookup(url) if self.options.skip_downloaded else None
+            try:
+                previous = self.store.lookup(url) if self.options.skip_downloaded else None
+            except Exception as exc:
+                record["error"] = str(exc)
+                self.state.files_error += 1
+                continue
             if previous:
                 record.update(
-                    status="skipped", previousPath=previous["path"], format=previous.get("format"),
+                    status="skipped", storage="shared", path=previous["path"], format=previous.get("format"),
                     sha256=previous.get("sha256"), bytes=previous.get("bytes"),
                 )
                 self.state.files_skipped += 1
@@ -268,17 +298,13 @@ class _ExportRun:
                 self.state.files_error += 1
                 self.state.stop_reason = "size_limit"
                 break
-            stem = f"{index:02d}_{role}"
-            ext = _EXT_FROM_FORMAT[image_format]
-            (dest / f"{stem}{ext}").write_bytes(body)
-            relative = f"items/{folder_name}/{stem}{ext}"
-            digest = hashlib.sha256(body).hexdigest()
-            record.update(
-                path=relative, status="ok", format=image_format, sha256=digest, bytes=len(body),
-            )
-            self.ledger.record(
-                url, f"{self.root.name}/{relative}", sha256=digest, size=len(body), image_format=image_format,
-            )
+            try:
+                saved = self.store.save(url, body, image_format)
+            except Exception as exc:
+                record["error"] = str(exc)
+                self.state.files_error += 1
+                continue
+            record.update(saved, storage="shared", status="ok")
             self.state.files_ok += 1
             self.state.bytes += len(body)
         entry = {

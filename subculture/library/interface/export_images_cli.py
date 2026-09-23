@@ -1,4 +1,4 @@
-"""Download product main + detail images from the local library into $FIGURE_PROJECT_DIR/exports."""
+"""Store originals in $FIGURE_PROJECT_DIR/images and records in exports."""
 
 import argparse
 
@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--ids", nargs="+", help="Item ids (CATEGORY:document_id)")
     parser.add_argument("--work-id", type=int, help="All items linked to this work")
     parser.add_argument("--collection-id", type=int, help="All items in this collection")
-    parser.add_argument("--out", help="Output directory (default: $FIGURE_PROJECT_DIR/exports/<stamp>, ~/figure_project if unset)")
+    parser.add_argument("--out", help="Export record directory; originals stay in FIGURE_PROJECT_DIR/images (default: $FIGURE_PROJECT_DIR/exports/<stamp>, ~/figure_project if unset)")
     parser.add_argument("--zip", action="store_true", help="Also write a .zip next to the folder")
     parser.add_argument("--pause", type=float, default=0.35, help="Seconds between items (default 0.35)")
     parser.add_argument(

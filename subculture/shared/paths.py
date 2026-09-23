@@ -16,5 +16,5 @@ def figure_project_dir() -> Path:
 
 
 def image_export_dir() -> Path:
-    """Image exports (`<stamp>/` folders and zips); figure-cutout reads them from here."""
+    """Export records and portable zips; originals live in figure_project_dir()/images."""
     return figure_project_dir() / "exports"
