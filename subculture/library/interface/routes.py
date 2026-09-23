@@ -14,7 +14,7 @@ from subculture.library.domain.taxonomy import FILTER_KEYS, TAXONOMIES
 from subculture.library.infrastructure.local_library import Library
 from subculture.library.infrastructure.database import SchemaError
 from subculture.shared.presentation import card_view
-from subculture.shared.paths import LOCAL_DIR
+from subculture.shared.paths import image_export_dir
 
 
 library = Blueprint("library", __name__, url_prefix="/library")
@@ -243,7 +243,7 @@ def export_item_images():
     try:
         root = export_images(
             store(), item_ids,
-            directory=LOCAL_DIR / "image_exports" / stamp,
+            directory=image_export_dir() / stamp,
         )
         archive = zip_export(root)
     except ExportError as exc:

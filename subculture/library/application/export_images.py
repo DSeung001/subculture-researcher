@@ -15,9 +15,8 @@ from sqlalchemy import exists, select
 from subculture.library.infrastructure.local_library import Library
 from subculture.library.infrastructure.models import CollectionItem, Item, ItemWork
 from subculture.shared.image_urls import http_url
-from subculture.shared.paths import LOCAL_DIR
+from subculture.shared.paths import image_export_dir
 
-EXPORT_ROOT = LOCAL_DIR / "image_exports"
 USER_AGENT = "SubcultureResearcher/0.1 (+https://github.com/DSeung001/subculture-researcher)"
 DEFAULT_TIMEOUT = 30
 DEFAULT_PAUSE = 0.35
@@ -74,7 +73,7 @@ def export_images(
     if missing and not by_id:
         raise ExportError("선택한 항목을 로컬 DB에서 찾지 못했습니다. 먼저 동기화하세요.")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    root = Path(directory) if directory is not None else EXPORT_ROOT / stamp
+    root = Path(directory) if directory is not None else image_export_dir() / stamp
     root.mkdir(parents=True, exist_ok=True)
     items_dir = root / "items"
     items_dir.mkdir(exist_ok=True)

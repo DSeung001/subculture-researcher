@@ -14,12 +14,12 @@
     │   └── 02_detail.png
     └── GOODS_7b10…e4/
         └── 00_detail.webp
-<root>.zip            # ZIP으로 받은 경우
+<root>.zip            # ZIP (웹 다운로드, 또는 CLI --zip) — <root> 옆에 생성
 ```
 
 | 요소 | 규칙 |
 |---|---|
-| `<root>` | 기본값 `.local/image_exports/<stamp>/`. `<stamp>`는 UTC `%Y%m%dT%H%M%S%fZ` (예: `20260923T041502123456Z`) |
+| `<root>` | 기본값 `$FIGURE_PROJECT_DIR/exports/<stamp>/` (미설정 시 `~/figure_project/exports/<stamp>/`, 두 저장소의 `.env`로 변경). `<stamp>`는 UTC `%Y%m%dT%H%M%S%fZ` (예: `20260923T041502123456Z`) |
 | `items/<folder>/` | 항목마다 하나. `<folder>`는 항목 id에서 `[A-Za-z0-9._-]` 밖의 문자(`:` 포함)를 `_`로 바꾼 값(비면 `item`). 한 export 안에서 겹치면 `-2`, `-3`… 접미사. 이미지가 없는 항목도 빈 폴더가 생깁니다. `not_in_library` 항목은 폴더가 없습니다 |
 | 파일 이름 | `<NN>_<role><ext>` |
 | `<NN>` | 항목 안에서 0부터 매기는 순번, 최소 두 자리(`00`, `01`, …, 100번째부터 `100`). 대표 이미지가 있으면 `00`이고 상세 이미지가 그 뒤를 잇습니다. 받기에 실패한 이미지도 번호를 차지하므로 **디스크 번호에 빈칸이 생길 수 있습니다** |

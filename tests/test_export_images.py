@@ -1,6 +1,7 @@
 """Offline checks for bulk image export (files + index.json, no real HTTP)."""
 
 import json
+import os
 import tempfile
 import unittest
 import zipfile
@@ -117,6 +118,20 @@ class ExportImagesTests(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in (root / "items" / "FIGURE_a").iterdir()), ["00_main.png"])
         self.assertEqual(json.loads((root / "export.json").read_text(encoding="utf-8"))["okCount"], 1)
 
+    def test_default_directory_follows_figure_project_dir(self):
+        from unittest.mock import patch
+        from subculture.shared.paths import figure_project_dir
+
+        with patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name}):
+            root = export_images(
+                self.lib, ["FIGURE:b"], pause_seconds=0,
+                fetch=lambda url, *, timeout: (_ for _ in ()).throw(AssertionError("no fetch")),
+            )
+        self.assertEqual(root.parent, Path(self.temp.name) / "exports")
+        self.assertTrue((root / "index.json").is_file())
+        with patch.dict(os.environ, {"FIGURE_PROJECT_DIR": ""}):
+            self.assertEqual(figure_project_dir(), Path.home() / "figure_project")
+
     def test_folder_names_unique_after_sanitizing(self):
         from subculture.library.application.export_images import _folder_name
 
@@ -169,9 +184,7 @@ class LibraryExportRouteTests(unittest.TestCase):
         from unittest.mock import patch
         with patch(
             "subculture.library.application.export_images._download", side_effect=fetch,
-        ), patch(
-            "subculture.library.interface.routes.LOCAL_DIR", Path(self.temp.name),
-        ):
+        ), patch.dict(os.environ, {"FIGURE_PROJECT_DIR": self.temp.name}):
             response = self.client.post(
                 "/library/export-images",
                 data={"item_ids": ["FIGURE:a"], "next": "/library"},
@@ -179,6 +192,9 @@ class LibraryExportRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/zip")
         self.assertTrue(response.data[:2] == b"PK")
+        exports = Path(self.temp.name) / "exports"
+        self.assertEqual(len(list(exports.glob("*/index.json"))), 1)
+        self.assertEqual(len(list(exports.glob("*.zip"))), 1)
 
 
 if __name__ == "__main__":
