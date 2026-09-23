@@ -661,6 +661,7 @@ works:
   - name: 천막의 자두가르
     aliases:
       - Jadugar
+      - 天幕のジャードゥーガル
   - name: 은혼
     aliases:
       - 銀魂
@@ -920,7 +921,6 @@ works:
     aliases:
       - 스파키즈
       - Spookiz
-      - 天幕のジャードゥーガル
   # Added from the 2026-09-23 review of unclassified items.
   - name: 진격의 거인
     aliases:
