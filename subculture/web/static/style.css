@@ -1,4 +1,5 @@
 :root {
+  --header-h: 53px;
   --bg: #f4f5f7;
   --panel: #ffffff;
   --border: #d8dde6;
@@ -35,6 +36,9 @@ body {
   padding: 10px 16px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .topnav-link {
@@ -59,8 +63,8 @@ body {
 
 .sidebar {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: var(--header-h);
+  height: calc(100vh - var(--header-h));
   overflow-y: auto;
   background: var(--panel);
   border-right: 1px solid var(--border);
@@ -506,7 +510,7 @@ h1 { margin: 0 0 4px; font-size: 26px; }
   .layout { grid-template-columns: 1fr; }
   .sidebar {
     position: sticky;
-    top: 0;
+    top: var(--header-h);
     height: auto;
     max-height: 45vh;
     z-index: 20;
@@ -586,7 +590,7 @@ dialog.modal::backdrop {
   font-size: 12px;
   color: var(--muted);
   position: sticky;
-  top: 0;
+  top: var(--header-h);
 }
 .sources-table tr:last-child td { border-bottom: none; }
 .sources-table tbody tr.source-row:nth-child(4n+3) { background: var(--bg); }

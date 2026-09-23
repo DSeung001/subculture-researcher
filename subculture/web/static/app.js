@@ -76,8 +76,8 @@ if (loadMoreEl) {
       if (!response.ok) throw new Error("load failed");
 
       const doc = new DOMParser().parseFromString(await response.text(), "text/html");
-      const currentItems = document.querySelector(".items");
-      const incomingItems = doc.querySelector(".items");
+      const currentItems = document.querySelector("#item-list");
+      const incomingItems = doc.querySelector("#item-list");
       if (!currentItems || !incomingItems) throw new Error("missing items");
 
       [...incomingItems.children].forEach((node) => {
