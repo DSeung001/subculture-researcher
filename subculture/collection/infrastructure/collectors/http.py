@@ -1,6 +1,8 @@
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
+import codecs
 import random
+import re
 import time
 
 import requests
@@ -112,5 +114,28 @@ def get_html(url: str, policy: RobotsPolicy, timeout: int = 15, source: dict | N
         if response.is_redirect:
             url = urljoin(url, response.headers["Location"])
             continue
-        return response.text, response.url
+        return response_text(response), response.url
     raise RuntimeError("페이지 리디렉션 횟수를 초과했습니다.")
+
+
+META_CHARSET_RE = re.compile(rb"""<meta[^>]+charset\s*=\s*["']?([\w.:-]+)""", re.IGNORECASE)
+# EUC-KR pages often use CP949-only syllables; cp949 is its superset.
+CHARSET_ALIASES = {"euc-kr": "cp949", "euc_kr": "cp949", "ks_c_5601-1987": "cp949"}
+
+
+def response_text(response) -> str:
+    """Decoded page text. Without a charset in Content-Type, requests assumes ISO-8859-1
+    for text/html (e.g. gundamboom's EUC-KR pages), so the page's <meta charset> wins then."""
+    if "charset" not in response.headers.get("Content-Type", "").lower():
+        match = META_CHARSET_RE.search(response.content[:4096])
+        encoding = None
+        if match:
+            name = match.group(1).decode("ascii", "ignore").lower()
+            name = CHARSET_ALIASES.get(name, name)
+            try:
+                codecs.lookup(name)
+                encoding = name
+            except LookupError:
+                pass
+        response.encoding = encoding or response.apparent_encoding
+    return response.text

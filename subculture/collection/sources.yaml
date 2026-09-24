@@ -487,6 +487,38 @@ sources:
     price_pattern: '판매가\s*:\s*([\d,]+)\s*원'
     shop: 이딴가게
 
+  # 건담붐(건프라·하비 전문샵, 자체 PHP) 예약상품. 페이지당 80건, 최신순이라 첫 2페이지(160건)만 본다.
+  # 페이지는 EUC-KR인데 Content-Type에 charset이 없어 http.get_html이 <meta charset>으로 디코딩한다. 카드(dl)의 제목·가격만 쓴다.
+  # 제목의 [예약]은 기본 예약어이고, [예약] 없이 붙는 "[10월입고예정]" 꼬리표도 예약 신호로 넣는다. 끝의 바코드 [4573…]는 걷어 낸다.
+  # 상세는 새 상품당 1회 상세이미지만 받는다(성인인증 상품은 경고 스크립트뿐이라 이미지 없음). 공통 안내 배너는 /image/sub/ 경로다.
+  - name: 건담붐 예약상품
+    type: html
+    url: https://gundamboom.com/product/reserve.php
+    link_selector: 'dd.name a'
+    title_strip_pattern: '\s*\[\d{8,14}\]\s*$'
+    region: KR
+    category: FIGURE
+    content_angle: PRICE
+    source_tier: MEDIA
+    allow_patterns:
+      - '^https://gundamboom\.com/product/detail\.html\?product_no=\d+$'
+    max_items: 160
+    page_param: page  # ?page=N (페이지당 80건)
+    max_pages: 2
+    request_delay_min_seconds: 2.0
+    request_delay_max_seconds: 4.5
+    enabled: true
+    respect_robots: true
+    list_product_mode: true
+    list_image_selector: 'dt img'  # 카드 앞 워터마크(p.waterPic) 제외
+    detail_images_selector: '.explain_dsp img'
+    image_deny_patterns:
+      - '/image/sub/'  # 방문구매 등 공통 안내 배너
+    price_pattern: '([\d,]+)\s*원'
+    preorder_words:
+      - '입고예정]'
+    shop: 건담붐
+
   # 국내 정품 피규어샵의 예약상품 목록. 장르 제한 없이 미국/일본/중국 라이선스 피규어가 섞여 있다.
   - name: 피규어프레소 예약상품
     type: html

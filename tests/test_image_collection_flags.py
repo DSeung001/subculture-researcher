@@ -45,6 +45,7 @@ class ImageCollectionFlagsTests(unittest.TestCase):
         for name in (
             "라프텔 스토어", "피규어팜 예약상품", "코믹스아트 신작 상품", "코믹스아트 입고 완료 당일 발송",
             "헤로타임 최신예약", "도키도키굿즈 신상품", "아트플렉스 전체 상품", "이딴가게 신규입고",
+            "건담붐 예약상품",
         ):
             with self.subTest(name=name):
                 self.assertEqual(image_collection_flags(by_name[name]), {"main": True, "detail": True})

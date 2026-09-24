@@ -41,6 +41,7 @@ class RequestPacingTests(unittest.TestCase):
     def test_get_html_pauses_before_each_page_fetch(self):
         response = Mock()
         response.is_redirect = False
+        response.headers = {"Content-Type": "text/html; charset=utf-8"}
         response.text = "<html></html>"
         response.url = "https://example.com/item"
         response.raise_for_status = Mock()
@@ -57,6 +58,33 @@ class RequestPacingTests(unittest.TestCase):
         get.assert_called_once()
         self.assertEqual((html, url), ("<html></html>", "https://example.com/item"))
         self.assertEqual(get.call_args.kwargs["headers"]["User-Agent"], http_mod.USER_AGENT)
+
+
+class ResponseEncodingTests(unittest.TestCase):
+    @staticmethod
+    def response(body: bytes, content_type: str):
+        import requests
+        response = requests.Response()
+        response._content = body
+        response.headers["Content-Type"] = content_type
+        response.encoding = requests.utils.get_encoding_from_headers(response.headers)
+        return response
+
+    def test_meta_charset_decodes_euc_kr_page_without_header_charset(self):
+        # gundamboom.com: "Content-Type: text/html" only, page declares euc-kr in <meta>.
+        body = '<META http-equiv="Content-Type" content="text/html; charset=euc-kr"><a>[예약] 건담 똠</a>'.encode("cp949")
+        text = http_mod.response_text(self.response(body, "text/html"))
+        self.assertIn("[예약] 건담 똠", text)
+
+    def test_header_charset_is_kept(self):
+        body = "<meta charset=euc-kr><p>예약</p>".encode("utf-8")
+        text = http_mod.response_text(self.response(body, "text/html; charset=utf-8"))
+        self.assertIn("예약", text)
+
+    def test_unknown_meta_charset_falls_back_to_detection(self):
+        body = "<meta charset=not-a-codec><p>예약 상품 안내 페이지입니다</p>".encode("utf-8")
+        text = http_mod.response_text(self.response(body, "text/html"))
+        self.assertIn("예약", text)
 
 
 if __name__ == "__main__":

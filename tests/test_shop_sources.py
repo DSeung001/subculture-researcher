@@ -31,6 +31,7 @@ DOKI = SOURCES["도키도키굿즈 신상품"]
 DAEWON = SOURCES["대원샵 상품(439827)"]
 ARTPLEX = SOURCES["아트플렉스 전체 상품"]
 ITTAN = SOURCES["이딴가게 신규입고"]
+GUNDAMBOOM = SOURCES["건담붐 예약상품"]
 NAVER_STORE_HOSTS = {"brand.naver.com", "smartstore.naver.com"}
 NAVER_STORES = [SOURCES[name] for name in ("메가하우스 몰 입고 상품", "메가하우스 몰 예약 상품", "코토부키야 몰")]
 
@@ -479,6 +480,29 @@ ITTAN_LIST = """
   <img src="//img.echosting.cafe24.com/design/skin/admin/ko_KR/ico_product_soldout.gif" alt="품절"></div></li>
 </ul>"""
 
+# gundamboom.com/product/reserve.php: each card is a <dl>; a watermark overlay precedes the photo in <dt>,
+# the name link is dd.name a, and the price reads "23,000원". Titles end in a barcode, and items
+# without the [예약] prefix carry an "[10월입고예정]" tag instead.
+GUNDAMBOOM_CARD = """
+<dl class="rightPad" title="{title}">
+ <p class="waterPic"><span class="thumb_water"><img src="https://pics2.gundamboom.kr/image/common/thumb_water.png"></span></p>
+ <dt><a href="/product/detail.html?product_no={no}"><img src="https://pics2.gundamboom.kr/web/product/small/{no}.jpg" onerror="this.src='https://pics2.gundamboom.kr/image/common/thumb_ready.gif'"></a></dt>
+ <dd class="ct"></dd>
+ <dd class="name"><a href="/product/detail.html?product_no={no}">{title}</a></dd>
+ <dd class="icon"><img src="https://pics2.gundamboom.kr/image/icon/icon_sale.gif" alt="세일"/></dd>
+ <dd class="price">
+  <p class="left"><a href="/product/detail.html?product_no={no}" target=_blank><img src="https://pics2.gundamboom.kr/image/icon/icon_win.gif" alt="새창"/></a>&nbsp; <span id="lyCartFrm{no}"><a href="javascript:;" onclick="frmCart('{no}',2)"><img src="https://pics2.gundamboom.kr/image/icon/icon_cart.gif"></a></span></p>
+  <p class="right"><span>{price}</span>원</p>
+ </dd>
+</dl>"""
+GUNDAMBOOM_LIST = '<div class="goods_list">' + "".join(
+    GUNDAMBOOM_CARD.format(no=no, title=title, price=price) for no, title, price in (
+        (2545491, "[예약] [경품피규어] 루루도 에스프레스토 이브 ", "23,000"),
+        (2545489, "[랜덤발송] 디지몬 개더링 파트1(1종랜덤발송) [10월입고예정] [4573102742506]", "17,200"),
+        (2545300, "[HG] 건담 에어리얼 [4573102630100]", "19,800"),
+    )
+) + "</div>"
+
 
 class ArtplexListTests(unittest.TestCase):
     def items(self):
@@ -547,6 +571,53 @@ class IttanstoreListTests(unittest.TestCase):
         self.assertTrue(ITTAN["list_product_mode"])
         self.assertFalse(ITTAN.get("product_mode"))
         self.assertEqual(ITTAN["category"], "FIGURE")
+
+
+class GundamboomListTests(unittest.TestCase):
+    def items(self):
+        return list(extract_links(GUNDAMBOOM_LIST, GUNDAMBOOM["url"], GUNDAMBOOM))
+
+    def test_name_links_give_product_urls_titles_without_barcodes_and_card_photos(self):
+        items = self.items()
+        self.assertEqual([item["url"] for item in items], [
+            f"https://gundamboom.com/product/detail.html?product_no={n}" for n in (2545491, 2545489, 2545300)])
+        self.assertEqual(items[0]["title"], "[예약] [경품피규어] 루루도 에스프레스토 이브")
+        self.assertEqual(items[1]["title"], "[랜덤발송] 디지몬 개더링 파트1(1종랜덤발송) [10월입고예정]")
+        self.assertEqual(items[2]["title"], "[HG] 건담 에어리얼")
+        self.assertEqual(items[0]["imageUrl"], "https://pics2.gundamboom.kr/web/product/small/2545491.jpg")  # not the watermark
+
+    def test_price_and_preorder_status_come_from_the_card(self):
+        first, second, third = self.items()
+        self.assertEqual((first["price"], second["price"], third["price"]), (23000, 17200, 19800))
+        self.assertEqual(first["saleStatus"], "PREORDER")  # [예약]
+        self.assertEqual(second["saleStatus"], "PREORDER")  # [10월입고예정]
+        self.assertEqual(third["saleStatus"], "IN_STOCK")
+        self.assertEqual(first["shop"], "건담붐")
+
+    def test_source_is_an_automatic_list_only_robots_checked_html(self):
+        self.assertIn(GUNDAMBOOM, automatic_sources())
+        self.assertTrue(GUNDAMBOOM["respect_robots"])
+        self.assertTrue(GUNDAMBOOM["list_product_mode"])
+        self.assertFalse(GUNDAMBOOM.get("product_mode"))
+        self.assertEqual(GUNDAMBOOM["category"], "FIGURE")
+
+    def test_second_page_uses_the_page_param(self):
+        pages = {}
+
+        def fake_get_html(url, policy, timeout=15, source=None):
+            pages.setdefault(url, None)
+            if "page=2" in url:
+                return GUNDAMBOOM_CARD.format(no=2545000, title="[예약] RG 뉴 건담", price="45,000"), url
+            if "product_no" in url:
+                return "<script>alert('19세이하 성인인증을 받으셔야 합니다')</script>", url  # age gate
+            return GUNDAMBOOM_LIST, url
+
+        with patch("subculture.collection.infrastructure.collectors.html_links.get_html", side_effect=fake_get_html),              patch("subculture.collection.infrastructure.collectors.html_links.RobotsPolicy"):
+            items = list(html_items(GUNDAMBOOM))
+        self.assertEqual(len(items), 4)
+        self.assertIn("https://gundamboom.com/product/reserve.php?page=2", pages)
+        self.assertEqual(items[0]["detailImageUrls"], [])  # age-gated detail just has no gallery
+        self.assertEqual(items[0]["_errors"], [])
 
 
 class HerotimeListTests(unittest.TestCase):
@@ -837,6 +908,13 @@ class DetailGallerySelectorTests(unittest.TestCase):
             with self.subTest(source=source["name"]):
                 self.assertEqual(self.gallery(source, html, f"https://{host}/product/detail.html"),
                                  [f"https://{host}/web/upload/NNEditor/20260922/a.png"])
+
+    def test_gundamboom_detail_body_without_shared_banners(self):
+        html = """<p><center><img src="https://pics2.gundamboom.kr/image/sub/reserve3.jpg"></center></p>
+          <div class="explain_dsp"><img src="https://pics2.gundamboom.kr/web/upload/2026/0914/a.jpg">
+          <p class="mgt20 mgb50"><img src="https://pics2.gundamboom.kr/image/sub/bottom.jpg" alt="방문구매안내"/></p></div>"""
+        self.assertEqual(self.gallery(GUNDAMBOOM, html, "https://gundamboom.com/product/detail.html"),
+                         ["https://pics2.gundamboom.kr/web/upload/2026/0914/a.jpg"])
 
 
 if __name__ == "__main__":
