@@ -549,6 +549,58 @@ class KeywordMatchTests(unittest.TestCase):
             self.assertEqual(linked("에일리언 (영화)"), set())
             self.assertEqual(linked("에일리언 스테이지"), {"FIGURE:stage"})
 
+    def test_catalog_links_limbus_and_japanese_titled_anime_without_false_hits(self):
+        from subculture.library.application import seed_works
+        titles = {
+            "limbus": "【굿즈-키홀더】 Limbus Company 아크릴 키홀더 G 히스클리프",
+            "hanakimi": "佐野と踊りたいなあ｜TVアニメ「#花ざかりの君たちへ」第2期 #HanaKimi #anime",
+            "arya": "[입고완료] 테니톨톨 가끔씩툭하고러시아어로부끄러워하는옆자리의아랴양 젖소 코스튬 ver.",
+            "multi": "『グレンラガン』『ノゲノラ』『着せ恋』からヨーコや白、喜多川海夢のスタチューが発表！",
+            "original": "[예약판매] 네이티브 사랑과 번영의 천사 프리엘 by 마타로 핑크캣 0432",
+        }
+        docs = [
+            SimpleNamespace(
+                id=key,
+                reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
+                to_dict=lambda key=key, title=title: {
+                    "url": f"https://s.example.com/{key}", "title": title, "source": "따빼몰"},
+            )
+            for key, title in titles.items()
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            library = Library(Path(directory) / "library.sqlite3")
+            cloud = Mock()
+            cloud.collection_group.return_value.stream.return_value = iter(docs)
+            library.sync(cloud)
+            seed_works.seed(library)
+            works = {w["name"]: w["id"] for w in library.terms()["works"]}
+
+            def linked(name):
+                rows, _ = library.items({"works": str(works[name])})
+                return {row["id"] for row in rows}
+
+            self.assertEqual(linked("림버스 컴퍼니"), {"FIGURE:limbus"})
+            self.assertEqual(linked("아름다운 그대에게"), {"FIGURE:hanakimi"})
+            self.assertEqual(linked("가끔씩 툭하고 러시아어로 부끄러워하는 옆자리의 아랴 양"), {"FIGURE:arya"})
+            self.assertEqual(linked("천원돌파 그렌라간"), {"FIGURE:multi"})
+            self.assertEqual(linked("노 게임 노 라이프"), {"FIGURE:multi"})
+            self.assertEqual(linked("그 비스크 돌은 사랑을 한다"), {"FIGURE:multi"})
+            self.assertEqual(library.unclassified_report()["total"], 1)
+
+    def test_catalog_aliases_are_plain_strings(self):
+        from subculture.library.application import seed_works
+        for entry in seed_works.load_catalog():
+            for alias in entry.get("aliases") or []:
+                self.assertIsInstance(alias, str, entry["name"])
+
+    def test_unquoted_colon_alias_is_rejected_instead_of_stored_as_a_dict(self):
+        from subculture.library.application import seed_works
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "catalog.yaml"
+            path.write_text("works:\n  - name: 퍼니싱\n    aliases:\n      - Punishing: Gray Raven\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "따옴표"):
+                seed_works.load_catalog(path)
+
     def test_seed_sync_flag_syncs_the_inbox_before_linking(self):
         from subculture.library.application import seed_works
         with tempfile.TemporaryDirectory() as directory:

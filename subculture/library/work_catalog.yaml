@@ -46,6 +46,7 @@ works:
     aliases:
       - 幼女戦記
       - Youjo Senki
+      - ようじょしぇんき
   - name: 그랑블루
     aliases:
       - ぐらんぶる
@@ -126,6 +127,7 @@ works:
   - name: 부족하나 악녀입니다만
     aliases:
       - ふつつかな悪女ではございますが
+      - ふつつかな悪女
       - 무능한 악녀
       - 나는 무능한 악녀지만
   # Product / game series recurring in FIGURE·GOODS titles
@@ -376,7 +378,7 @@ works:
       - 퍼니싱 그레이 레이븐
       - 퍼니싱그레이레이븐
       - Punishing Gray Raven
-      - Punishing: Gray Raven
+      - "Punishing: Gray Raven"
       - PGR
   - name: "워해머 40,000"
     aliases:
@@ -413,6 +415,7 @@ works:
       - Fate/stay night
       - Fate/kaleid
       - FGO
+      - 페그오
       - 프리즈마 일리야
       - 프리즈마이리야
       - 프리즈마 이리야
@@ -445,6 +448,7 @@ works:
       - 비스크 돌
       - My Dress-Up Darling
       - その着せ替え人形は恋をする
+      - 着せ恋
   - name: 오버로드
     aliases:
       - Overlord
@@ -1008,6 +1012,7 @@ works:
   - name: 가끔씩 툭하고 러시아어로 부끄러워하는 옆자리의 아랴 양
     aliases:
       - 러시아어로 부끄러워하는
+      - 러시아어로부끄러워하는
       - ロシア語でデレる
   - name: 걸즈 밴드 크라이
     aliases:
@@ -1150,6 +1155,7 @@ works:
   - name: 코테츠쿤
     aliases:
       - コテツくん
+      - こてつくん
   - name: FX 전사 쿠루미짱
     aliases:
       - FX戦士くるみちゃん
@@ -1171,3 +1177,101 @@ works:
   - name: LINE FRIENDS
     aliases:
       - 라인프렌즈
+  - name: 림버스 컴퍼니
+    aliases:
+      - Limbus Company
+      - リンバスカンパニー
+  - name: 여학교의 별
+    aliases:
+      - 女学校の星
+  - name: "NU:카니발"
+    aliases:
+      - "NU: Carnival"
+      - "NU:カーニバル"
+  - name: 엘프마을
+    aliases:
+      - 엘프 마을
+      - エルフ村
+  - name: 천원돌파 그렌라간
+    aliases:
+      - 그렌라간
+      - グレンラガン
+      - Gurren Lagann
+  - name: 노 게임 노 라이프
+    aliases:
+      - ノーゲーム・ノーライフ
+      - ノゲノラ
+      - No Game No Life
+  - name: 사사키와 피짱
+    aliases:
+      - 佐々木とピーちゃん
+      - ささピー
+      - 사사피
+  - name: 아름다운 그대에게
+    aliases:
+      - 花ざかりの君たちへ
+      - HanaKimi
+      - 하나키미
+  - name: 전격 데이지
+    aliases:
+      - 電撃デイジー
+      - 덴게키 데이지
+  - name: 風を継ぐもの
+  - name: 월화국 기의전
+    aliases:
+      - 月華国奇医伝
+  - name: 책벌레의 하극상
+    aliases:
+      - 本好きの下剋上
+  - name: 주식회사 마지르미에
+    aliases:
+      - 株式会社マジルミエ
+      - マジルミエ
+  - name: 얼음 성벽
+    aliases:
+      - 氷の城壁
+  - name: 전생했더니 검이었습니다
+    aliases:
+      - 転生したら剣でした
+  - name: 야생의 라스트 보스가 나타났다!
+    aliases:
+      - 野生のラスボスが現れた
+  - name: 트위스티드 원더랜드
+    aliases:
+      - ツイステッドワンダーランド
+      - ツイステ
+      - Twisted-Wonderland
+  - name: 그노시아
+    aliases:
+      - グノーシア
+      - Gnosia
+  - name: 바키
+    aliases:
+      - 刃牙
+      - Baki
+  - name: 겨울왕국
+    aliases:
+      - アナと雪の女王
+      - 안나와 눈의 여왕
+  - name: 마신영웅전 와타루
+    aliases:
+      - 魔神英雄伝ワタル
+  - name: 마동왕 그랑조트
+    aliases:
+      - 魔動王グランゾート
+  - name: 우주의 기사 테카맨 블레이드
+    aliases:
+      - 테카맨
+      - テッカマン
+  - name: 메다로트
+    aliases:
+      - メダロット
+      - 메달롯
+      - Medarot
+  - name: DC 코믹스
+    aliases:
+      - 배트맨
+      - バットマン
+      - Batman
+  - name: 애니모
+  - name: 흔한남매
