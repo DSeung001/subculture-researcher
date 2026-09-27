@@ -8,3 +8,4 @@ service-account*.json
 .DS_Store
 .local/
 .claude/worktrees/
+.idea/

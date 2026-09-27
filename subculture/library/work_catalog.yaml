@@ -101,6 +101,7 @@ works:
   - name: 신님 학교의 낙제생
     aliases:
       - 神さま学校の落ちこぼれ
+      - 신령님, 낙제 위기
   - name: 해골기사님
     aliases:
       - 骸骨騎士様
@@ -161,11 +162,16 @@ works:
     aliases:
       - Zenless Zone Zero
       - ZZZ
+      - ゼンゼロ
+      - 젠제로
+      - Zen Zero
   - name: 동방 프로젝트
     aliases:
       - 동방프로젝트
       - Touhou
       - 東方
+      - 魔理沙
+      - 마리사
   - name: 우마무스메 프리티 더비
     aliases:
       - 우마무스메
@@ -249,6 +255,7 @@ works:
     aliases:
       - 学園アイドルマスター
       - Gakuen Idolmaster
+      - 藤田ことね
   # Gaps from unclassified product / Laftel titles
   - name: 지박소년 하나코 군
     aliases:
@@ -287,6 +294,7 @@ works:
       - 블루아카이브
       - Blue Archive
       - ブルーアーカイブ
+      - ブルアカ
   - name: 귀멸의 칼날
     aliases:
       - 귀멸의칼날
@@ -315,6 +323,9 @@ works:
       - Yu-Gi-Oh
       - Yu-Gi-Oh!
       - 유희왕 듀얼 몬스터즈 GX
+      - 高橋和希
+      - Kazuki Takahashi
+      - 城之内
   - name: 마징가 Z
     aliases:
       - 마징가Z
@@ -369,6 +380,12 @@ works:
       - 아주르레인
       - Azur Lane
       - アズールレーン
+      - 春の暁に鳳歌う
+      - 大鳳
+      - セントルイス
+      - 세인트루이스
+      - 雅夢の白浜
+      - エーギル
   - name: 명일방주
     aliases:
       - Arknights
@@ -405,6 +422,12 @@ works:
       - 건담
       - Gundam
       - 機動戦士ガンダム
+      - 건프라
+      - ガンプラ
+      - 해서웨이
+      - ハサウェイ
+      - 쿠샤트리야
+      - クシャトリヤ
   - name: Fate 시리즈
     aliases:
       - 페이트
@@ -419,6 +442,11 @@ works:
       - 프리즈마 일리야
       - 프리즈마이리야
       - 프리즈마 이리야
+      - 오키타 소지
+      - 沖田
+      - モルガン
+      - 애비게일 윌리엄스
+      - アビゲイル
   - name: 치이카와
     aliases:
       - 치카와
@@ -483,6 +511,8 @@ works:
       - 에반게리온
       - Evangelion
       - 新世紀エヴァンゲリオン
+      - はまエヴァ
+      - HAMA EVA
   - name: 소녀전선
     aliases:
       - Girls' Frontline
@@ -1275,3 +1305,361 @@ works:
       - Batman
   - name: 애니모
   - name: 흔한남매
+  # Gaps from unclassified titles (2026-09-27)
+  - name: 주홍색 가면
+    aliases:
+      - 朱色の仮面
+      - 주홍빛 가면
+  - name: 매리지 톡신
+    aliases:
+      - Marriage Toxin
+      - マリッジトキシン
+  - name: 반딧불이의 혼례
+    aliases:
+      - ホタルの嫁入り
+      - 반딧불이 결혼
+  - name: MAO
+  - name: 바보의 밤
+    aliases:
+      - フールナイト
+      - Fool Night
+  - name: 월드 이즈 댄싱
+    aliases:
+      - ワールド イズ ダンシング
+  - name: 마법사의 밤
+    aliases:
+      - 魔法使いの夜
+      - 마술사의 밤
+  - name: 낙원 추방
+    aliases:
+      - 楽園追放
+  - name: 간바레 나카무라 군
+    aliases:
+      - ガンバレ中村くん
+      - 간바레 나카무라
+  - name: 버텍스 포스
+    aliases:
+      - バーテックスフォース
+      - Vertex Force
+  - name: 마지컬★익스플로러
+    aliases:
+      - マジカル★エクスプローラー
+      - 마법의★ 탐험가
+  - name: 브레스
+    aliases:
+      - ブレス
+  - name: 유유식
+    aliases:
+      - ゆゆ式
+      - 유유시키
+  - name: 이와모토 선배의 추천
+    aliases:
+      - 岩元先輩ノ推薦
+      - 이와모토 센파노 추천
+  - name: 용자의 서정가
+    aliases:
+      - 勇者の抒情歌
+      - 용자의 가사
+  - name: 사큐리파이스
+    aliases:
+      - さきゅりふぁいす
+      - 사큐 후유수
+  - name: 유능한 고양이는 오늘도 우울해
+    aliases:
+      - デキる猫は今日も憂鬱
+  - name: 이세계의 판단은 사축에게 달려 있다
+    aliases:
+      - 異世界の沙汰は社畜次第
+  - name: 쾌쾌반점
+    aliases:
+      - 楽楽飯店
+      - 라쿠라쿠 호텔
+  - name: 히메노짱에게 사랑은 아직 일러
+    aliases:
+      - 姫乃ちゃんに恋はまだ早い
+      - 히메노짱
+  - name: 아타신치
+    aliases:
+      - あたしンち
+  - name: 맛의 신보
+    aliases:
+      - 美味しんぼ
+  - name: 미남고교 지구방위부
+    aliases:
+      - 美男高校地球防衛部
+      - 비조고등학교 지구방위부
+  - name: 비밀결사 매의 발톱
+    aliases:
+      - 秘密結社 鷹の爪
+      - 鷹の爪
+  - name: 은아전설
+    aliases:
+      - 銀牙伝説
+  - name: 상처투성이 성녀에게 보복을 담아
+    aliases:
+      - 傷だらけ聖女より報復をこめて
+      - 상처입은 성자
+  - name: "전생 고블린인데 질문 있어?"
+    aliases:
+      - 転生ゴブリンだけど質問ある？
+      - 환생 도깨비인데
+  - name: 빌려준 마력은 리볼빙으로 강제 징수
+    aliases:
+      - 貸した魔力は
+      - 사순절 마력
+  - name: 무자각 성녀는 오늘도 무의식적으로 힘을 흘린다
+    aliases:
+      - 無自覚聖女は今日も無意識に力を垂れ流す
+      - 무의식의 성녀
+  - name: 약기 MAX 영애인데 유능한 약혼자님의 내기에 뛰어들어 버렸다
+    aliases:
+      - 弱気MAX令嬢
+      - 맥스 레이디
+  - name: 건 소드
+    aliases:
+      - ガン×ソード
+      - Gun x Sword
+  - name: 실바니아 패밀리
+    aliases:
+      - シルバニアファミリー
+      - Sylvanian Families
+  - name: 전투요정 유키카제
+    aliases:
+      - 戦闘妖精雪風
+      - 배틀 페어리 유키카제
+      - 유키카제
+      - 雪風
+  - name: 진 게터로보
+    aliases:
+      - 真ゲッター
+      - Shin Getter
+  - name: 그렌다이저
+    aliases:
+      - グレンダイザー
+      - 글렌다이저
+  - name: 철완 아톰
+    aliases:
+      - 鉄腕アトム
+      - 아이언 암 아톰
+  - name: R-TYPE
+  - name: 코드 기아스
+    aliases:
+      - コードギアス
+      - Code Geass
+  - name: 유미아의 아틀리에
+    aliases:
+      - ユミア
+      - ユミリア
+      - 유미아
+      - Yumia
+      - Yumilia
+  - name: 소피의 아틀리에
+    aliases:
+      - ソフィーのアトリエ
+      - ノイエンミュラー
+      - 소피 노이뮐러
+  - name: 고질라
+    aliases:
+      - ゴジラ
+      - Godzilla
+  - name: 메탈 슬러그
+    aliases:
+      - メタルスラッグ
+      - Metal Slug
+  - name: 드림 클럽
+    aliases:
+      - ドリームクラブ
+  - name: 에이스 컴뱃
+    aliases:
+      - エースコンバット
+      - Ace Combat
+  - name: 신세기 GPX 사이버 포뮬러
+    aliases:
+      - サイバーフォーミュラ
+      - 사이버 포뮬러
+  - name: 젤다의 전설
+    aliases:
+      - ゼルダの伝説
+      - The Legend of Zelda
+  - name: 성전사 던바인
+    aliases:
+      - ダンバイン
+      - 던바인
+  - name: 철냄비의 잔!
+    aliases:
+      - 鉄鍋のジャン
+      - 철 항아리의 얀
+  - name: 야마토나데시코 칠변화
+    aliases:
+      - ヤマトナデシコ七変化
+      - Yamatona Deshiko
+  - name: 악마성 드라큘라
+    aliases:
+      - 悪魔城ドラキュラ
+      - Castlevania
+  - name: 핑크 하트 잼
+    aliases:
+      - ピンクハートジャム
+      - 핑크 하트잼
+  - name: 블루버드 리더
+    aliases:
+      - ブルーバードリーダー
+  - name: 케무리
+    aliases:
+      - KEMURI
+      - ケムリ
+  - name: 루리코라는 여자
+    aliases:
+      - 瑠璃子という女
+  - name: 재활용 인간
+    aliases:
+      - リサイクル人間
+  - name: 오다키리 가문
+    aliases:
+      - 小田切家
+      - 오다키리야
+  - name: 두근거림의 교전
+    aliases:
+      - ときめきの教典
+  - name: 오후 4시. 투명하고 때로는 성우
+    aliases:
+      - 午後4時。透明、ときどき声優
+      - 투명하고 때로는 성우
+  - name: 직장의 잘생긴 영업사원은 이상적인 주인님
+    aliases:
+      - 職場のイケメン営業は理想の飼い主様
+  - name: 기숙사의 잘생긴 동료는 최고의 플레이메이트
+    aliases:
+      - 寮舎のイケメン同僚は至高のプレイメイト
+  - name: 얀데레 최강 마법사와 추방 악역 영애의 행복한 감금 생활
+    aliases:
+      - ヤンデレ最強魔法使い
+      - 얀데레의 가장 강한 마법사
+  - name: 당신에게서 온 첫 편지는 이혼 신고서였습니다
+    aliases:
+      - あなたからの初めての手紙は離婚届でした
+      - 첫 번째 편지는 이혼 통지
+  - name: 아름다운 왕은 바케모노 왕비를 사랑한다
+    aliases:
+      - 美しき王はバケモノ王妃を愛す
+      - 바케모노 여왕
+  - name: 심슨 가족
+    aliases:
+      - The Simpsons
+      - シンプソンズ
+  - name: 암살교실
+    aliases:
+      - 暗殺教室
+  - name: 마인탐정 네우로
+    aliases:
+      - ネウロ
+  - name: 도망치면 와카즈쿠리
+    aliases:
+      - 逃げ若
+      - 逃げ上手の若君
+  - name: 몬치치
+    aliases:
+      - モンチッチ
+      - Monchhichi
+  - name: 아랑전설
+    aliases:
+      - 餓狼伝説
+      - 餓狼
+      - 不知火
+      - Fatal Fury
+      - Garou
+  - name: 트랜스포머
+    aliases:
+      - トランスフォーマー
+      - Transformers
+  - name: 토미카
+    aliases:
+      - トミカ
+  - name: 미니사구
+    aliases:
+      - ミニ四駆
+      - 미니 4륜구동
+  - name: 골고 13
+    aliases:
+      - ゴルゴ13
+      - Golgo 13
+  - name: 이웃집 천사님 때문에 어느샌가 인간적으로 타락했습니다
+    aliases:
+      - 椎名真昼
+      - お隣の天使様
+  - name: 패배 히로인이 너무 많아!
+    aliases:
+      - 負けヒロインが多すぎる
+      - 八奈見
+      - 야나미
+  - name: 프로젝트 세카이
+    aliases:
+      - プロセカ
+      - ワンダーランズ×ショウタイム
+      - 원더랜드 x 쇼타임
+      - わんだぴょい
+  - name: 내가 인기 있어서 어쩌란 건데
+    aliases:
+      - 私がモテてどうすんだ
+      - 인기 어떡하지
+  - name: 아름다운 너에게 죽고 싶어.
+    aliases:
+      - 綺麗な君に殺されたい
+  - name: 애일과 신부
+    aliases:
+      - 愛日と花嫁
+      - 러브 데이 앤 브라이드
+  - name: 하이칸후게키
+    aliases:
+      - 灰仭巫覡
+      - 하이칸 시칸
+  - name: 우주형사 가반
+    aliases:
+      - 超ギャバン
+      - 슈퍼 가반
+      - ギャバン
+  - name: 쾌수 부스카
+    aliases:
+      - 快獣ブースカ
+      - ブースカ
+  - name: 데즈카 오사무
+    aliases:
+      - 手塚治虫
+  - name: 메타모르버스
+    aliases:
+      - メタモルバース
+  - name: 루덴스
+    aliases:
+      - ルーデンス
+  - name: 매트릭스
+    aliases:
+      - マトリックス
+  - name: LEGO
+    aliases:
+      - レゴ
+  - name: 괴물과 유령
+    aliases:
+      - モンスターアンドゴースト
+  - name: 스크랩 북
+    aliases:
+      - すくらっぷ・ブック
+  - name: 다크 어드벤트
+    aliases:
+      - ダークアドヴェント
+  - name: 알카나디아
+    aliases:
+      - アルカナディア
+  - name: 발할라 서바이벌
+  - name: 아키에이지
+    aliases:
+      - 아키에이지 워
+  - name: 카오스 제로 나이트메어
+  - name: "솔: 인챈트"
+  - name: 도깨비의세계
+  - name: 아스오라
+  - name: "오딘: 발할라 라이징"
+    aliases:
+      - 오딘
+  - name: 스마일게이트 이클립스
+    aliases:
+      - MMO 이클립스
