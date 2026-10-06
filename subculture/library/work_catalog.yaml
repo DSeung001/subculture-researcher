@@ -55,6 +55,7 @@ works:
     aliases:
       - 时光代理人
       - Link Click
+      - 시광대리인
   - name: 부치기레 영애
     aliases:
       - ブチ切れ令嬢は報復を誓いました
@@ -82,6 +83,7 @@ works:
   - name: 네가 죽을 때까지 사랑하고 싶어
     aliases:
       - きみが死ぬまで恋をしたい
+      - 네가죽을때까지사랑하고싶어
   - name: 대아리였습니다
     aliases:
       - 対ありでした
@@ -121,6 +123,7 @@ works:
   - name: 정반대인 너와 나
     aliases:
       - 正反対な君と僕
+      - 정반대의 너와 나
   - name: 슈퍼 뒤에서 담배를 피는 두 사람
     aliases:
       - スーパーの裏でヤニ吸うふたり
@@ -161,6 +164,7 @@ works:
   - name: 젠레스 존 제로
     aliases:
       - Zenless Zone Zero
+      - Xenless Zone Zero
       - ZZZ
       - ゼンゼロ
       - 젠제로
@@ -172,6 +176,8 @@ works:
       - 東方
       - 魔理沙
       - 마리사
+      - 동방로스트워드
+      - 동방 로스트워드
   - name: 우마무스메 프리티 더비
     aliases:
       - 우마무스메
@@ -196,6 +202,9 @@ works:
       - Vocaloid
       - 하츠네미쿠
       - 카사네 테토
+      - 카사네테토
+      - 사쿠라 미쿠
+      - Sakura Miku
   - name: 체인소맨
     aliases:
       - 체인소 맨
@@ -213,6 +222,7 @@ works:
       - 승리의여신 니케
       - Goddess of Victory Nikke
       - NIKKE
+      - 니케
   - name: NEEDY GIRL OVERDOSE
     aliases:
       - 니디 걸 오버도즈
@@ -256,6 +266,8 @@ works:
       - 学園アイドルマスター
       - Gakuen Idolmaster
       - 藤田ことね
+      - 학원 아이돌 마스터
+      - 학원아이돌마스터
   # Gaps from unclassified product / Laftel titles
   - name: 지박소년 하나코 군
     aliases:
@@ -289,12 +301,15 @@ works:
     aliases:
       - 超かぐや姫
       - 가구야 공주
+      - 초가구야공주
+      - 가구야공주
   - name: 블루 아카이브
     aliases:
       - 블루아카이브
       - Blue Archive
       - ブルーアーカイブ
       - ブルアカ
+      - 블루아카
   - name: 귀멸의 칼날
     aliases:
       - 귀멸의칼날
@@ -374,6 +389,7 @@ works:
     aliases:
       - 薬屋のひとりごと
       - The Apothecary Diaries
+      - 약사의혼잣말
   # Gaps from unmatched shop / AniList / Laftel titles (2026-09)
   - name: 벽람항로
     aliases:
@@ -382,6 +398,8 @@ works:
       - アズールレーン
       - 春の暁に鳳歌う
       - 大鳳
+      - 브레머턴
+      - ブレマートン
       - セントルイス
       - 세인트루이스
       - 雅夢の白浜
@@ -424,6 +442,8 @@ works:
       - 機動戦士ガンダム
       - 건프라
       - ガンプラ
+      - 전용 자쿠
+      - 양산형 자쿠
       - 해서웨이
       - ハサウェイ
       - 쿠샤트리야
@@ -447,6 +467,7 @@ works:
       - モルガン
       - 애비게일 윌리엄스
       - アビゲイル
+      - Fate
   - name: 치이카와
     aliases:
       - 치카와
@@ -528,6 +549,7 @@ works:
     aliases:
       - Monster Hunter
       - モンスターハンター
+      - 몬스터헌터
   - name: 나 혼자만 레벨업
     aliases:
       - 나혼자만레벨업
@@ -580,6 +602,7 @@ works:
     aliases:
       - Zero no Tsukaima
       - ゼロの使い魔
+      - 제로의사역마
   - name: 헬테이커
     aliases:
       - Helltaker
@@ -660,6 +683,8 @@ works:
   - name: 마법에 걸렸습니다! 이루마군
     aliases:
       - 이루마군
+      - 이루마 군
+      - 악마에 입문했습니다
       - Welcome to Demon School Iruma-kun
       - 魔入りました！入間くん
   - name: 오니 신부
@@ -799,6 +824,7 @@ works:
       - 카드캡터사쿠라
       - カードキャプターさくら
       - Cardcaptor Sakura
+      - 木之本桜
   - name: 아오아시
     aliases:
       - アオアシ
@@ -812,6 +838,7 @@ works:
     aliases:
       - 装甲騎兵ボトムズ
       - Armored Trooper Votoms
+      - 장갑기병보톰즈
   - name: 메이드 인 어비스
     aliases:
       - 메이드인어비스
@@ -822,6 +849,7 @@ works:
     aliases:
       - 스파이 패밀리
       - SPY FAMILY
+      - "SPY x FAMILY"
   - name: 도쿄 리벤저스
     aliases:
       - 도쿄리벤저스
@@ -848,6 +876,7 @@ works:
     aliases:
       - ウルトラマン
       - Ultraman
+      - 고모라
   - name: 에픽세븐
     aliases:
       - Epic Seven
@@ -855,6 +884,7 @@ works:
   - name: 크레용 신짱
     aliases:
       - 짱구는 못말려
+      - 짱구는못말려
       - クレヨンしんちゃん
       - Crayon Shin-chan
   - name: 이니셜D
@@ -927,6 +957,7 @@ works:
       - 프레임 암즈 걸
       - フレームアームズ・ガール
       - Frame Arms Girl
+      - 프레임암즈걸
   - name: 마크로스
     aliases:
       - マクロス
@@ -937,6 +968,7 @@ works:
       - 세인트 세이야 황금성투사성의
       - 聖闘士星矢
       - Saint Seiya
+      - Saint Clothed Myth
   - name: 킨니쿠맨
     aliases:
       - キン肉マン
@@ -1073,6 +1105,7 @@ works:
       - 스파이더맨
       - Spider-Man
       - 울버린
+      - 스파이더그웬
   - name: 에일리언 (영화)
     aliases:
       - 파워로더
@@ -1092,6 +1125,7 @@ works:
       - パトレイバー
       - Patlabor
       - Patraber
+      - SIDE LABOR
   - name: 데몬 엑스 마키나
     aliases:
       - Daemon X Machina
@@ -1116,6 +1150,7 @@ works:
     aliases:
       - ドラゴンボール
       - Dragon Ball
+      - 초사이어인
   - name: 메달리스트
     aliases:
       - メダリスト
@@ -1232,6 +1267,7 @@ works:
       - ノーゲーム・ノーライフ
       - ノゲノラ
       - No Game No Life
+      - 노게임노라이프
   - name: 사사키와 피짱
     aliases:
       - 佐々木とピーちゃん
@@ -1289,6 +1325,7 @@ works:
   - name: 마동왕 그랑조트
     aliases:
       - 魔動王グランゾート
+      - 마동왕그랑조트
   - name: 우주의 기사 테카맨 블레이드
     aliases:
       - 테카맨
@@ -1333,6 +1370,7 @@ works:
   - name: 낙원 추방
     aliases:
       - 楽園追放
+      - 낙원추방
   - name: 간바레 나카무라 군
     aliases:
       - ガンバレ中村くん
@@ -1419,6 +1457,7 @@ works:
     aliases:
       - ガン×ソード
       - Gun x Sword
+      - 건X스워드
   - name: 실바니아 패밀리
     aliases:
       - シルバニアファミリー
@@ -1433,6 +1472,8 @@ works:
     aliases:
       - 真ゲッター
       - Shin Getter
+      - 진겟타로보
+      - 겟타로보
   - name: 그렌다이저
     aliases:
       - グレンダイザー
@@ -1458,6 +1499,7 @@ works:
       - ソフィーのアトリエ
       - ノイエンミュラー
       - 소피 노이뮐러
+      - 소피의아틀리에
   - name: 고질라
     aliases:
       - ゴジラ
@@ -1481,10 +1523,13 @@ works:
     aliases:
       - ゼルダの伝説
       - The Legend of Zelda
+      - 젤다의전설
   - name: 성전사 던바인
     aliases:
       - ダンバイン
       - 던바인
+      - 단바인
+      - 성전사단바인
   - name: 철냄비의 잔!
     aliases:
       - 鉄鍋のジャン
@@ -1649,6 +1694,7 @@ works:
   - name: 알카나디아
     aliases:
       - アルカナディア
+      - 아르카나디아
   - name: 발할라 서바이벌
   - name: 아키에이지
     aliases:
@@ -1663,3 +1709,305 @@ works:
   - name: 스마일게이트 이클립스
     aliases:
       - MMO 이클립스
+      - 이클립스
+  # Gaps from unclassified shop, goods, and anime titles (2026-10)
+  - name: 트라이건
+    aliases:
+      - Trigun
+      - トライガン
+      - 트라이건스타게이즈
+  - name: 영웅전설
+    aliases:
+      - 영웅전설 하늘의 궤적
+      - 하늘의궤적
+      - 궤적시리즈
+      - The Legend of Heroes
+  - name: 닌자 거북이
+    aliases:
+      - 닌자거북이
+      - Teenage Mutant Ninja Turtles
+      - TMNT
+  - name: 식극의 소마
+    aliases:
+      - 식극의소마
+      - 食戟のソーマ
+      - Food Wars
+  - name: 전설의 용자 다간
+    aliases:
+      - 전설의용자다간
+      - 伝説の勇者ダ・ガーン
+  - name: 드라마티컬 머더
+    aliases:
+      - 드라마티컬머더
+      - DRAMAtical Murder
+      - ドラマティカルマーダー
+  - name: 블러드본
+    aliases:
+      - Bloodborne
+      - ブラッドボーン
+  - name: 두근두근 문예부
+    aliases:
+      - 두근두근문예부
+      - Doki Doki Literature Club
+  - name: 슈타인즈 게이트
+    aliases:
+      - 슈타인즈게이트
+      - "Steins;Gate"
+      - "Steins; Gate"
+      - シュタインズ・ゲート
+  - name: 나츠메 우인장
+    aliases:
+      - 나츠메우인장
+      - 夏目友人帳
+  - name: 9-nine-
+    aliases:
+      - 9-nine
+  - name: 메갈로마리아
+    aliases:
+      - 메가로마리아
+      - メガロマリア
+      - 무한해후
+  - name: 제노사가
+    aliases:
+      - Xenosaga
+      - ゼノサーガ
+      - KOS-MOS
+  - name: 듀엣 나이트 어비스
+    aliases:
+      - 듀엣나이트어비스
+      - Duet Night Abyss
+  - name: 대마인
+    aliases:
+      - 対魔忍
+      - Taimanin
+  - name: 시리얼 익스페리먼츠 레인
+    aliases:
+      - 시리얼익스페러먼츠레인
+      - Serial Experiments Lain
+  - name: SSSS.그리드맨
+    aliases:
+      - 그리드맨
+      - 그리드맨유니버스
+      - SSSS.GRIDMAN
+      - グリッドマン
+  - name: 클라나드
+    aliases:
+      - CLANNAD
+      - クラナド
+  - name: 니어 오토마타
+    aliases:
+      - 니어오토마타
+      - "NieR:Automata"
+      - "NieR: Automata"
+      - NieR
+  - name: 신비한 바다의 나디아
+    aliases:
+      - 신비한바다의나디아
+      - 바다의 나디아
+      - ふしぎの海のナディア
+  - name: 열혈최강 고자우라
+    aliases:
+      - 열혈최강고자우라
+      - 고자우라
+  - name: 뉴로사마
+    aliases:
+      - Neuro-sama
+      - ニューロさま
+  - name: 스노우볼 어스
+    aliases:
+      - 스노우볼어스
+  - name: 다이아클론
+    aliases:
+      - Diaclone
+      - ダイアクロン
+      - 다이아크론
+  - name: 드래곤 길들이기
+    aliases:
+      - 드래곤길들이기
+      - How to Train Your Dragon
+  - name: 케로로 중사
+    aliases:
+      - 케로로중사
+      - ケロロ軍曹
+  - name: 스트리트 파이터
+    aliases:
+      - Street Fighter
+      - ストリートファイター
+      - 춘리
+  - name: 톰과 제리
+    aliases:
+      - Tom and Jerry
+      - トムとジェリー
+  - name: 용자왕 가오가이가
+    aliases:
+      - 용자왕가오가이가
+      - 용자왕가오가이거
+      - 勇者王ガオガイガー
+      - 가오가이가
+      - 가오가이거
+  - name: 무민
+    aliases:
+      - Moomin
+      - ムーミン
+  - name: 초전자로보 컴배틀러 V
+    aliases:
+      - 로보콘
+      - 컴배틀러
+  - name: 투장 다이모스
+    aliases:
+      - 배틀 다이모스
+      - 闘将ダイモス
+  - name: 슈퍼 소니코
+    aliases:
+      - Super Sonico
+      - すーぱーそに子
+      - 소니코
+  - name: 팩맨
+    aliases:
+      - Pac-Man
+      - パックマン
+  - name: 소드 아트 온라인
+    aliases:
+      - 소드아트온라인
+      - Sword Art Online
+      - SAO
+  - name: 풀 메탈 패닉!
+    aliases:
+      - Full Metal Panic
+      - フルメタル・パニック
+  - name: 마법기사 레이어스
+    aliases:
+      - Magic Knight Rayearth
+      - 魔法騎士レイアース
+  - name: 기갑창세기 모스피다
+    aliases:
+      - 機甲創世記モスピーダ
+      - 모스피다
+  - name: 야터맨
+    aliases:
+      - ヤッターマン
+      - Yatterman
+      - 도로롱
+  - name: 닌자 슬레이어
+    aliases:
+      - Ninja Slayer
+      - ニンジャスレイヤー
+  - name: 천공의 에스카플로네
+    aliases:
+      - 천공의에스카플로네
+      - 天空のエスカフローネ
+      - 에스카플로네
+  - name: 리코리스 리코일
+    aliases:
+      - 리코리스리코일
+      - Lycoris Recoil
+  - name: 러키☆스타
+    aliases:
+      - らき☆すた
+      - Lucky Star
+  - name: 용기폭발 뱅브레이번
+    aliases:
+      - 뱅브레이번
+      - バーンブレイバーン
+  - name: 이누야샤
+    aliases:
+      - Inuyasha
+      - 犬夜叉
+  - name: 루리 드래곤
+    aliases:
+      - 루리드래곤
+      - ルリドラゴン
+  - name: 블랙 라군
+    aliases:
+      - 블랙라군
+      - Black Lagoon
+  - name: 용자경찰 제이데커
+    aliases:
+      - 제이데커
+      - 勇者警察ジェイデッカー
+  - name: 던전밥
+    aliases:
+      - ダンジョン飯
+      - Delicious in Dungeon
+  - name: 흑집사
+    aliases:
+      - 黒執事
+      - Black Butler
+  - name: 소닉 더 헤지혹
+    aliases:
+      - 소닉
+      - Sonic
+  - name: 마슐
+    aliases:
+      - MASHLE
+      - マッシュル
+  - name: 무심코 말해버리는 세토구치 선배
+    aliases:
+      - 세토구치 선배
+      - 세토구치선배
+  - name: 골든 카무이
+    aliases:
+      - 골든카무이
+      - Golden Kamuy
+      - ゴールデンカムイ
+  - name: 해리 포터
+    aliases:
+      - 해리포터
+      - Harry Potter
+  - name: 울려라! 유포니엄
+    aliases:
+      - 울려라 유포니엄
+      - 響け!ユーフォニアム
+  - name: 죠죠의 기묘한 모험
+    aliases:
+      - 죠죠
+      - JoJo
+      - ジョジョ
+  - name: 미크로맨
+    aliases:
+      - Microman
+      - ミクロマン
+  - name: 독수리 오형제
+    aliases:
+      - 독수리오형제
+      - 갓챠맨
+  - name: 디아블로
+    aliases:
+      - Diablo
+  - name: 검은사막
+    aliases:
+      - Black Desert
+  - name: 배틀그라운드
+    aliases:
+      - 배그
+      - PUBG
+  - name: 신의 탑
+    aliases:
+      - Tower of God
+  - name: 레플리카도 사랑을 한다
+    aliases:
+      - 레플리카도사랑을한다
+  - name: 천사소녀 네티
+    aliases:
+      - 천사소녀네티
+  - name: 라르크 앙 시엘
+    aliases:
+      - 라르크앙시엘
+      - "L'Arc-en-Ciel"
+  - name: 밀로의 비너스
+  - name: 쿠노이치 열풍
+  - name: 화성의 공주
+    aliases:
+      - 데자 소리스
+  - name: FX 전사 쿠루미
+  - name: 흉란영애 니아 리스톤
+  - name: "안경, 때때로, 불량아"
+  - name: TANK CHAIR
+    aliases:
+      - 탱크체어
+  - name: 못 미더운 악녀입니다만
+  - name: 깨끗하게 해주시겠어요?
+  - name: 여기는 내게 맡기고 먼저 가라고 말한 지 10년이 지났더니 전설이 되어 있었다
+  - name: 루프 N
+  - name: 퍼펙트 어딕션
+  - name: 대역 영애를 구한 것은 냉혹 무자비한 얼음 왕자의 사랑이었습니다

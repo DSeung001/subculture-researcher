@@ -587,6 +587,58 @@ class KeywordMatchTests(unittest.TestCase):
             self.assertEqual(linked("그 비스크 돌은 사랑을 한다"), {"FIGURE:multi"})
             self.assertEqual(library.unclassified_report()["total"], 1)
 
+    def test_catalog_links_unclassified_shop_titles_without_short_alias_hits(self):
+        from subculture.library.application import seed_works
+        titles = {
+            "shin": "[예약판매] 짱구는못말려 액션가면 프라모델",
+            "hunter": "넨도로이드 몬스터헌터 얀쿡쿡",
+            "kaguya": "초가구야공주! 카구야 콜라보 라이브 ver.",
+            "trigun": "넨도로이드 트라이건 밧슈더스탬피드",
+            "steins": "슈타인즈게이트 마키세크리스 레이싱 ver.",
+            "jojo": "죠죠의 기묘한 모험 스톤 오션 엔리코",
+            "spy": "【굿즈-스티커】 SPY x FAMILY 애니판 트레이딩 스티커",
+            "link": "시광대리인 공식 정품 굿즈 리톈시",
+            "iruma": "악마에 입문했습니다! 이루마 군 아크릴스탠드",
+            "zaku": "ROBOT혼 SIDE MS 샤아 전용 자쿠 ver. ANIM",
+            "koujaku": "드라마티컬머더 코우자쿠",
+            "original": "네이티브 사랑과 번영의 천사 프리엘 by 마타로",
+            "notice": "AGF KOREA 2025 스폰서 공개",
+        }
+        docs = [
+            SimpleNamespace(
+                id=key,
+                reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
+                to_dict=lambda key=key, title=title: {
+                    "url": f"https://s.example.com/{key}", "title": title, "source": "따빼몰"},
+            )
+            for key, title in titles.items()
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            library = Library(Path(directory) / "library.sqlite3")
+            cloud = Mock()
+            cloud.collection_group.return_value.stream.return_value = iter(docs)
+            library.sync(cloud)
+            seed_works.seed(library)
+            works = {w["name"]: w["id"] for w in library.terms()["works"]}
+
+            def linked(name):
+                rows, _ = library.items({"works": str(works[name])})
+                return {row["id"] for row in rows}
+
+            self.assertEqual(linked("크레용 신짱"), {"FIGURE:shin"})
+            self.assertEqual(linked("몬스터 헌터"), {"FIGURE:hunter"})
+            self.assertEqual(linked("초 가구야 공주"), {"FIGURE:kaguya"})
+            self.assertEqual(linked("트라이건"), {"FIGURE:trigun"})
+            self.assertEqual(linked("슈타인즈 게이트"), {"FIGURE:steins"})
+            self.assertEqual(linked("죠죠의 기묘한 모험"), {"FIGURE:jojo"})
+            self.assertEqual(linked("SPY×FAMILY"), {"FIGURE:spy"})
+            self.assertEqual(linked("시간대리인"), {"FIGURE:link"})
+            self.assertEqual(linked("마법에 걸렸습니다! 이루마군"), {"FIGURE:iruma"})
+            self.assertEqual(linked("기동전사 건담"), {"FIGURE:zaku"})
+            self.assertEqual(linked("드라마티컬 머더"), {"FIGURE:koujaku"})
+            self.assertNotIn("FIGURE:koujaku", linked("기동전사 건담"))
+            self.assertEqual(library.unclassified_report()["total"], 2)
+
     def test_catalog_aliases_are_plain_strings(self):
         from subculture.library.application import seed_works
         for entry in seed_works.load_catalog():
