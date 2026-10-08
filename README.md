@@ -51,6 +51,21 @@ Windows에서 가상환경 미활성화 시 `python`을 `.\.venv\Scripts\python.
 - 사이트 주소를 아는 사람은 수집 목록(제목·링크·사진 주소·가격)을 모두 볼 수 있습니다. 검색엔진에는 `noindex`로 표시합니다.
 - 빌드마다 Firestore 문서 전체를 한 번 읽습니다(무료 한도 하루 5만 읽기 기준으로 관리).
 
+### 배포된 사이트 보기
+
+주소는 `https://<GitHub 사용자명>.github.io/subculture-researcher/` 입니다. [GitHub CLI](https://cli.github.com/)(`gh auth login` 완료)로 확인·실행할 수 있습니다.
+
+| 작업 | 명령 |
+|---|---|
+| 사이트 주소 확인 | `gh api repos/{owner}/{repo}/pages --jq .html_url` |
+| 브라우저로 열기 | `open "$(gh api repos/{owner}/{repo}/pages --jq .html_url)"` (Windows: 출력된 주소를 `start`로) |
+| 지금 다시 배포 | `gh workflow run "Deploy site"` |
+| 배포 진행 지켜보기 | `gh run watch` |
+| 최근 배포 결과 | `gh run list --workflow "Deploy site" --limit 5` |
+| 배포된 데이터 시각·건수 확인 | `curl -s "$(gh api repos/{owner}/{repo}/pages --jq .html_url)data.json" \| python -c "import json,sys; d=json.load(sys.stdin); print(d['builtAt'], len(d['items']))"` |
+
+`{owner}/{repo}`는 저장소 폴더 안에서 실행하면 `gh`가 자동으로 채웁니다. 배포 전에 같은 화면을 로컬에서 보려면 `python build_site.py` 후 `python -m http.server -d site`로 http://localhost:8000 을 엽니다.
+
 ## 코드 구조
 
 경계 컨텍스트별로 `subculture/` 아래에 묶습니다. 의존 규칙은 [AGENTS.md](AGENTS.md) "Code layout"과 `tests/test_architecture.py`가 지킵니다.
