@@ -13,7 +13,6 @@ from subculture.collection.infrastructure.collectors.local_browser import collec
 from subculture.collection.infrastructure.collectors.rss import collect_rss
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.collection.infrastructure.sources_config import is_manual_source
-from subculture.library.application.sync import report_local_sync
 
 
 COLLECTORS = {
@@ -63,8 +62,6 @@ def run_collection(
     inter_source_delay: tuple[float, float] | None = None,
     show_progress: bool = False,
     force_refresh: bool = False,
-    local_check: bool = False,
-    local_db_path=None,
 ) -> dict:
     store = ContentStore(db)
     duplicates = store.duplicates()
@@ -73,9 +70,6 @@ def run_collection(
             f"[점검] 기존 중복 URL={len(duplicates)} 잘못된 URL={len(store.invalid_urls)}. "
             "--check-duplicates로 확인하세요. 기존 문서는 삭제하지 않습니다."
         )
-
-    if local_check and db is not None:
-        report_local_sync(store, local_db_path)
 
     total = dict.fromkeys(COUNTS, 0)
     table_rows = []

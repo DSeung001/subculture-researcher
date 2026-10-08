@@ -35,5 +35,4 @@ jobs:
       - name: Collect
         env:
           MYMEMORY_EMAIL: ${{ secrets.MYMEMORY_EMAIL }}
-        # Drafts live in the local library, which the cloud runner cannot reach.
-        run: python collect.py --no-ai-draft
+        run: python collect.py

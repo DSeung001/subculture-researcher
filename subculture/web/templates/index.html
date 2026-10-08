@@ -128,11 +128,7 @@
 
     {% macro render_item(item, id_prefix='') %}
       {% call(slot) item_card(item['_view']) %}
-        {% if slot == 'select' %}
-          <label class="card-select-label">
-            <input type="checkbox" class="draft-source" name="source_ids" value="{{ item['_ref'] }}" form="draft-create-form" aria-label="글에 포함">
-          </label>
-        {% elif slot == 'meta_end' %}
+        {% if slot == 'meta_end' %}
           <button type="button" class="more-trigger" data-dialog-target="more-dialog-{{ id_prefix }}{{ item['_id'] }}">더보기</button>
         {% elif slot == 'actions' %}
           {% for status, label, icon in [('KEEP', '채택', '✅'), ('HOLD', '보류', '⏸️'), ('IGNORE', '무시', '🚫'), ('NEW', '새 항목', '🔄')] %}
@@ -196,10 +192,4 @@
     </div>
   </main>
 </div>
-
-<form id="draft-create-form" method="post" action="{{ url_for('create_draft_item') }}" class="draft-bar" hidden>
-  <input type="hidden" name="next" value="{{ next_url }}">
-  <span class="draft-bar-count">0개 선택</span>
-  <button type="submit" class="btn btn-primary">글 만들기</button>
-</form>
 {% endblock %}

@@ -1,21 +1,19 @@
-"""The inbox and the local library must render one and the same item card."""
+"""The item card: one view model for the inbox and the static site, and the inbox markup."""
 
 import json
 import re
-import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.firestore import Client
 
 from subculture.web import app as review
 from subculture.shared.content_model import content_ref
-from subculture.library.infrastructure.local_library import Library, json_default
 from subculture.shared.presentation import card_view
+from subculture.web import site_builder
 
 NOW = datetime.now(timezone.utc)
 DOC = {
@@ -45,11 +43,13 @@ def first_card(html):
 
 
 class CardViewTests(unittest.TestCase):
-    def test_firestore_document_and_its_json_payload_give_the_same_card(self):
-        payload = json.loads(json.dumps(DOC, default=json_default))
-        self.assertEqual(card_view(DOC), card_view(payload))
-        self.assertTrue(card_view(payload)["is_new_today"])
-        self.assertIn("게시", card_view({**payload, "publishedAt": "2026-09-01"})["meta"])
+    def test_static_site_card_is_the_inbox_card_view_as_json(self):
+        view = json.loads(json.dumps(site_builder.site_item("FIGURE:abc", DOC, [])["view"]))
+        expected = card_view(DOC)
+        expected["score_breakdown"] = [list(pair) for pair in expected["score_breakdown"]]
+        self.assertEqual(view, expected)
+        self.assertTrue(view["is_new_today"])
+        self.assertIn("게시", card_view({**DOC, "publishedAt": "2026-09-01"})["meta"])
 
     def test_unsafe_links_never_reach_the_card(self):
         view = card_view({**DOC, "url": "javascript:alert(1)", "imageUrl": "data:image/png;base64,AAAA"})
@@ -80,14 +80,11 @@ class CardViewTests(unittest.TestCase):
         self.assertEqual(card_view(DOC)["detail_image_urls"], [])
 
 
-class SharedCardRenderingTests(unittest.TestCase):
+class InboxCardRenderingTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.path = Path(self.temp.name) / "library.sqlite3"
-        self.old = {k: review.app.config.get(k) for k in ("LIBRARY_PATH", "LIBRARY_CLOUD_DB", "TESTING")}
-        self.addCleanup(lambda: review.app.config.update(self.old))
-        review.app.config.update(TESTING=True, LIBRARY_PATH=self.path, LIBRARY_CLOUD_DB=Mock())
+        self.old = review.app.config.get("TESTING")
+        self.addCleanup(lambda: review.app.config.update(TESTING=self.old))
+        review.app.config.update(TESTING=True)
         self.client = review.app.test_client()
 
     def inbox(self, *snapshots):
@@ -95,78 +92,60 @@ class SharedCardRenderingTests(unittest.TestCase):
                 patch.object(review, "fetch_recommended_items", return_value=[]):
             return self.client.get("/inbox").get_data(as_text=True)
 
-    def library(self, *snapshots, url="/library"):
-        db = Mock()
-        db.collection_group.return_value.stream.return_value = iter(snapshots)
-        Library(self.path).sync(db)
-        return self.client.get(url).get_data(as_text=True)
-
-    def test_inbox_and_library_render_the_same_card_markup(self):
-        inbox = first_card(self.inbox(snapshot()))
-        library = first_card(self.library(snapshot()))
-        self.assertEqual(classes(inbox), classes(library))
-        for html in (inbox, library):
-            self.assertIn('<img class="card-thumb-img" src="https://cdn.example.com/p/1.jpg"', html)
-            self.assertIn('referrerpolicy="no-referrer"', html)
-            self.assertIn("붕괴 스타레일 스파키 1/7 피규어", html)
-            self.assertIn("자세히보기", html)
-            self.assertIn("따빼몰 · 예약중 · 269,000원", html)
-            self.assertIn("예약 접수 중", html)
-            self.assertNotIn("(마감 지남)", html)
-
-    def test_only_the_page_specific_controls_differ(self):
-        inbox = first_card(self.inbox(snapshot()))
-        library = first_card(self.library(snapshot()))
-        self.assertIn('name="source_ids"', inbox)        # draft selection + status buttons: inbox
-        self.assertIn("/items/FIGURE/abc/status", inbox)
-        self.assertNotIn("library-item-select", inbox)
-        self.assertIn("library-item-select", library)    # bulk selection: library
-        self.assertNotIn("/items/FIGURE/abc/status", library)
-        self.assertNotIn('name="source_ids"', library)
-
-    def test_detail_images_show_next_to_the_main_thumbnail_in_both(self):
-        item = snapshot(detailImageUrls=[
-            "https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg",
+    def test_card_markup(self):
+        card = first_card(self.inbox(snapshot()))
+        self.assertEqual(classes(card), [
+            "card item-card", "card-row", "card-thumb-col", "card-thumb", "card-main", "card-title",
+            "card-meta-row", "card-meta", "card-summary", "card-summary",
         ])
-        for html in (first_card(self.inbox(item)), first_card(self.library(item))):
-            self.assertIn('class="card-detail-thumbs"', html)
-            self.assertIn('src="https://cdn.example.com/p/1-detail-1.jpg"', html)
-            self.assertIn('src="https://cdn.example.com/p/1-detail-2.jpg"', html)
+        self.assertIn('<img class="card-thumb-img" src="https://cdn.example.com/p/1.jpg"', card)
+        self.assertIn('referrerpolicy="no-referrer"', card)
+        self.assertIn("붕괴 스타레일 스파키 1/7 피규어", card)
+        self.assertIn("자세히보기", card)
+        self.assertIn("따빼몰 · 예약중 · 269,000원", card)
+        self.assertIn("예약 접수 중", card)
+        self.assertNotIn("(마감 지남)", card)
+
+    def test_card_has_status_buttons_and_no_draft_selection(self):
+        card = first_card(self.inbox(snapshot()))
+        self.assertIn("/items/FIGURE/abc/status", card)
+        self.assertNotIn('name="source_ids"', card)
+        self.assertNotIn("card-select", card)
+
+    def test_detail_images_show_next_to_the_main_thumbnail(self):
+        card = first_card(self.inbox(snapshot(detailImageUrls=[
+            "https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg",
+        ])))
+        self.assertIn('class="card-detail-thumbs"', card)
+        self.assertIn('src="https://cdn.example.com/p/1-detail-1.jpg"', card)
+        self.assertIn('src="https://cdn.example.com/p/1-detail-2.jpg"', card)
 
     def test_item_without_detail_images_shows_no_detail_strip(self):
-        for html in (first_card(self.inbox(snapshot())), first_card(self.library(snapshot()))):
-            self.assertNotIn("card-detail-thumbs", html)
+        self.assertNotIn("card-detail-thumbs", first_card(self.inbox(snapshot())))
 
-    def test_item_without_a_photo_shows_the_category_placeholder_in_both(self):
-        for html in (first_card(self.inbox(snapshot(imageUrl=None))),
-                     first_card(self.library(snapshot(imageUrl=None), url="/library?q=%EC%8A%A4"))):
-            self.assertIn("card-thumb card-thumb-empty", html)
-            self.assertNotIn("<img", html)
-            self.assertIn("피규어", html)
+    def test_item_without_a_photo_shows_the_category_placeholder(self):
+        card = first_card(self.inbox(snapshot(imageUrl=None)))
+        self.assertIn("card-thumb card-thumb-empty", card)
+        self.assertNotIn("<img", card)
+        self.assertIn("피규어", card)
 
-    def test_unsafe_image_and_link_are_not_rendered_in_either_list(self):
-        bad = snapshot(imageUrl="javascript:alert(1)", url="javascript:alert(1)")
-        for html in (self.inbox(bad), self.library(bad)):
-            self.assertNotIn('src="javascript:', html)
-            self.assertNotIn('href="javascript:', html)
+    def test_unsafe_image_and_link_are_not_rendered(self):
+        html = self.inbox(snapshot(imageUrl="javascript:alert(1)", url="javascript:alert(1)"))
+        self.assertNotIn('src="javascript:', html)
+        self.assertNotIn('href="javascript:', html)
 
-    def test_elapsed_preorder_deadline_is_flagged_in_both(self):
+    def test_elapsed_preorder_deadline_is_flagged(self):
         old = snapshot(preorderEndAt=(NOW - timedelta(days=30)).date().isoformat())
-        for html in (first_card(self.inbox(old)), first_card(self.library(old))):
-            self.assertIn("(마감 지남)", html)
+        self.assertIn("(마감 지남)", first_card(self.inbox(old)))
 
-    def test_work_edit_page_uses_the_same_card_with_an_unlink_action(self):
-        lib = Library(self.path)
-        db = Mock()
-        db.collection_group.return_value.stream.return_value = iter([snapshot()])
-        lib.sync(db)
-        work = lib.save_term("works", "붕괴 스타레일", aliases="붕괴 스타레일")
-        lib.auto_assign_works()
-        html = self.client.get(f"/library/works/{work}").get_data(as_text=True)
-        card = first_card(html)
-        self.assertEqual(classes(card), classes(first_card(self.inbox(snapshot()))))
-        self.assertIn('name="action" value="unlink"', card)
-        self.assertIn("card-thumb-img", card)
+    def test_nav_links_only_to_the_remaining_screens(self):
+        html = self.inbox(snapshot())
+        self.assertIn('href="/sources"', html)
+        for gone in ("/library", "/drafts", "/erd"):
+            self.assertNotIn(f'href="{gone}', html)
+        self.assertEqual(self.client.get("/").headers["Location"], "/inbox")
+        for gone in ("/library", "/drafts", "/erd", "/sources/samples?name=x"):
+            self.assertEqual(self.client.get(gone).status_code, 404, gone)
 
 
 if __name__ == "__main__":

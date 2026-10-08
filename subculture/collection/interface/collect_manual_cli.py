@@ -1,13 +1,10 @@
 """Manual collection entry point (local browser sources)."""
 
 import argparse
-import os
 
 from dotenv import load_dotenv
 
-from subculture.drafts.application.ai_drafts import run_local_trending_draft
 from subculture.collection.application.collection_runner import run_collection
-from subculture.library.application.sync import sync_local
 from subculture.shared.firebase_client import get_db
 from subculture.collection.infrastructure.sources_config import is_manual_source, load_sources, manual_sources
 
@@ -22,20 +19,6 @@ def main(argv=None):
     )
     parser.add_argument("--dry-run", action="store_true", help="Firestore에 연결하지 않고 수집 결과 출력")
     parser.add_argument("--source", action="append", help="수집할 수동 소스 이름 (여러 번 지정 가능)")
-    parser.add_argument(
-        "--no-sync", action="store_true",
-        help="수집 후 Firestore → 로컬 라이브러리 동기화를 건너뜀 (기본은 동기화함)",
-    )
-    parser.add_argument(
-        "--no-local-check", action="store_true",
-        help="시작 시 로컬 동기화 상태 확인을 건너뜀",
-    )
-    parser.add_argument("--db", help="로컬 라이브러리 DB URL 또는 레거시 SQLite 경로")
-    parser.add_argument(
-        "--ai-draft",
-        action="store_true",
-        help="수집 후 AI 초안 생성(Gemini 호출). 기본은 끔",
-    )
     args = parser.parse_args(argv)
 
     all_sources = load_sources()
@@ -54,26 +37,14 @@ def main(argv=None):
         sources = manual_sources(all_sources)
 
     db = None if args.dry_run else get_db()
-    result = run_collection(
+    run_collection(
         sources,
         db=db,
         dry_run=args.dry_run,
         allow_manual=True,
         inter_source_delay=None if args.dry_run else INTER_SOURCE_DELAY,
         show_progress=True,
-        local_check=not (args.dry_run or args.no_local_check or os.environ.get("CI")),
-        local_db_path=args.db,
     )
-
-    if db is not None and not args.no_sync and not os.environ.get("CI"):
-        sync_local(db, args.db)
-
-    if db is not None and args.ai_draft:
-        # Nothing new means the same candidates as the last draft: skip the Gemini calls.
-        if result["total"]["inserted"] > 0:
-            print(run_local_trending_draft(args.db))
-        else:
-            print("[AI 초안] 신규 항목 없음, 건너뜀")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Placeholder-titled leftovers that neither the store nor the local library should keep."""
+"""Placeholder-titled leftovers that the store should not keep."""
 
 from urllib.parse import urlsplit
 

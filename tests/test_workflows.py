@@ -7,13 +7,11 @@ from unittest.mock import MagicMock, Mock, patch
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.firestore import Client
 
-from subculture.drafts.application import ai_drafts
 from subculture.web import app as review
 from subculture.collection.infrastructure.collectors.local_browser import _extract_candidate_url
 from subculture.shared.content_model import content_id, content_ref
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.collection.domain.content_rules import doc_id, normalize_url
-from subculture.drafts.domain.rules import DraftError
 from subculture.shared.presentation import content_score, effective_date
 
 
@@ -42,160 +40,12 @@ class WorkflowTests(unittest.TestCase):
             response = review.app.test_client().get("/inbox")
         self.assertEqual(response.status_code, 200)
         self.assertIn('/items/FIGURE/abc/status', response.get_data(as_text=True))
-        self.assertIn('value="FIGURE:abc"', response.get_data(as_text=True))
+        self.assertIn('/items/FIGURE/abc/note', response.get_data(as_text=True))
 
     def test_invalid_reference_rejected(self):
         for source_id in ("", "FIGURE", ":abc", "FIGURE:", "FIGURE:abc/def"):
             with self.subTest(source_id=source_id), self.assertRaises(ValueError):
                 content_ref(self.db, source_id)
-
-    def test_ai_flow_defers_writer_and_validates_size(self):
-        library = Mock()
-        library.draft_candidates.return_value = [{"_id": "FIGURE:a"}]
-        library.drafted_item_ids.return_value = set()
-        with patch.object(ai_drafts, "write_draft_posts") as writer, \
-             patch.object(ai_drafts, "create_draft", return_value=7) as create:
-            self.assertEqual(ai_drafts.create_trending_draft(library), 7)
-            writer.assert_not_called()
-            self.assertIs(create.call_args.kwargs["body_factory"], writer)
-            self.assertIs(create.call_args.args[0], library)
-        for size in (0, -1, 21, True):
-            with self.subTest(size=size), self.assertRaises(DraftError):
-                ai_drafts.create_trending_draft(library, size=size)
-
-    def test_trending_draft_leaves_out_items_already_in_a_draft(self):
-        library = Mock()
-        library.draft_candidates.return_value = [{"_id": "FIGURE:a"}, {"_id": "FIGURE:b"}]
-        library.drafted_item_ids.return_value = {"FIGURE:a"}
-        with patch.object(ai_drafts, "select_top_items", side_effect=lambda pool, size: pool[:size]) as select, \
-             patch.object(ai_drafts, "create_draft", return_value=7) as create:
-            self.assertEqual(ai_drafts.create_trending_draft(library, size=1), 7)
-            self.assertEqual(select.call_args.args[0], [{"_id": "FIGURE:b"}])
-            self.assertEqual(create.call_args.args[1], ["FIGURE:b"])
-
-        library.drafted_item_ids.return_value = {"FIGURE:a", "FIGURE:b"}
-        with patch.object(ai_drafts, "select_top_items") as select, \
-             patch.object(ai_drafts, "create_draft") as create:
-            self.assertIsNone(ai_drafts.create_trending_draft(library))
-            select.assert_not_called()  # no candidates left: no Gemini call
-            create.assert_not_called()
-
-    def test_work_drafts_skip_shared_sources_and_ignore_unusable(self):
-        groups = [
-            {
-                "work_id": 1,
-                "work_name": "피규어 작품",
-                "items": [
-                    {"id": "FIGURE:a", "storage_category": "FIGURE", "data": {"title": "fig"}},
-                    {"id": "FIGURE:b", "storage_category": "FIGURE", "data": {"title": "fig2"}},
-                    {"id": "FIGURE:ignored", "storage_category": "FIGURE", "data": {"status": "IGNORE"}},
-                    {"id": "FIGURE:posted", "storage_category": "FIGURE", "data": {"postedAt": "x"}},
-                ],
-            },
-            {
-                "work_id": 2,
-                "work_name": "애니 작품",
-                "items": [
-                    {"id": "ANIME:c", "storage_category": "ANIME", "data": {"title": "anime"}},
-                ],
-            },
-            {
-                "work_id": 3,
-                "work_name": "혼합 작품",
-                "items": [
-                    {"id": "FIGURE:e", "storage_category": "FIGURE", "data": {"title": "fig3"}},
-                    {"id": "GOODS:d", "storage_category": "GOODS", "data": {"title": "goods"}},
-                ],
-            },
-        ]
-        library = Mock()
-        library.linked_work_items.return_value = groups
-        library.posted_item_ids.return_value = set()
-        with patch.object(ai_drafts, "create_draft", side_effect=["d1", "d2"]) as create, \
-             patch.object(ai_drafts, "write_draft_posts"):
-            results = ai_drafts.create_work_drafts(library)
-        self.assertEqual([r[0] for r in results], ["FIGURE", "MIXED"])
-        self.assertEqual([r[1] for r in results], ["d1", "d2"])
-        calls = [call.args[1] for call in create.call_args_list]
-        self.assertTrue(all(sid.startswith("FIGURE:") for sid in calls[0]))
-        self.assertNotIn("FIGURE:ignored", calls[0])
-        self.assertNotIn("FIGURE:posted", calls[0])
-        self.assertTrue(set(calls[1]).isdisjoint(calls[0]))
-        mixed_cats = {sid.partition(":")[0] for sid in calls[1]}
-        self.assertGreaterEqual(len(mixed_cats), 2)
-        self.assertNotIn("ANIME:c", {sid for ids in calls for sid in ids})  # no ANIME draft type
-
-    def test_work_drafts_can_target_one_work(self):
-        groups = [
-            {
-                "work_id": 1,
-                "work_name": "피규어 작품",
-                "items": [
-                    {"id": "FIGURE:a", "storage_category": "FIGURE", "data": {"title": "fig"}},
-                ],
-            },
-            {
-                "work_id": 2,
-                "work_name": "애니 작품",
-                "items": [
-                    {"id": "ANIME:c", "storage_category": "ANIME", "data": {"title": "anime"}},
-                ],
-            },
-        ]
-        library = Mock()
-        library.linked_work_items.return_value = groups
-        library.posted_item_ids.return_value = set()
-        with patch.object(ai_drafts, "create_draft", side_effect=["d1"]) as create, \
-             patch.object(ai_drafts, "write_draft_posts"):
-            results = ai_drafts.create_work_drafts(library, work_id=1)
-        self.assertEqual(create.call_args_list[0].args[1], ["FIGURE:a"])
-        by_type = {draft_type: draft_id for draft_type, draft_id, _ in results}
-        self.assertEqual(by_type, {"FIGURE": "d1", "MIXED": None})
-
-        with patch.object(ai_drafts, "create_draft") as create, \
-             patch.object(ai_drafts, "write_draft_posts"):
-            results = ai_drafts.create_work_drafts(library, work_id=2)  # ANIME-only work
-        create.assert_not_called()
-        self.assertEqual({t: d for t, d, _ in results}, {"FIGURE": None, "MIXED": None})
-
-    def test_collect_still_runs_mixed_trending_draft(self):
-        from subculture.collection.interface import collect_cli as collect_mod
-        with patch.object(collect_mod, "load_sources", return_value=[]), \
-             patch.object(collect_mod, "get_db", return_value=self.db), \
-             patch.object(collect_mod, "run_collection", return_value={"total": {"inserted": 2}}) as run, \
-             patch.object(collect_mod, "run_local_trending_draft", return_value="[AI 초안] ok") as draft, \
-             patch.dict("os.environ", {}, clear=False):
-            import os
-            os.environ.pop("CI", None)
-            collect_mod.main([])
-        run.assert_called_once()
-        draft.assert_called_once_with(None)  # the draft goes to the local library, not Firestore
-
-    def test_collect_skips_the_draft_when_nothing_new_was_inserted(self):
-        from subculture.collection.interface import collect_cli as collect_mod
-        from subculture.collection.interface import collect_manual_cli as manual_mod
-        for module, argv in ((collect_mod, []), (manual_mod, ["--ai-draft"])):
-            with self.subTest(module=module.__name__), \
-                 patch.object(module, "load_sources", return_value=[]), \
-                 patch.object(module, "get_db", return_value=self.db), \
-                 patch.object(module, "run_collection", return_value={"total": {"inserted": 0}}), \
-                 patch.object(module, "sync_local"), \
-                 patch.object(module, "run_local_trending_draft") as draft, \
-                 patch.dict("os.environ", {}, clear=False):
-                import os
-                os.environ.pop("CI", None)
-                module.main(argv)
-            draft.assert_not_called()
-
-    def test_cloud_run_never_writes_a_draft(self):
-        from subculture.collection.interface import collect_cli as collect_mod
-        with patch.object(collect_mod, "load_sources", return_value=[]), \
-             patch.object(collect_mod, "get_db", return_value=self.db), \
-             patch.object(collect_mod, "run_collection", return_value={"total": {"inserted": 2}}), \
-             patch.object(collect_mod, "run_local_trending_draft") as draft, \
-             patch.dict("os.environ", {"CI": "true"}):
-            collect_mod.main([])
-        draft.assert_not_called()
 
     def test_manual_vs_automatic_source_filters(self):
         from subculture.collection.infrastructure.sources_config import automatic_sources, is_manual_source, manual_sources

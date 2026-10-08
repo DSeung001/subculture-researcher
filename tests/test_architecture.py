@@ -6,12 +6,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / "subculture"
-CONTEXTS = ("collection", "library", "drafts")
 LAYERS = ("domain", "application", "infrastructure", "interface")
+# library is the work/IP catalog: pure matching rules plus the YAML loader, nothing to store or show.
+CONTEXTS = {"collection": LAYERS, "library": ("domain", "application")}
 
 # A domain layer is plain Python: no I/O libraries.
 FORBIDDEN_IN_DOMAIN = {
-    "sqlalchemy", "alembic", "firebase_admin", "google", "flask", "requests", "yaml", "bs4",
+    "firebase_admin", "google", "flask", "requests", "yaml", "bs4",
     "feedparser", "dotenv", "playwright",
 }
 
@@ -52,10 +53,12 @@ class ArchitectureTests(unittest.TestCase):
                     found.append(f"{name} imports {target}: {message}")
         return found
 
-    def test_every_context_has_the_four_layers(self):
-        for context in CONTEXTS:
-            for layer in LAYERS:
+    def test_every_context_has_its_layers(self):
+        for context, layers in CONTEXTS.items():
+            for layer in layers:
                 self.assertTrue((PACKAGE / context / layer / "__init__.py").is_file(), f"{context}/{layer}")
+            extra = {path.name for path in (PACKAGE / context).iterdir() if path.name in LAYERS} - set(layers)
+            self.assertEqual(extra, set(), context)
 
     def test_domain_layers_stay_free_of_io_and_outer_layers(self):
         def rule(name, target):
@@ -85,20 +88,14 @@ class ArchitectureTests(unittest.TestCase):
         self.assertEqual(self.violations(rule), [])
 
     def test_context_dependencies_point_one_way(self):
-        # Below the interface layer: library depends on nobody; collection may only start a
-        # library sync; drafts may use library. Interface modules (CLIs, screens) compose contexts.
+        # Below the interface layer the contexts do not know each other; the web layer
+        # (review UI, static site build) and interface modules compose them.
         def rule(name, target):
             context, importer_layer = place(name)
-            other, layer = place(target) if target.startswith("subculture.") else (None, None)
+            other, _ = place(target) if target.startswith("subculture.") else (None, None)
             if not context or not other or other == context or importer_layer == "interface":
                 return None
-            if context == "library":
-                return "library must not depend on other contexts"
-            if context == "collection" and (other != "library" or layer != "application"):
-                return "collection may only call library.application (sync)"
-            if context == "drafts" and other != "library":
-                return "drafts may only depend on library"
-            return None
+            return f"{context} must not depend on {other}"
 
         self.assertEqual(self.violations(rule), [])
 

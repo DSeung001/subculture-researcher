@@ -22,8 +22,8 @@ from subculture.shared.untitled_content import UNTITLED_TITLE, is_untitled_lafte
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.collection.application.untitled_cleanup import delete_untitled_x_contents
 from subculture.collection.domain.content_rules import doc_id
-from subculture.library.infrastructure.local_library import Library
-from subculture.library.domain.keywords import match_keyword, normalized
+from subculture.library.application.catalog import load_catalog
+from subculture.library.domain.keywords import compile_works, match_keyword, match_works, normalized
 from subculture.collection.infrastructure.sources_config import load_sources
 
 SOURCES = {source["name"]: source for source in load_sources()}
@@ -414,20 +414,6 @@ class UntitledLaftelTests(unittest.TestCase):
         home.reference.delete.assert_called_once()
         product.reference.delete.assert_not_called()
 
-    def test_local_cleanup_removes_the_home_row(self):
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter([
-                SimpleNamespace(id="h", reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="ANIME"))),
-                                to_dict=lambda: {"url": "https://laftel.net/", "title": UNTITLED_TITLE, "source": "x"}),
-                SimpleNamespace(id="k", reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="ANIME"))),
-                                to_dict=lambda: {"url": "https://laftel.net/", "title": "라프텔 홈", "source": "x"}),
-            ])
-            library.sync(cloud)
-            result = library.delete_untitled_x()
-            self.assertEqual([item["id"] for item in result["items"]], ["ANIME:h"])
-
 
 class KeywordMatchTests(unittest.TestCase):
     def test_latin_alias_next_to_hangul_or_kana_matches(self):
@@ -467,49 +453,31 @@ class KeywordMatchTests(unittest.TestCase):
             with self.subTest(title=title, keyword=keyword):
                 self.assertEqual(match_keyword(normalized(title), keyword), keyword)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.catalog = load_catalog()
+        cls.compiled = compile_works(cls.catalog)
+        cls.names = {entry["name"] for entry in cls.catalog}
+
+    def linker(self, titles):
+        """(linked(work name) -> matching item ids, number of titles no work matched)."""
+        works = {key: match_works({"title": title}, self.compiled) for key, title in titles.items()}
+
+        def linked(name):
+            self.assertIn(name, self.names)
+            return {f"FIGURE:{key}" for key, found in works.items() if name in found}
+
+        return linked, sum(1 for found in works.values() if not found)
+
     def test_genshin_is_in_the_catalog_and_links_hoyoverse_titles(self):
-        from subculture.library.application import seed_works
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter([
-                SimpleNamespace(id="g", reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
-                                to_dict=lambda: {"url": "https://s.example.com/g", "title": "[원신] 클리어 파일", "source": "따빼몰"}),
-            ])
-            library.sync(cloud)
-            created, linked = seed_works.seed(library)
-            self.assertGreater(created, 0)
-            self.assertEqual(linked, 1)
-            works = {w["name"]: w["id"] for w in library.terms()["works"]}
-            rows, _ = library.items({"works": str(works["원신"])})
-            self.assertEqual([row["id"] for row in rows], ["FIGURE:g"])
+        self.assertEqual(match_works({"title": "[원신] 클리어 파일"}, self.compiled), ["원신"])
 
     def test_azur_lane_is_in_the_catalog_and_links_shop_titles(self):
-        from subculture.library.application import seed_works
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter([
-                SimpleNamespace(
-                    id="a",
-                    reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
-                    to_dict=lambda: {
-                        "url": "https://s.example.com/a",
-                        "title": "[예약]벽람항로 아주르 레인 키어사지 피규어",
-                        "source": "따빼몰",
-                    },
-                ),
-            ])
-            library.sync(cloud)
-            created, linked = seed_works.seed(library)
-            self.assertGreater(created, 0)
-            self.assertEqual(linked, 1)
-            works = {w["name"]: w["id"] for w in library.terms()["works"]}
-            rows, _ = library.items({"works": str(works["벽람항로"])})
-            self.assertEqual([row["id"] for row in rows], ["FIGURE:a"])
+        self.assertEqual(
+            match_works({"title": "[예약]벽람항로 아주르 레인 키어사지 피규어"}, self.compiled), ["벽람항로"],
+        )
 
     def test_catalog_links_spaced_variants_and_new_ips_without_false_hits(self):
-        from subculture.library.application import seed_works
         titles = {
             "love": "(26년 12월 발매) 공식 러브 라이브 찻집 시리즈 아크릴 스탠드 굿즈",
             "titan": "[예약]진격의 거인 넨도로이드 라이너 브라운 (재판)",
@@ -518,39 +486,18 @@ class KeywordMatchTests(unittest.TestCase):
             "store": "히메노짱 × 빌리지 뱅가드 한정 콜라보레이션 굿즈 출시!!",
             "stage": "에일리언 스테이지 아크릴 스탠드",
         }
-        docs = [
-            SimpleNamespace(
-                id=key,
-                reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
-                to_dict=lambda key=key, title=title: {
-                    "url": f"https://s.example.com/{key}", "title": title, "source": "따빼몰"},
-            )
-            for key, title in titles.items()
-        ]
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter(docs)
-            library.sync(cloud)
-            seed_works.seed(library)
-            works = {w["name"]: w["id"] for w in library.terms()["works"]}
-
-            def linked(name):
-                rows, _ = library.items({"works": str(works[name])})
-                return {row["id"] for row in rows}
-
-            self.assertEqual(linked("러브라이브"), {"FIGURE:love"})
-            self.assertEqual(linked("진격의 거인"), {"FIGURE:titan"})
-            self.assertEqual(linked("아이카츠"), {"FIGURE:collab"})
-            self.assertEqual(linked("프리파라"), {"FIGURE:collab"})
-            self.assertEqual(linked("조이드"), {"FIGURE:zoid"})
-            self.assertEqual(linked("기동경찰 패트레이버"), {"FIGURE:zoid"})
-            self.assertEqual(linked("카드파이트!! 뱅가드"), set())
-            self.assertEqual(linked("에일리언 (영화)"), set())
-            self.assertEqual(linked("에일리언 스테이지"), {"FIGURE:stage"})
+        linked, _ = self.linker(titles)
+        self.assertEqual(linked("러브라이브"), {"FIGURE:love"})
+        self.assertEqual(linked("진격의 거인"), {"FIGURE:titan"})
+        self.assertEqual(linked("아이카츠"), {"FIGURE:collab"})
+        self.assertEqual(linked("프리파라"), {"FIGURE:collab"})
+        self.assertEqual(linked("조이드"), {"FIGURE:zoid"})
+        self.assertEqual(linked("기동경찰 패트레이버"), {"FIGURE:zoid"})
+        self.assertEqual(linked("카드파이트!! 뱅가드"), set())
+        self.assertEqual(linked("에일리언 (영화)"), set())
+        self.assertEqual(linked("에일리언 스테이지"), {"FIGURE:stage"})
 
     def test_catalog_links_limbus_and_japanese_titled_anime_without_false_hits(self):
-        from subculture.library.application import seed_works
         titles = {
             "limbus": "【굿즈-키홀더】 Limbus Company 아크릴 키홀더 G 히스클리프",
             "hanakimi": "佐野と踊りたいなあ｜TVアニメ「#花ざかりの君たちへ」第2期 #HanaKimi #anime",
@@ -558,37 +505,16 @@ class KeywordMatchTests(unittest.TestCase):
             "multi": "『グレンラガン』『ノゲノラ』『着せ恋』からヨーコや白、喜多川海夢のスタチューが発表！",
             "original": "[예약판매] 네이티브 사랑과 번영의 천사 프리엘 by 마타로 핑크캣 0432",
         }
-        docs = [
-            SimpleNamespace(
-                id=key,
-                reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
-                to_dict=lambda key=key, title=title: {
-                    "url": f"https://s.example.com/{key}", "title": title, "source": "따빼몰"},
-            )
-            for key, title in titles.items()
-        ]
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter(docs)
-            library.sync(cloud)
-            seed_works.seed(library)
-            works = {w["name"]: w["id"] for w in library.terms()["works"]}
-
-            def linked(name):
-                rows, _ = library.items({"works": str(works[name])})
-                return {row["id"] for row in rows}
-
-            self.assertEqual(linked("림버스 컴퍼니"), {"FIGURE:limbus"})
-            self.assertEqual(linked("아름다운 그대에게"), {"FIGURE:hanakimi"})
-            self.assertEqual(linked("가끔씩 툭하고 러시아어로 부끄러워하는 옆자리의 아랴 양"), {"FIGURE:arya"})
-            self.assertEqual(linked("천원돌파 그렌라간"), {"FIGURE:multi"})
-            self.assertEqual(linked("노 게임 노 라이프"), {"FIGURE:multi"})
-            self.assertEqual(linked("그 비스크 돌은 사랑을 한다"), {"FIGURE:multi"})
-            self.assertEqual(library.unclassified_report()["total"], 1)
+        linked, unclassified = self.linker(titles)
+        self.assertEqual(linked("림버스 컴퍼니"), {"FIGURE:limbus"})
+        self.assertEqual(linked("아름다운 그대에게"), {"FIGURE:hanakimi"})
+        self.assertEqual(linked("가끔씩 툭하고 러시아어로 부끄러워하는 옆자리의 아랴 양"), {"FIGURE:arya"})
+        self.assertEqual(linked("천원돌파 그렌라간"), {"FIGURE:multi"})
+        self.assertEqual(linked("노 게임 노 라이프"), {"FIGURE:multi"})
+        self.assertEqual(linked("그 비스크 돌은 사랑을 한다"), {"FIGURE:multi"})
+        self.assertEqual(unclassified, 1)
 
     def test_catalog_links_unclassified_shop_titles_without_short_alias_hits(self):
-        from subculture.library.application import seed_works
         titles = {
             "shin": "[예약판매] 짱구는못말려 액션가면 프라모델",
             "hunter": "넨도로이드 몬스터헌터 얀쿡쿡",
@@ -604,101 +530,32 @@ class KeywordMatchTests(unittest.TestCase):
             "original": "네이티브 사랑과 번영의 천사 프리엘 by 마타로",
             "notice": "AGF KOREA 2025 스폰서 공개",
         }
-        docs = [
-            SimpleNamespace(
-                id=key,
-                reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
-                to_dict=lambda key=key, title=title: {
-                    "url": f"https://s.example.com/{key}", "title": title, "source": "따빼몰"},
-            )
-            for key, title in titles.items()
-        ]
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter(docs)
-            library.sync(cloud)
-            seed_works.seed(library)
-            works = {w["name"]: w["id"] for w in library.terms()["works"]}
-
-            def linked(name):
-                rows, _ = library.items({"works": str(works[name])})
-                return {row["id"] for row in rows}
-
-            self.assertEqual(linked("크레용 신짱"), {"FIGURE:shin"})
-            self.assertEqual(linked("몬스터 헌터"), {"FIGURE:hunter"})
-            self.assertEqual(linked("초 가구야 공주"), {"FIGURE:kaguya"})
-            self.assertEqual(linked("트라이건"), {"FIGURE:trigun"})
-            self.assertEqual(linked("슈타인즈 게이트"), {"FIGURE:steins"})
-            self.assertEqual(linked("죠죠의 기묘한 모험"), {"FIGURE:jojo"})
-            self.assertEqual(linked("SPY×FAMILY"), {"FIGURE:spy"})
-            self.assertEqual(linked("시간대리인"), {"FIGURE:link"})
-            self.assertEqual(linked("마법에 걸렸습니다! 이루마군"), {"FIGURE:iruma"})
-            self.assertEqual(linked("기동전사 건담"), {"FIGURE:zaku"})
-            self.assertEqual(linked("드라마티컬 머더"), {"FIGURE:koujaku"})
-            self.assertNotIn("FIGURE:koujaku", linked("기동전사 건담"))
-            self.assertEqual(library.unclassified_report()["total"], 2)
+        linked, unclassified = self.linker(titles)
+        self.assertEqual(linked("크레용 신짱"), {"FIGURE:shin"})
+        self.assertEqual(linked("몬스터 헌터"), {"FIGURE:hunter"})
+        self.assertEqual(linked("초 가구야 공주"), {"FIGURE:kaguya"})
+        self.assertEqual(linked("트라이건"), {"FIGURE:trigun"})
+        self.assertEqual(linked("슈타인즈 게이트"), {"FIGURE:steins"})
+        self.assertEqual(linked("죠죠의 기묘한 모험"), {"FIGURE:jojo"})
+        self.assertEqual(linked("SPY×FAMILY"), {"FIGURE:spy"})
+        self.assertEqual(linked("시간대리인"), {"FIGURE:link"})
+        self.assertEqual(linked("마법에 걸렸습니다! 이루마군"), {"FIGURE:iruma"})
+        self.assertEqual(linked("기동전사 건담"), {"FIGURE:zaku"})
+        self.assertEqual(linked("드라마티컬 머더"), {"FIGURE:koujaku"})
+        self.assertNotIn("FIGURE:koujaku", linked("기동전사 건담"))
+        self.assertEqual(unclassified, 2)
 
     def test_catalog_aliases_are_plain_strings(self):
-        from subculture.library.application import seed_works
-        for entry in seed_works.load_catalog():
+        for entry in self.catalog:
             for alias in entry.get("aliases") or []:
                 self.assertIsInstance(alias, str, entry["name"])
 
     def test_unquoted_colon_alias_is_rejected_instead_of_stored_as_a_dict(self):
-        from subculture.library.application import seed_works
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "catalog.yaml"
             path.write_text("works:\n  - name: 퍼니싱\n    aliases:\n      - Punishing: Gray Raven\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "따옴표"):
-                seed_works.load_catalog(path)
-
-    def test_seed_sync_flag_syncs_the_inbox_before_linking(self):
-        from subculture.library.application import seed_works
-        with tempfile.TemporaryDirectory() as directory:
-            db_path = Path(directory) / "library.sqlite3"
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter([
-                SimpleNamespace(id="a", reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="FIGURE"))),
-                                to_dict=lambda: {"url": "https://s.example.com/a", "title": "[원신] 클리어 파일", "source": "따빼몰"}),
-            ])
-            with patch("subculture.shared.firebase_client.get_db", return_value=cloud), \
-                    patch("sys.argv", ["seed_works.py", "--db", str(db_path), "--sync"]):
-                seed_works.main()
-            library = Library(db_path)
-            works = {w["name"]: w["id"] for w in library.terms()["works"]}
-            rows, _ = library.items({"works": str(works["원신"])})
-            self.assertEqual([row["id"] for row in rows], ["FIGURE:a"])
-
-    def test_seed_without_sync_flag_never_touches_firestore(self):
-        from subculture.library.application import seed_works
-        with tempfile.TemporaryDirectory() as directory:
-            db_path = Path(directory) / "library.sqlite3"
-            with patch("subculture.shared.firebase_client.get_db") as get_db, \
-                    patch("sys.argv", ["seed_works.py", "--db", str(db_path)]):
-                seed_works.main()
-            get_db.assert_not_called()
-
-    def test_unmatched_report_summarises_unlinked_items_by_source(self):
-        with tempfile.TemporaryDirectory() as directory:
-            library = Library(Path(directory) / "library.sqlite3")
-
-            def snap(doc_id_, title, source):
-                return SimpleNamespace(
-                    id=doc_id_, reference=SimpleNamespace(parent=SimpleNamespace(parent=SimpleNamespace(id="GOODS"))),
-                    to_dict=lambda: {"url": f"https://s.example.com/{doc_id_}", "title": title, "source": source})
-            cloud = Mock()
-            cloud.collection_group.return_value.stream.return_value = iter([
-                snap("1", "【굿즈-키홀더】 미지의 작품 A", "애니메이트"),
-                snap("2", "【굿즈-키홀더】 미지의 작품 B", "애니메이트"),
-                snap("3", "[예약] 미지의 작품 C", "라프텔 스토어"),
-            ])
-            library.sync(cloud)
-            report = library.unclassified_report()
-        self.assertEqual(report["total"], 3)
-        self.assertEqual(dict(report["by_source"]), {"애니메이트": 2, "라프텔 스토어": 1})
-        self.assertEqual(dict(report["bracket_tokens"])["굿즈-키홀더"], 2)
-        self.assertEqual(len(report["samples"]["애니메이트"]), 2)
+                load_catalog(path)
 
 
 class InboxPeriodTests(unittest.TestCase):

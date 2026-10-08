@@ -53,16 +53,6 @@ class ContentStore:
                     "checkedAt": data.get("detailCheckedAt") or data.get("productCheckedAt"),
                 })
 
-    def item_ids(self) -> set[str]:
-        """Item IDs (`STORAGE_CATEGORY:document_id`) of every stored document, from the index already read."""
-        ids = set()
-        for docs in self.by_url.values():
-            for doc in docs:
-                ref = doc.get("ref")
-                if ref is not None:
-                    ids.add(f"{ref.parent.parent.id}:{doc['id']}")
-        return ids
-
     def duplicates(self) -> list[dict]:
         return [
             {

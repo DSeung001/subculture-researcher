@@ -2,13 +2,10 @@
 
 import argparse
 import json
-import os
 
 from dotenv import load_dotenv
 
-from subculture.drafts.application.ai_drafts import run_local_trending_draft
 from subculture.collection.application.collection_runner import MANUAL_ENTRY, run_collection
-from subculture.library.application.sync import sync_local
 from subculture.collection.infrastructure.content_store import ContentStore
 from subculture.shared.firebase_client import get_db
 from subculture.collection.application.image_backfill import backfill_images
@@ -38,20 +35,6 @@ def main(argv=None):
     parser.add_argument(
         "--force-refresh", action="store_true",
         help="결과를 캐시하는 수집기의 캐시를 무시하고 다시 수집 (현재 캐시하는 수집기 없음)",
-    )
-    parser.add_argument(
-        "--no-sync", action="store_true",
-        help="수집 후 Firestore → 로컬 라이브러리 동기화를 건너뜀 (기본은 동기화함)",
-    )
-    parser.add_argument(
-        "--no-local-check", action="store_true",
-        help="시작 시 로컬 동기화 상태 확인을 건너뜀 (CI 환경변수가 있으면 자동으로 건너뜀)",
-    )
-    parser.add_argument("--db", help="로컬 라이브러리 DB URL 또는 레거시 SQLite 경로")
-    parser.add_argument(
-        "--no-ai-draft",
-        action="store_true",
-        help="수집 후 로컬 임시글 AI 초안 생성(Gemini 호출)을 건너뜀",
     )
     args = parser.parse_args(argv)
 
@@ -88,7 +71,7 @@ def main(argv=None):
         sources = automatic_sources(all_sources)
 
     db = None if args.dry_run else get_db()
-    result = run_collection(
+    run_collection(
         sources,
         db=db,
         dry_run=args.dry_run,
@@ -96,20 +79,7 @@ def main(argv=None):
         inter_source_delay=None if args.dry_run else INTER_SOURCE_DELAY,
         show_progress=True,
         force_refresh=args.force_refresh,
-        local_check=not (args.dry_run or args.no_local_check or os.environ.get("CI")),
-        local_db_path=args.db,
     )
-
-    if db is not None and not args.no_sync and not os.environ.get("CI"):
-        sync_local(db, args.db)
-
-    # Drafts live in the local library; the cloud run (CI) has none to write to.
-    if db is not None and not args.no_ai_draft and not os.environ.get("CI"):
-        # Nothing new means the same candidates as the last draft: skip the Gemini calls.
-        if result["total"]["inserted"] > 0:
-            print(run_local_trending_draft(args.db))
-        else:
-            print("[AI 초안] 신규 항목 없음, 건너뜀")
 
 
 if __name__ == "__main__":
