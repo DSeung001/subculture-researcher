@@ -2,7 +2,7 @@
 // (presentation.card_view runs at build time), so this only filters, sorts and renders.
 const PAGE_SIZE = 30;
 const UNCLASSIFIED = "__NONE__";
-const state = { q: "", work: "ALL", category: "ALL", days: "ALL", sort: "RECOMMENDED", source: "ALL", unposted: false };
+const state = { q: "", work: "ALL", category: "ALL", days: "ALL", sort: "RECOMMENDED", source: "ALL" };
 let allItems = [];
 let categoryLabels = {};
 let matched = [];
@@ -59,7 +59,6 @@ function applyFilters() {
     if (state.work === UNCLASSIFIED ? item.works.length : state.work !== "ALL" && !item.works.includes(state.work)) return false;
     if (state.category !== "ALL" && item.category !== state.category) return false;
     if (state.source !== "ALL" && item.source !== state.source) return false;
-    if (state.unposted && item.posted) return false;
     if (cutoff && item._collected < cutoff) return false;
     return !query || item._text.includes(query);
   });
@@ -159,10 +158,6 @@ async function start() {
 
   document.getElementById("filter-q").addEventListener("input", (event) => {
     state.q = event.target.value;
-    applyFilters();
-  });
-  document.getElementById("filter-unposted").addEventListener("change", (event) => {
-    state.unposted = event.target.checked;
     applyFilters();
   });
   document.getElementById("more-button").addEventListener("click", (event) => {

@@ -78,9 +78,10 @@ class SiteBuildTests(unittest.TestCase):
         self.assertEqual(first["view"]["title_text"], "원피스 루피 피규어")
         self.assertEqual(first["view"]["url"], "https://example.com/a")
         self.assertEqual(first["collected"], NOW.isoformat())
-        self.assertTrue(first["posted"])
+        # Publish state is a local review concern, not a visitor filter.
+        self.assertNotIn("posted", first)
         # Unmatched items stay, unclassified.
-        self.assertEqual((second["works"], second["posted"], second["collected"]), ([], False, ""))
+        self.assertEqual((second["works"], second["collected"]), ([], ""))
 
     def test_ignored_items_are_left_out(self):
         _, count, data = self.build([

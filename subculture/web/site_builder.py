@@ -42,7 +42,6 @@ def site_item(source_id: str, data: dict, compiled_works) -> dict:
         "works": match_works(data, compiled_works),
         "date": _iso(effective_date(data)),
         "collected": _iso(data.get("collectedAt")),
-        "posted": bool(data.get("postedAt")),
     }
 
 
