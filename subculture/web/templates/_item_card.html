@@ -1,4 +1,4 @@
-{#- One item card for every list (inbox, 작품·기획, 작품 편집).
+{#- One item card for the inbox; web/site/site.js builds the same markup for the static site.
     `v` is presentation.card_view(item). Page-specific parts come in through the
     call block, which is invoked once per slot:
       {% call(slot) item_card(v) %}{% if slot == 'select' %}…{% endif %}{% endcall %}

@@ -6,7 +6,7 @@
 
 `python collect.py`. GitHub Actions가 매일(KST 08:00, UTC 23:00)에 실행하며 로컬에서도 돌릴 수 있습니다. 수동 전용 소스(`manual_only`/`local_only`)는 건너뛰고, HTML 소스는 `robots.txt`를 확인합니다.
 
-- 로컬 실행은 수집 후 로컬 DB 동기화와 AI 초안 생성까지 기본으로 하며(`--no-sync`, `--no-ai-draft`로 끔), `CI` 환경(Actions)에서는 둘 다 건너뜁니다.
+- 수집이 끝나면 `Deploy site` 워크플로가 보기 전용 정적 사이트를 다시 만들어 GitHub Pages에 올립니다. 로컬에서 수집했다면 Actions에서 `Deploy site`를 수동 실행하세요.
 
 ### 상품·예약 정보 (피규어·굿즈)
 
@@ -101,8 +101,6 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 글·상품 정보에 실제로 쓰인 사진의 **링크(URL)만** 저장합니다(Firestore에는 이미지 파일을 올리지 않고, 화면에서 원본 주소를 그대로 불러옵니다). 대표 사진은 `imageUrl`, 상품 상세 본문·갤러리 사진은 `detailImageUrls`(배열)입니다. 로고·아이콘·플레이스홀더·사이트 공통 공유 이미지는 `subculture/shared/image_urls.py` 규칙으로 걸러내며, 저장 전 `ContentStore.save`가 http(s) 링크인지 다시 확인합니다.
 
-항목의 대표·상세 이미지를 **로컬로 받는** 기능은 Firestore와 별개입니다. 작품·기획의 「이미지 내보내기…」 팝업(현재 조건 전체 또는 선택 항목, 개수 제한 없음, 백그라운드 진행) 또는 `python export_images.py`가 `~/figure_project/exports/<stamp>/`(`.env`의 `FIGURE_PROJECT_DIR`로 변경)에 파일과 `index.json`을 만듭니다. 팝업에서 받을 항목 수·항목당 이미지 수·요청 간격·대표/상세 포함·총용량 상한을 정하고, 이미 받은 이미지 URL은 `exports/ledger.jsonl` 기준으로 건너뜁니다. 웹은 ZIP을 만들지 않습니다. figure-cutout이 같은 경로에서 읽습니다. 형식은 [docs/image-export-format.md](docs/image-export-format.md).
-
 ## 소스 설정 키 (HTML 소스)
 
 | 설정 키 | 의미 |
@@ -129,7 +127,7 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 
 `type: local_browser`(브라우저 수동 수집) 전용 키: `local_only: true`(자동 수집 제외), `interactive_ready`·`interactive_message`·`ready_wait_min_seconds`/`ready_wait_max_seconds`(사용자가 화면을 준비하는 랜덤 대기), `scroll_steps`·`scroll_delay_seconds`, `persistent_profile: true`(기본은 시크릿 컨텍스트). 이 방식의 `product_mode`는 상세를 열지 않고 목록 카드 텍스트에서 가격·상태를 읽습니다(상세 갤러리 URL은 수집하지 않음).
 
-이미 저장된 항목은 다음 수집 때 같은 URL의 값(사진 포함)이 갱신됩니다(로컬 라이브러리에는 다시 동기화해야 반영).
+이미 저장된 항목은 다음 수집 때 같은 URL의 값(사진 포함)이 갱신됩니다(정적 사이트에는 다음 배포 때 반영).
 
 ### 소스별 목록 규모 메모
 
@@ -142,14 +140,10 @@ Wonder Festival·Comiket·Anime Festival Asia는 구조상 자동 수집이 어�
 |---|---|
 | 사진 없는 기존 문서 보완 | `python collect.py --backfill-images` |
 | 제목 없음 잔여 문서 정리(X 게시물, `laftel.net` 홈) | `python delete_untitled_x.py --dry-run` 후 `--dry-run` 없이 실행 |
-| 작품 링크 없는 항목 요약(카탈로그 보강용) | `python seed_works.py --unmatched` |
-| 원격에서 사라진 로컬 항목 정리 | `python prune_library.py --dry-run` 후 `--dry-run` 없이 실행 |
-| 수집 후 로컬 동기화 건너뛰기 | `python collect.py --no-sync` (`collect_manual.py`도 동일) |
+| 작품 미분류 항목 확인(카탈로그 보강용) | 배포 사이트의 「작품·IP → 작품 미분류」 필터 |
 
 - `--backfill-images`는 `imageUrl`이 비어 있는 문서에만 씁니다(덮어쓰지 않음). `fetch_detail_image` 소스의 상세 페이지를 최대 60건까지 robots.txt·요청 간격을 지키며 엽니다.
-- `prune_library.py`는 Firestore에 없는 로컬 항목 중 작품 링크·기획 묶음·임시글 재료로 쓰이지 **않는 것만** 삭제합니다(동기화가 FIGURE에 자동으로 붙이는 「피규어」 카테고리는 작업으로 보지 않음)(있는 항목은 목록만 출력). 삭제 전 백업(PostgreSQL은 `.local/backups`의 pg_dump, SQLite는 `.bak` 복사)에 실패하면 아무것도 지우지 않습니다.
-- 로컬에서 `collect.py`/`collect_manual.py`를 실행하면 시작 시 `[로컬 동기화] 마지막 … · 미동기화 N · 로컬에만 M`을 출력합니다. 수집기가 이미 읽은 문서 ID를 쓰므로 Firestore를 더 읽지 않고, 로컬 DB가 꺼져 있어도 수집은 계속됩니다. 자동 수집(GitHub Actions)은 `CI` 환경변수로 이 확인을 건너뜁니다.
-- 임시글은 로컬 DB에만 있고 본문(`body`)과 댓글(`reply_body`, 상품 링크) 두 글로 저장됩니다. `reply_body` 컬럼이 추가되어(SQLite `0005_draft_reply_body`, PostgreSQL `pg0003_draft_reply_body`) 기존 임시글은 본문 그대로 두고 댓글을 빈 값으로 둡니다. 스키마가 바뀌었으므로 앱·동기화를 멈추고 `docker compose run --rm tools python migrate_library.py upgrade`로 업그레이드해야 글 화면이 열립니다(백업 자동). 발행하면 재료의 `postedAt`을 Firestore에도 기록합니다.
+- 로컬 DB(작품·기획, 글, AI 초안, 이미지 내보내기)는 제거했습니다. 작품·IP 분류는 `subculture/library/work_catalog.yaml` 키워드 매칭으로 정적 사이트를 만들 때 계산하며 저장하지 않습니다.
 - Firestore 문서에 `detailCheckedAt`(상세 페이지를 마지막으로 확인한 시각) 필드가 추가됩니다. 스키마 마이그레이션과 새 Firestore 인덱스는 필요 없습니다.
 - 조회수·좋아요(`viewCount`·`likeCount`)와 그 시간당 증가량(`*Velocity`)은 더 이상 수집·저장·점수 반영하지 않습니다(`list_metrics`·`detail_metrics` 설정 키도 제거). 추천 점수는 신선도와 공식·국내·예약·한정판 보너스로만 매깁니다. 기존 문서에 남은 필드는 무시됩니다.
 

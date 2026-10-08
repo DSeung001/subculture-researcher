@@ -54,7 +54,7 @@ SALE_STATUS_LABELS = {
     "SOLD_OUT": "품절",
     "UNKNOWN": "상태 미확인",
 }
-# Firestore documents reach the local library as JSON, so timestamps arrive as ISO strings.
+# A document copied as JSON carries its timestamps as ISO strings.
 DATETIME_FIELDS = ("collectedAt", "postedAt")
 _LEADING_DATE = re.compile(
     r"^(?P<date>\d{4}[./-]\d{1,2}[./-]\d{1,2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?)\s+(?P<title>.+)$"
@@ -249,8 +249,8 @@ def _with_datetimes(item: dict) -> dict:
 def card_view(item: dict) -> dict:
     """Everything an item card shows, from one Firestore-shaped document.
 
-    The inbox (Firestore) and the local library (JSON payload of the same
-    document) both render through this, so the two lists cannot drift apart.
+    The inbox and the static site (site_builder) both render through this, so the
+    two lists cannot drift apart.
     """
     data = _with_datetimes(item)
     category = data.get("category", "UNKNOWN")

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>서브컬처 리서처</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="topnav">
+    <span class="topnav-link active">서브컬처 리서처</span>
+  </nav>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>필터 &amp; 정렬</h2>
+      <div class="stacked-form">
+        <label>검색<input type="text" id="filter-q" placeholder="제목 · 작품 · 소스"></label>
+        <label>작품·IP<select id="filter-work"></select></label>
+
+        <div class="field-group">
+          <span class="field-label">카테고리</span>
+          <div class="chip-row" id="filter-category"></div>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">수집 기간</span>
+          <div class="chip-row" id="filter-days">
+            <a href="#" class="chip" data-value="7">최근 7일</a>
+            <a href="#" class="chip" data-value="14">최근 14일</a>
+            <a href="#" class="chip" data-value="30">최근 30일</a>
+            <a href="#" class="chip" data-value="ALL">전체 기간</a>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <span class="field-label">정렬</span>
+          <div class="chip-row" id="filter-sort">
+            <a href="#" class="chip" data-value="RECOMMENDED">추천순</a>
+            <a href="#" class="chip" data-value="NEWEST">최신순</a>
+            <a href="#" class="chip" data-value="OLDEST">오래된순</a>
+          </div>
+        </div>
+
+        <label>소스<select id="filter-source"></select></label>
+
+        <label class="toggle-row">
+          <span>미발행만 보기</span>
+          <span class="toggle">
+            <input type="checkbox" id="filter-unposted">
+            <span class="toggle-slider"></span>
+          </span>
+        </label>
+      </div>
+    </aside>
+
+    <main>
+      <h1>서브컬처 리서처</h1>
+      <p class="subtitle" id="site-status">불러오는 중…</p>
+      <div id="item-list" class="items"></div>
+      <div id="more" class="load-more" hidden>
+        <a class="btn full" href="#" id="more-button">더 보기</a>
+      </div>
+    </main>
+  </div>
+  <script src="app.js" defer></script>
+  <script src="site.js" defer></script>
+</body>
+</html>

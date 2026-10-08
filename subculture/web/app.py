@@ -5,32 +5,17 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
-from flask import Flask, abort, flash, redirect, render_template, request, url_for
-from sqlalchemy.exc import SQLAlchemyError
+from flask import Flask, flash, redirect, render_template, request, url_for
 
-from subculture.drafts.application.ai_drafts import create_trending_draft, create_work_drafts
-from subculture.drafts.infrastructure.ai_writer import AiWriterError
 from subculture.shared.firebase_client import get_db
 from subculture.collection.application.manual_entry import add_manual_content
-from subculture.library.interface.erd import build_erd
 from subculture.shared.content_model import ANGLES, CATEGORIES, SOURCE_TIERS, STATUSES, category_collection, content_id, content_ref
-from subculture.drafts.domain.posts import BODY_TARGET, post_length
-from subculture.drafts.domain.rules import DraftError
-from subculture.drafts.application.drafts import create_draft, delete_draft, list_drafts, publish_draft, save_posts
-from subculture.library.infrastructure.database import SchemaError
-from subculture.library.infrastructure.local_library import Library
 from subculture.collection.infrastructure.sources_config import load_sources
 from subculture.collection.domain.image_collection import image_collection_flags
 
 load_dotenv()
-from subculture.shared.presentation import ANGLE_LABELS, CATEGORY_LABELS, REGION_LABELS, STATUS_LABELS, TIER_LABELS, card_view, format_date_kst, sort_items
+from subculture.shared.presentation import ANGLE_LABELS, CATEGORY_LABELS, REGION_LABELS, STATUS_LABELS, TIER_LABELS, card_view, sort_items
 
-
-DRAFT_STATUSES = ["DRAFT", "POSTED"]
-DRAFT_STATUS_LABELS = {
-    "DRAFT": "초안",
-    "POSTED": "발행됨",
-}
 
 PAGE_SIZE = 30
 # Inbox default: unreviewed items collected recently; older ones stay reachable via 「전체 기간」.
@@ -40,9 +25,6 @@ DEFAULT_DAYS = "14"
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
-from subculture.library.interface.routes import library
-app.register_blueprint(library)
-
 _db = None
 
 
@@ -51,19 +33,6 @@ def db():
     if _db is None:
         _db = get_db()
     return _db
-
-
-app.config["LIBRARY_CLOUD_DB"] = db
-
-
-def local_library() -> Library:
-    """Drafts live in the local library; Firestore is only read/written for sources and publish marks."""
-    return Library(app.config.get("LIBRARY_PATH"))
-
-
-@app.errorhandler(SchemaError)
-def schema_upgrade_required(exc):
-    return render_template("library_upgrade.html", message=str(exc)), 503
 
 
 def update_content(category: str, document_id: str, **fields):
@@ -167,8 +136,8 @@ def fetch_recommended_items(days: int = RECOMMENDATION_POOL_DAYS, limit: int = R
 
 @app.get("/")
 def home():
-    """The app opens on 작품·기획; the inbox lives at /inbox."""
-    return redirect(url_for("library.index"))
+    """The app opens on the inbox, which lives at /inbox."""
+    return redirect(url_for("index"))
 
 
 @app.get("/inbox")
@@ -218,7 +187,7 @@ def index():
     next_url = build_url(list_filters)
 
     for item in items:
-        # Same card model as the local library list (presentation.card_view).
+        # Same card model as the static site list (presentation.card_view).
         item["_view"] = card_view(item)
 
     more_url = build_url(list_filters, after=cursor_id) if has_more and cursor_id else ""
@@ -245,131 +214,6 @@ def index():
         remaining=PAGE_SIZE if more_url else 0,
         filter_url=lambda **overrides: build_url(list_filters, **overrides),
     )
-
-
-def drafts_list_url(status: str | None = None) -> str:
-    chosen = status or request.values.get("list_status") or "DRAFT"
-    if chosen not in {"ALL", "DRAFT", "POSTED"}:
-        chosen = "DRAFT"
-    if chosen == "DRAFT":
-        return url_for("drafts_page")
-    return url_for("drafts_page", status=chosen)
-
-
-@app.get("/drafts")
-def drafts_page():
-    status = request.args.get("status", "DRAFT")
-    if status not in {"ALL", "DRAFT", "POSTED"}:
-        status = "DRAFT"
-    library = local_library()
-    drafts = list_drafts(library, status=status)
-    for draft in drafts:
-        created_at = draft.get("createdAt")
-        posted_at = draft.get("postedAt")
-        draft["_created"] = format_date_kst(created_at) if isinstance(created_at, datetime) else ""
-        draft["_posted"] = format_date_kst(posted_at) if isinstance(posted_at, datetime) else ""
-        angle = draft.get("angle") or "NEWS"
-        draft["_angle_label"] = ANGLE_LABELS.get(angle, angle)
-        draft["_status_label"] = DRAFT_STATUS_LABELS.get(draft.get("status"), draft.get("status"))
-    work_options = [
-        {"id": group["work_id"], "name": group["work_name"]}
-        for group in library.linked_work_items()
-    ]
-    return render_template(
-        "drafts.html",
-        drafts=drafts,
-        status=status,
-        draft_statuses=DRAFT_STATUSES,
-        draft_status_labels=DRAFT_STATUS_LABELS,
-        list_status=status,
-        work_options=work_options,
-        body_target=BODY_TARGET,
-        post_length=post_length,
-    )
-
-
-@app.post("/drafts")
-def create_draft_item():
-    next_url = safe_next(request.form.get("next"))
-    try:
-        create_draft(local_library(), request.form.getlist("source_ids"), cloud=db())
-    except DraftError as exc:
-        flash(str(exc), "error")
-        return redirect(next_url)
-    flash("글을 만들었습니다.", "success")
-    return redirect(url_for("drafts_page"))
-
-
-@app.post("/drafts/ai")
-def create_ai_draft_item():
-    try:
-        draft_id = create_trending_draft(local_library())
-    except (DraftError, AiWriterError) as exc:
-        flash(str(exc), "error")
-    else:
-        flash("글을 만들었습니다." if draft_id else "AI로 쓸 만한 새 재료가 없습니다.", "success" if draft_id else "info")
-    return redirect(url_for("drafts_page"))
-
-
-@app.post("/drafts/ai/by-work")
-def create_work_ai_draft_item():
-    work_id = request.form.get("work_id", type=int)
-    if work_id is None:
-        flash("작품을 선택해주세요.", "error")
-        return redirect(url_for("drafts_page"))
-    try:
-        results = create_work_drafts(local_library(), work_id=work_id)
-    except SchemaError as exc:
-        flash(str(exc), "error")
-        return redirect(url_for("drafts_page"))
-    except AiWriterError as exc:
-        flash(str(exc), "error")
-        return redirect(url_for("drafts_page"))
-
-    created = sum(1 for _, draft_id, error in results if draft_id and not error)
-    errors = [error for _, _, error in results if error]
-    if created:
-        flash(f"작품별 글 {created}개를 만들었습니다.", "success")
-    elif errors:
-        flash(errors[0], "error")
-    else:
-        flash("이 작품에 연결된 새 재료가 없습니다. 작품·기획에서 연결한 뒤 다시 시도해주세요.", "info")
-    return redirect(url_for("drafts_page"))
-
-
-@app.post("/drafts/<int:draft_id>/body")
-def save_draft_body(draft_id):
-    try:
-        save_posts(local_library(), draft_id, request.form.get("body", ""), request.form.get("reply", ""))
-    except DraftError as exc:
-        flash(str(exc), "error")
-    else:
-        flash("본문과 댓글을 저장했습니다.", "success")
-    return redirect(drafts_list_url())
-
-
-@app.post("/drafts/<int:draft_id>/publish")
-def publish_draft_item(draft_id):
-    try:
-        warnings = publish_draft(local_library(), draft_id, cloud=db())
-    except DraftError as exc:
-        flash(str(exc), "error")
-        return redirect(drafts_list_url())
-    flash("발행함으로 표시했습니다.", "success")
-    for warning in warnings:
-        flash(warning, "error")
-    return redirect(url_for("drafts_page", status="POSTED"))
-
-
-@app.post("/drafts/<int:draft_id>/delete")
-def delete_draft_item(draft_id):
-    try:
-        delete_draft(local_library(), draft_id)
-    except DraftError as exc:
-        flash(str(exc), "error")
-    else:
-        flash("글을 삭제했습니다.", "success")
-    return redirect(drafts_list_url())
 
 
 def _source_status(source: dict) -> str:
@@ -399,32 +243,6 @@ def sources_page():
         region_labels=REGION_LABELS,
         tier_labels=TIER_LABELS,
     )
-
-
-SOURCE_SAMPLE_COUNT = 5
-
-
-@app.get("/sources/samples")
-def source_samples():
-    """Newest locally synced items of one source as item cards (fragment for the sources page)."""
-    name = request.args.get("name", "").strip()
-    if not name or name not in {source["name"] for source in load_sources()}:
-        abort(400)
-    error = ""
-    items = []
-    try:
-        items = local_library().source_samples(name, limit=SOURCE_SAMPLE_COUNT)
-    except (SQLAlchemyError, OSError):
-        error = "로컬 DB를 열 수 없습니다. DB 실행과 동기화 상태를 확인하세요."
-    for item in items:
-        item["_view"] = card_view(item)
-    return render_template("_source_samples.html", name=name, items=items, error=error)
-
-
-@app.get("/erd")
-def erd_page():
-    # Static schema view: no DB connection, so it works even before Docker is up.
-    return render_template("erd.html", erd=build_erd())
 
 
 @app.post("/items/<category>/<item_id>/status")

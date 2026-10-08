@@ -46,8 +46,8 @@ def work_keywords(work):
     return names
 
 
-def match_keyword(text, keyword):
-    """Return the matched keyword if it appears in normalized title text, else None."""
+def keyword_pattern(keyword):
+    """Compiled pattern for one keyword against normalized title text; None if it is too short."""
     alias = normalized(keyword)
     # Short aliases are noisy; ASCII aliases must not sit inside another Latin word or number.
     # Hangul/kana next to them is fine: shop titles often glue the name to a product noun.
@@ -56,6 +56,30 @@ def match_keyword(text, keyword):
     pattern = re.escape(alias)
     if alias.isascii():
         pattern = r"(?<![a-z0-9])" + pattern + r"(?![a-z0-9])"
-    if re.search(pattern, text):
+    return re.compile(pattern)
+
+
+def match_keyword(text, keyword):
+    """Return the matched keyword if it appears in normalized title text, else None."""
+    pattern = keyword_pattern(keyword)
+    if pattern and pattern.search(text):
         return keyword.strip()
     return None
+
+
+def compile_works(works):
+    """(name, patterns) per work, ready for match_works. Entries repeating a name are merged."""
+    merged = {}
+    for work in works:
+        name = (work.get("name") or "").strip()
+        if not name:
+            continue
+        patterns = merged.setdefault(normalized(name), (name, []))[1]
+        patterns.extend(pattern for pattern in map(keyword_pattern, work_keywords(work)) if pattern)
+    return list(merged.values())
+
+
+def match_works(data, compiled):
+    """Names of the works whose keywords appear in the item's title, in catalog order."""
+    text = item_title_text(data)
+    return [name for name, patterns in compiled if any(pattern.search(text) for pattern in patterns)]
