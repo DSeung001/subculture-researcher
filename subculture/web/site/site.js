@@ -1,6 +1,6 @@
 // Read-only list for the static site: data.json already holds every card field
 // (presentation.card_view runs at build time), so this only filters, sorts and renders.
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 60;
 const UNCLASSIFIED = "__NONE__";
 const state = { q: "", work: "ALL", category: "ALL", days: "ALL", sort: "RECOMMENDED", source: "ALL" };
 let allItems = [];

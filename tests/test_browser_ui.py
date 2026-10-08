@@ -65,6 +65,38 @@ class BrowserUITests(unittest.TestCase):
             self.assertTrue(self.page.locator("#search-work").is_visible())
             self.assertFalse(self.errors, self.errors)
 
+    def test_public_grid_pagination_and_mobile_overflow(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            site_builder.build([
+                (f"GOODS:{n}", {"title": f"상품 {n} " + "긴제목" * 20,
+                                  "source": "테스트 샵", "category": "GOODS"})
+                for n in range(65)
+            ], [], tmp)
+
+            def route(request):
+                name = request.request.url.rsplit("/", 1)[-1] or "index.html"
+                file = Path(tmp) / name
+                request.fulfill(path=str(file)) if file.is_file() else request.abort()
+
+            self.page.route("**/*", route)
+            self.page.set_viewport_size({"width": 1440, "height": 900})
+            self.page.goto("http://offline.test/subculture-researcher/index.html")
+            self.page.wait_for_selector(".item-card")
+            self.assertEqual(self.page.locator(".item-card").count(), 60)
+            first = self.page.locator(".item-card").nth(0).bounding_box()
+            second = self.page.locator(".item-card").nth(1).bounding_box()
+            self.assertAlmostEqual(first["y"], second["y"], delta=1)
+            self.assertGreater(second["x"], first["x"])
+            self.page.locator("#more-button").click()
+            self.assertEqual(self.page.locator(".item-card").count(), 65)
+            self.assertTrue(self.page.locator("#more").is_hidden())
+            self.page.set_viewport_size({"width": 390, "height": 844})
+            self.assertTrue(self.page.evaluate(
+                "document.documentElement.scrollWidth <= window.innerWidth"))
+            self.page.locator("#filter-q").fill("상품 64 ")
+            self.assertEqual(self.page.locator(".item-card").count(), 1)
+            self.assertFalse(self.errors, self.errors)
+
     def test_local_panel_duplicate_selection_edit_error_and_reload(self):
         with patch.object(review, "fetch_contents_page", return_value=([], False, "")), patch.object(review, "fetch_recommended_items", return_value=[]):
             html = review.app.test_client().get("/inbox").get_data(as_text=True)

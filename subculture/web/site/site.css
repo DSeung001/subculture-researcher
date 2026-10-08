@@ -1,0 +1,39 @@
+/* Dense public gallery; local review cards keep their shared layout. */
+.public-site .layout { grid-template-columns: 260px minmax(0, 1fr); }
+.public-site .sidebar { padding: 18px; }
+.public-site main { width: 100%; max-width: none; min-width: 0; padding: 24px; }
+.public-site .items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.public-site .item-card { min-width: 0; padding: 12px; }
+.public-site .item-card .card-row { gap: 10px; flex-direction: row; flex-wrap: nowrap; }
+.public-site .item-card .card-main { flex-basis: auto; }
+.public-site .card-thumb-col { width: 64px; }
+.public-site .card-thumb { width: 64px; height: 80px; }
+.public-site .card-thumb-img { object-fit: contain; }
+.public-site .card-title { font-size: 14px; line-height: 1.45; }
+.public-site .card-meta, .public-site .card-summary { font-size: 12px; }
+.public-site .card-summary + .card-summary { margin-top: 4px; }
+.public-site .card-flags { display: flex; flex-wrap: wrap; gap: 4px; }
+.public-site .tag { padding: 1px 6px; font-size: 11px; }
+.public-site input[type="search"] {
+  width: 100%; min-width: 0; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: inherit;
+}
+.public-site .load-more { margin-top: 16px; }
+@media (max-width: 860px) {
+  .public-site .layout { grid-template-columns: minmax(0, 1fr); }
+  .public-site .sidebar { position: static; height: auto; max-height: none; }
+  .public-site .stacked-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .public-site .search-options { max-height: 140px; }
+  .public-site main { padding: 18px; }
+}
+@media (max-width: 480px) {
+  .public-site .stacked-form { grid-template-columns: minmax(0, 1fr); }
+  .public-site .search-options { max-height: 110px; }
+  .public-site main { padding: 14px; }
+}

@@ -4,6 +4,8 @@
 
 **수집(GitHub Actions, 매일 08:00 KST) → Firestore → 보기 전용 사이트(GitHub Pages)**
 
+**[사이트 바로가기](https://dseung001.github.io/subculture-researcher/)** — 화면 폭에 맞춰 여러 열로 표시되는 카드 그리드에서 한 번에 60개씩 볼 수 있습니다.
+
 [개발 원칙](AGENTS.md) · [수집 대상·정책](source.md)
 
 ## 설정
