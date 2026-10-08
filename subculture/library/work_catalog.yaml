@@ -1,6 +1,6 @@
 # Local work/IP dictionary seeded from stored titles (AniList + recurring product series).
 # aliases are matching keywords (Korean / Japanese / English / common short forms).
-# Edit further in the web UI: /library/works/<id>
+# Edit this catalog to change classification; links are computed at site build time.
 works:
   - name: 장송의 프리렌
     aliases:
@@ -205,6 +205,8 @@ works:
       - 카사네테토
       - 사쿠라 미쿠
       - Sakura Miku
+      - "데코미쿠"
+      - "デコミク"
   - name: 체인소맨
     aliases:
       - 체인소 맨
@@ -292,6 +294,7 @@ works:
     aliases:
       - とんがり帽子のアトリエ
       - Witch Hat Atelier
+      - "고깔모자의아틀리에"
   - name: 마도조사
     aliases:
       - 魔道祖師
@@ -1021,6 +1024,7 @@ works:
       - 역시내청춘러브코메디는잘못됐다
       - 내청코
       - やはり俺の青春ラブコメはまちがっている
+      - "俺ガイル"
   - name: 악역영애 전생 아저씨
     aliases:
       - 악역영애전생아저씨
@@ -1033,6 +1037,7 @@ works:
     aliases:
       - "딸기100%"
       - "いちご100%"
+      - "딸기100"
   - name: 마법소녀의 마녀재판
     aliases:
       - 魔法少女ノ魔女裁判
@@ -1180,6 +1185,8 @@ works:
       - 프리티 큐어
       - プリキュア
       - Precure
+      - "スイプリ"
+      - "まほプリ"
   - name: 아이프리
     aliases:
       - アイプリ
@@ -1239,6 +1246,7 @@ works:
   - name: NTE
     aliases:
       - Neverness to Everness
+      - "이환"
   - name: LINE FRIENDS
     aliases:
       - 라인프렌즈
@@ -1253,6 +1261,7 @@ works:
     aliases:
       - "NU: Carnival"
       - "NU:カーニバル"
+      - "ニューカニ"
   - name: 엘프마을
     aliases:
       - 엘프 마을
@@ -1326,6 +1335,7 @@ works:
     aliases:
       - 魔動王グランゾート
       - 마동왕그랑조트
+      - "グランゾート"
   - name: 우주의 기사 테카맨 블레이드
     aliases:
       - 테카맨
@@ -1691,6 +1701,7 @@ works:
   - name: 다크 어드벤트
     aliases:
       - ダークアドヴェント
+      - "다크어드벤트"
   - name: 알카나디아
     aliases:
       - アルカナディア
@@ -1700,9 +1711,13 @@ works:
     aliases:
       - 아키에이지 워
   - name: 카오스 제로 나이트메어
+    aliases:
+      - "카제나"
   - name: "솔: 인챈트"
   - name: 도깨비의세계
   - name: 아스오라
+    aliases:
+      - "아스트라에 오라티오"
   - name: "오딘: 발할라 라이징"
     aliases:
       - 오딘
@@ -1845,6 +1860,7 @@ works:
       - 勇者王ガオガイガー
       - 가오가이가
       - 가오가이거
+      - "ガオガイガー"
   - name: 무민
     aliases:
       - Moomin
@@ -1853,6 +1869,7 @@ works:
     aliases:
       - 로보콘
       - 컴배틀러
+      - "コン・バトラー"
   - name: 투장 다이모스
     aliases:
       - 배틀 다이모스
@@ -1879,6 +1896,7 @@ works:
     aliases:
       - Magic Knight Rayearth
       - 魔法騎士レイアース
+      - "마법기사레이어스"
   - name: 기갑창세기 모스피다
     aliases:
       - 機甲創世記モスピーダ
@@ -2011,3 +2029,138 @@ works:
   - name: 루프 N
   - name: 퍼펙트 어딕션
   - name: 대역 영애를 구한 것은 냉혹 무자비한 얼음 왕자의 사랑이었습니다
+
+  # Missing IPs reviewed against deployed titles on 2026-10-08.
+  - name: "스튜디오 카바나"
+    aliases:
+      - "スタジオカバナ"
+  - name: "추방당한 치트 부여 마술사는 자유로운 세컨드 라이프를 구가한다"
+    aliases:
+      - "追放されたチート付与魔術師は気ままなセカンドライフを謳歌する"
+  - name: "크레이지 택시"
+    aliases:
+      - "Crazy Taxi"
+      - "クレイジータクシー"
+  - name: "창세기전"
+    aliases:
+      - "창세기전 모바일"
+  - name: "퍼즐 세븐틴"
+  - name: "제우스: 오만의 신"
+    aliases:
+      - "제우스:오만의 신"
+  - name: "RF 온라인 넥스트"
+  - name: "전략적 팀 전투"
+    aliases:
+      - "TFT"
+  - name: "대항해시대 오리진"
+  - name: "원더 파우스"
+  - name: "고양이와 스프"
+  - name: "레전드 오브 이미르"
+  - name: "메이크 드라마"
+  - name: "로드나인"
+  - name: "아우터플레인"
+  - name: "세피루스 키우기"
+  - name: "템빨: 오버기어드"
+  - name: "악마단 돌겨억!"
+  - name: "삼국지: 천하결전"
+  - name: "팬텀 블레이드 제로"
+  - name: "콜 오브 듀티"
+    aliases:
+      - "콜옵"
+  - name: "뮤 포켓 나이츠"
+  - name: "서머너즈 워"
+  - name: "리듬하이브"
+  - name: "봄의 소리는 마치 너와 닮아서"
+  - name: "씰M2"
+  - name: "마남 이치"
+    aliases:
+      - "마남이치"
+      - "魔男のイチ"
+  - name: "다이블로스 코어"
+    aliases:
+      - "다이블로스코어"
+  - name: "아스트랄 파티"
+    aliases:
+      - "아스트랄파티"
+  - name: "해즈빈 호텔"
+    aliases:
+      - "해즈빈호텔"
+      - "Hazbin Hotel"
+      - "ハズビン・ホテル"
+  - name: "헥사기어"
+    aliases:
+      - "ヘキサギア"
+      - "Hexa Gear"
+  - name: "기갑전기 드라고나"
+    aliases:
+      - "ドラグナー"
+      - "機甲戦記ドラグナー"
+  - name: "백수왕 고라이온"
+    aliases:
+      - "백수왕고라이온"
+      - "볼트론"
+      - "百獣王ゴライオン"
+      - "Voltron"
+  - name: "니지산지"
+    aliases:
+      - "にじさんじ"
+      - "NIJISANJI"
+  - name: "베르세르크"
+    aliases:
+      - "ベルセルク"
+      - "Berserk"
+  - name: "티타노마키아"
+    aliases:
+      - "TITANOMACHIA"
+      - "ティタノマキア"
+  - name: "오빗 걸즈"
+    aliases:
+      - "오빗걸즈"
+      - "オービットガールズ"
+  - name: "별의 커비"
+    aliases:
+      - "星のカービィ"
+      - "Kirby"
+  - name: "고독한 미식가"
+    aliases:
+      - "고독한미식가"
+      - "孤独のグルメ"
+  - name: "로사도 프로젝트"
+    aliases:
+      - "ロザドプロジェクト"
+  - name: "라임라이트 레모네이드 잼"
+    aliases:
+      - "ライムライト・レモネードジャム"
+  - name: "그렘린"
+    aliases:
+      - "グレムリン"
+      - "Gremlins"
+  - name: "아마카노"
+    aliases:
+      - "アマカノ"
+      - "Amakano"
+  - name: "은하특급 밀키 서브웨이"
+    aliases:
+      - "은하특급밀키서브웨이"
+      - "銀河特急 ミルキー☆サブウェイ"
+  - name: "Chill with You: Lo-Fi Story"
+    aliases:
+      - "Chill with You Lo-Fi Story"
+  - name: "스타워즈"
+    aliases:
+      - "スター・ウォーズ"
+      - "Star Wars"
+  - name: "토마스와 친구들"
+    aliases:
+      - "きかんしゃトーマス"
+      - "Thomas & Friends"
+  - name: "블로커즈 FIORE"
+    aliases:
+      - "ブロッカーズFIORE"
+  - name: "어쥬르 프로밀리아"
+    aliases:
+      - "アズールプロミリア"
+      - "Azur Promilia"
+  - name: "BUGCAT CAPOO"
+    aliases:
+      - "Bugcat Capoo"

@@ -9,6 +9,10 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 - Work links are computed when the static site is built and are never stored. There are no hand-made links or unlinks: fix a classification by editing the catalog.
 - Do not decide that two listings are the same product or merge products across shops. Keep one item per source.
 
+## Repository skills
+
+- For missing IPs, unclassified items, or alias matching repairs, read and use [audit-ip-matching](.agents/skills/audit-ip-matching/SKILL.md). It audits current titles read-only, repairs the catalog, and checks for false matches.
+
 ## Code layout
 
 - Code lives in `subculture/`: `collection` (수집; layers `domain`, `application`, `infrastructure`, `interface`), `library` (작품·IP catalog; `domain` matching rules and `application` YAML loader only), `shared` (kernel: content vocabulary, image/URL rules, presentation, Firestore client, paths) and `web` (local Flask app, static site builder, templates, static).
