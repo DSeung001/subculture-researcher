@@ -1290,3 +1290,16 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
 @media (max-width: 560px) {
   .export-grid { grid-template-columns: 1fr; }
 }
+
+/* Searchable public filters and the session-only comparison panel. */
+.search-options { display: flex; flex-direction: column; align-items: stretch; gap: 6px; max-height: 260px; overflow-y: auto; }
+.search-options .chip { text-align: left; white-space: normal; cursor: pointer; }
+.search-options [aria-pressed="true"] { background: var(--info); color: white; }
+.search-options .chip:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+#compare-panel[hidden] { display: none; }
+#compare-panel textarea { width: 100%; box-sizing: border-box; }
+#compare-error { overflow-wrap: anywhere; }
+.draft-bar { flex-wrap: wrap; }
+
+#compare-panel .post-head { flex-wrap: wrap; }
+#compare-panel .post-head label { flex: 1 1 160px; }

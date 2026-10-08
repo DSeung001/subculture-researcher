@@ -5,10 +5,11 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, jsonify, flash, redirect, render_template, request, url_for
 
 from subculture.shared.firebase_client import get_db
 from subculture.collection.application.manual_entry import add_manual_content
+from subculture.shared.compare_post import BODY_TARGET, MAX_SOURCES, build_compare_posts
 from subculture.shared.content_model import ANGLES, CATEGORIES, SOURCE_TIERS, STATUSES, category_collection, content_id, content_ref
 from subculture.collection.infrastructure.sources_config import load_sources
 from subculture.collection.domain.image_collection import image_collection_flags
@@ -197,6 +198,8 @@ def index():
         items=items,
         recommended_items=fetch_recommended_items(),
         recommended_days=RECOMMENDATION_POOL_DAYS,
+        max_sources=MAX_SOURCES,
+        body_target=BODY_TARGET,
         filters=list_filters,
         categories=CATEGORIES,
         statuses=STATUSES,
@@ -263,6 +266,46 @@ def publish_item(category, item_id):
 def save_note(category, item_id):
     update_content(category, item_id, note=request.form.get("note", "").strip())
     return redirect(safe_next(request.form.get("next")))
+
+
+@app.post("/compare")
+def compare_page():
+    """Comparison post from the items ticked in the list. Shown once; nothing is stored."""
+    wants_json = request.accept_mimetypes.best == "application/json"
+    def failure(message):
+        if wants_json:
+            return jsonify(error=message), 400
+        flash(message, "error")
+        return redirect(next_url)
+
+    next_url = safe_next(request.form.get("next"))
+    ids = list(dict.fromkeys(value.strip() for value in request.form.getlist("source_ids") if value.strip()))
+    if not ids:
+        return failure("항목을 선택해주세요.")
+    if len(ids) > MAX_SOURCES:
+        return failure(f"비교글 재료는 {MAX_SOURCES}개까지입니다.")
+    try:
+        refs = [content_ref(db(), source_id) for source_id in ids]
+    except ValueError as exc:
+        return failure(str(exc))
+    # get_all may return snapshots in any order; match them by their own path.
+    found = {content_id(snapshot): snapshot.to_dict() for snapshot in db().get_all(refs) if snapshot.exists}
+    items = [found[source_id] for source_id in ids if source_id in found]
+    if not items:
+        return failure("선택한 항목을 찾을 수 없습니다.")
+    if wants_json:
+        posts = build_compare_posts(items)
+        return jsonify(body=posts.body, reply=posts.reply, count=len(items), bodyTarget=BODY_TARGET,
+                       missingCount=len(ids) - len(items))
+    for item in items:
+        item["_view"] = card_view(item)
+    return render_template(
+        "compare.html",
+        items=items,
+        posts=build_compare_posts(items),
+        body_target=BODY_TARGET,
+        next_url=next_url,
+    )
 
 
 @app.post("/manual")

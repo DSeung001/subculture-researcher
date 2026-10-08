@@ -106,11 +106,13 @@ class InboxCardRenderingTests(unittest.TestCase):
         self.assertIn("예약 접수 중", card)
         self.assertNotIn("(마감 지남)", card)
 
-    def test_card_has_status_buttons_and_no_draft_selection(self):
-        card = first_card(self.inbox(snapshot()))
+    def test_card_has_status_buttons_and_a_compare_checkbox(self):
+        html = self.inbox(snapshot())
+        card = first_card(html)
         self.assertIn("/items/FIGURE/abc/status", card)
-        self.assertNotIn('name="source_ids"', card)
-        self.assertNotIn("card-select", card)
+        # The checkbox carries the storage id and posts through the compare bar's form.
+        self.assertIn('name="source_ids" value="FIGURE:abc" form="compare-form"', card)
+        self.assertIn('<form id="compare-form" method="post" action="/compare"', html)
 
     def test_detail_images_show_next_to_the_main_thumbnail(self):
         card = first_card(self.inbox(snapshot(detailImageUrls=[

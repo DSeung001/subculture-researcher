@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from subculture.library.application.catalog import load_catalog
-from subculture.library.domain.keywords import compile_works, match_works
+from subculture.library.domain.keywords import compile_works, match_works, normalized, work_keywords
 from subculture.shared.content_model import content_id
 from subculture.shared.firebase_client import get_db
 from subculture.shared.paths import PROJECT_ROOT
@@ -55,10 +55,21 @@ def build(docs, works, out_dir, *, now: datetime | None = None) -> int:
         for source_id, data in docs
         if data.get("status") != "IGNORE"
     ]
+    visible = {name for item in items for name in item["works"]}
+    names = {normalized(name): name for name in visible}
+    search_works = {}
+    for work in works:
+        name = names.get(normalized(work.get("name") or ""))
+        if name:
+            aliases = search_works.setdefault(name, [])
+            for alias in work_keywords(work):
+                if normalized(alias) not in {normalized(value) for value in aliases}:
+                    aliases.append(alias)
     payload = {
         "builtAt": _iso(now or datetime.now(timezone.utc)),
         "categoryLabels": CATEGORY_LABELS,
         "items": items,
+        "works": [{"name": name, "aliases": aliases} for name, aliases in search_works.items()],
     }
     (out_dir / "data.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8",

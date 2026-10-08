@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}비교글 · 서브컬처 리서처{% endblock %}
+{% block body %}
+<main>
+  <h1>비교글</h1>
+  <p class="subtitle">선택한 {{ items|length }}개 항목으로 만든 글입니다. 저장되지 않으니 고친 뒤 바로 복사하거나 X에서 여세요. <a href="{{ next_url }}">← 검토 화면으로</a></p>
+
+  <article class="card draft-card">
+    <ul class="draft-sources">
+      {% for item in items %}
+      <li class="draft-source-row">
+        {% if item['_view'].image_url %}
+        <a class="card-thumb" href="{{ item['_view'].url or item['_view'].image_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="{{ item['_view'].image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>
+        {% else %}
+        <div class="card-thumb card-thumb-empty" aria-hidden="true"><span>{{ item['_view'].category_label }}</span></div>
+        {% endif %}
+        <div class="draft-source-text">
+          {{ loop.index }}.
+          {% if item['_view'].url %}
+          <a href="{{ item['_view'].url }}" target="_blank" rel="noopener">{{ item['_view'].title_text }}</a>
+          {% else %}
+          {{ item['_view'].title_text }}
+          {% endif %}
+          {% if item['_view'].product_caption or item.source %}<span class="draft-source-meta">{{ item['_view'].product_caption or item.source }}</span>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="note-form draft-posts">
+      <section class="post-block">
+        <div class="post-head">
+          <label class="post-label" for="post-body">① 본문 · 비교 정보</label>
+          <span class="post-count" data-count-for="post-body" data-limit="{{ body_target }}"></span>
+          <button type="button" class="btn btn-small" data-copy-target="post-body">복사</button>
+          <button type="button" class="btn btn-small btn-primary" data-x-post-target="post-body">X에서 열기</button>
+        </div>
+        <textarea id="post-body" rows="{{ [posts.body.count('\n') + 2, 8]|max }}">{{ posts.body }}</textarea>
+      </section>
+      <section class="post-block post-reply">
+        <div class="post-head">
+          <label class="post-label" for="post-reply">② 댓글 · 링크</label>
+          <span class="post-count" data-count-for="post-reply"></span>
+          <button type="button" class="btn btn-small" data-copy-target="post-reply">복사</button>
+        </div>
+        <textarea id="post-reply" rows="{{ [posts.reply.count('\n') + 2, 6]|max }}" placeholder="본문 글에 답글로 달 링크">{{ posts.reply }}</textarea>
+      </section>
+    </div>
+  </article>
+</main>
+{% endblock %}

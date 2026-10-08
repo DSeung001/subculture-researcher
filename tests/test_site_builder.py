@@ -83,6 +83,13 @@ class SiteBuildTests(unittest.TestCase):
         # Unmatched items stay, unclassified.
         self.assertEqual((second["works"], second["collected"]), ([], ""))
 
+    def test_search_catalog_merges_aliases_and_only_includes_visible_works(self):
+        _, _, data = self.build([
+            ("GOODS:a", {"title": "사이버펑크 루시"}),
+            ("GOODS:b", {"title": "원피스", "status": "IGNORE"}),
+        ])
+        self.assertEqual(data["works"], [{"name": "사이버펑크 엣지러너", "aliases": ["사이버펑크 엣지러너", "Cyberpunk Edgerunners", "사이버펑크", "X"]}])
+
     def test_ignored_items_are_left_out(self):
         _, count, data = self.build([
             ("GOODS:keep", {"title": "보이는 항목", "status": "NEW"}),

@@ -4,6 +4,7 @@ const PAGE_SIZE = 30;
 const UNCLASSIFIED = "__NONE__";
 const state = { q: "", work: "ALL", category: "ALL", days: "ALL", sort: "RECOMMENDED", source: "ALL" };
 let allItems = [];
+const normalizeSearch = (value) => String(value).normalize("NFKC").toLowerCase().replace(/:/g, " ").replace(/\s+/g, " ").trim();
 let categoryLabels = {};
 let matched = [];
 let shown = 0;
@@ -53,7 +54,7 @@ function cardHtml(item) {
 }
 
 function applyFilters() {
-  const query = state.q.trim().toLowerCase();
+  const query = normalizeSearch(state.q);
   const cutoff = state.days === "ALL" ? 0 : Date.now() - Number(state.days) * 86400000;
   matched = allItems.filter((item) => {
     if (state.work === UNCLASSIFIED ? item.works.length : state.work !== "ALL" && !item.works.includes(state.work)) return false;
@@ -107,13 +108,32 @@ function countBy(values) {
   return counts;
 }
 
-function fillSelect(id, key, options) {
-  const select = document.getElementById(id);
-  select.innerHTML = options.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
-  select.addEventListener("change", () => {
-    state[key] = select.value;
+function searchMenu(key, options) {
+  const container = document.getElementById(`filter-${key}`);
+  const input = document.getElementById(`search-${key}`);
+  const selected = document.getElementById(`selected-${key}`);
+  const render = () => {
+    const query = normalizeSearch(input.value);
+    const candidates = options.filter((option) => option.value === "ALL" || option.value === UNCLASSIFIED ||
+      normalizeSearch([option.label, ...(option.aliases || [])].join(" ")).includes(query));
+    container.innerHTML = candidates.map((option) => `<button type="button" class="chip" data-value="${escapeHtml(option.value)}" aria-pressed="${state[key] === option.value}">${escapeHtml(option.label)}</button>`).join("") +
+      (query && !candidates.some((option) => option.value !== "ALL" && option.value !== UNCLASSIFIED) ? '<p role="status">검색 결과가 없습니다.</p>' : "");
+    selected.textContent = `선택: ${options.find((option) => option.value === state[key])?.label || "전체"}`;
+  };
+  input.addEventListener("input", render);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") { event.preventDefault(); container.querySelector('button[data-value]:not([data-value="ALL"]):not([data-value="__NONE__"])')?.focus(); }
+    if (event.key === "Escape") { input.value = ""; render(); }
+  });
+  container.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-value]");
+    if (!button) return;
+    state[key] = button.dataset.value;
+    render();
+    [...container.querySelectorAll("button")].find((candidate) => candidate.dataset.value === state[key])?.focus();
     applyFilters();
   });
+  render();
 }
 
 async function start() {
@@ -130,10 +150,11 @@ async function start() {
   }
   categoryLabels = data.categoryLabels;
   allItems = data.items;
+  const aliases = new Map((data.works || []).map((work) => [work.name, work.aliases]));
   allItems.forEach((item) => {
     item._date = Date.parse(item.date) || 0;
     item._collected = Date.parse(item.collected) || 0;
-    item._text = [item.view.title_text, item.view.original_title, item.source, ...item.works].join(" ").toLowerCase();
+    item._text = normalizeSearch([item.view.title_text, item.view.original_title, item.source, ...item.works, ...item.works.flatMap((name) => aliases.get(name) || [])].join(" "));
   });
 
   const built = data.builtAt ? new Date(data.builtAt).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" }) : "";
@@ -141,13 +162,13 @@ async function start() {
 
   const workCounts = [...countBy(allItems.flatMap((item) => item.works))].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"));
   const unclassified = allItems.filter((item) => !item.works.length).length;
-  fillSelect("filter-work", "work", [
-    ["ALL", `전체 (${allItems.length})`],
-    [UNCLASSIFIED, `작품 미분류 (${unclassified})`],
-    ...workCounts.map(([name, count]) => [name, `${name} (${count})`]),
+  searchMenu("work", [
+    { value: "ALL", label: `전체 · 선택 해제 (${allItems.length})` },
+    { value: UNCLASSIFIED, label: `작품 미분류 (${unclassified})` },
+    ...workCounts.map(([name, count]) => ({ value: name, label: `${name} (${count})`, aliases: aliases.get(name) || [] })),
   ]);
   const sources = [...countBy(allItems.map((item) => item.source).filter(Boolean))].sort((a, b) => a[0].localeCompare(b[0], "ko"));
-  fillSelect("filter-source", "source", [["ALL", "전체"], ...sources.map(([name, count]) => [name, `${name} (${count})`])]);
+  searchMenu("source", [{ value: "ALL", label: `전체 · 선택 해제 (${allItems.length})` }, ...sources.map(([name, count]) => ({ value: name, label: `${name} (${count})` }))]);
 
   const used = new Set(allItems.map((item) => item.category));
   document.getElementById("filter-category").innerHTML = [["ALL", "전체"], ...Object.entries(categoryLabels).filter(([key]) => used.has(key))]

@@ -16,7 +16,7 @@
       <h2>필터 &amp; 정렬</h2>
       <div class="stacked-form">
         <label>검색<input type="text" id="filter-q" placeholder="제목 · 작품 · 소스"></label>
-        <label>작품·IP<select id="filter-work"></select></label>
+        <div class="field-group"><label for="search-work">작품·IP 찾기</label><input type="search" id="search-work" placeholder="작품명 · 한글/영문/일문 별칭" aria-controls="filter-work"><p id="selected-work" role="status"></p><div id="filter-work" class="search-options"></div></div>
 
         <div class="field-group">
           <span class="field-label">카테고리</span>
@@ -42,7 +42,7 @@
           </div>
         </div>
 
-        <label>소스<select id="filter-source"></select></label>
+        <div class="field-group"><label for="search-source">수집 출처 찾기</label><input type="search" id="search-source" placeholder="쇼핑몰 · 공식 사이트 이름" aria-controls="filter-source"><p id="selected-source" role="status"></p><div id="filter-source" class="search-options"></div></div>
       </div>
     </aside>
 
