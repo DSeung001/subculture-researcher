@@ -6,6 +6,8 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
+from bs4 import BeautifulSoup
+
 import yaml
 
 from subculture.library.application.catalog import load_catalog
@@ -102,12 +104,14 @@ class SiteBuildTests(unittest.TestCase):
         out, _, _ = self.build([])
         # Pages serves the site under /<repo>/, so absolute paths would break.
         html = (out / "index.html").read_text(encoding="utf-8")
-        for name in ("style.css", "app.js", "site.js"):
-            self.assertIn(f'"{name}"', html)
-            self.assertTrue((out / name).is_file(), name)
-        self.assertNotIn('="/', html)
-        self.assertIn('content="noindex"', html)
-        self.assertIn('fetch("data.json"', (out / "site.js").read_text(encoding="utf-8"))
+        page = BeautifulSoup(html, "html.parser")
+        assets = [node[attr] for selector, attr in (("script[src]", "src"), ("link[rel=stylesheet]", "href"))
+                  for node in page.select(selector)]
+        self.assertTrue(assets)
+        for asset in assets:
+            self.assertFalse(asset.startswith(("/", "http:", "https:")), asset)
+            self.assertTrue((out / asset).is_file(), asset)
+        self.assertEqual(page.select_one('meta[name="robots"]')["content"], "noindex")
         self.assertTrue((out / ".nojekyll").is_file())
         self.assertFalse(any("firebase" in path.name.lower() for path in out.iterdir()))
 

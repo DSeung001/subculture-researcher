@@ -33,15 +33,6 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(content_id(snapshot), "FIGURE:abc")
         self.assertEqual(review.cursor_token(snapshot), "FIGURE:abc")
 
-    def test_review_forms_use_storage_category(self):
-        snapshot = self.snapshot("FIGURE:abc", {"category": "GOODS", "title": "자료", "status": "NEW"})
-        with patch.object(review, "fetch_contents_page", return_value=([snapshot], False, "")), \
-                patch.object(review, "fetch_recommended_items", return_value=[]):
-            response = review.app.test_client().get("/inbox")
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('/items/FIGURE/abc/status', response.get_data(as_text=True))
-        self.assertIn('/items/FIGURE/abc/note', response.get_data(as_text=True))
-
     def test_invalid_reference_rejected(self):
         for source_id in ("", "FIGURE", ":abc", "FIGURE:", "FIGURE:abc/def"):
             with self.subTest(source_id=source_id), self.assertRaises(ValueError):

@@ -3,6 +3,9 @@ untitled leftover cleanup, keyword matching and the inbox period filter."""
 
 import tempfile
 import unittest
+from urllib.parse import parse_qs, urlsplit
+
+from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -600,8 +603,14 @@ class InboxPeriodTests(unittest.TestCase):
                 patch.object(review, "fetch_recommended_items", return_value=[]):
             html = review.app.test_client().get("/inbox").get_data(as_text=True)
         self.assertEqual(fetch.call_args.args[2], "14")
-        for label in ("최근 7일", "최근 14일", "최근 30일", "전체 기간"):
-            self.assertIn(label, html)
+        page = BeautifulSoup(html, "html.parser")
+        period_group = page.find("span", string="수집 기간").parent
+        links = period_group.select("a[href]")
+        periods = {parse_qs(urlsplit(link["href"]).query)["days"][0] for link in links}
+        self.assertEqual(periods, {"7", "14", "30", "ALL"})
+        active = [parse_qs(urlsplit(link["href"]).query)["days"][0]
+                  for link in links if "active" in link.get("class", [])]
+        self.assertEqual(active, ["14"])
 
 
 class RecommendedItemsTests(unittest.TestCase):

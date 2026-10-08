@@ -1,6 +1,8 @@
 """Comparison post for X: text rules and the session-only page (offline, nothing stored)."""
 
 import unittest
+
+from bs4 import BeautifulSoup
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -90,16 +92,15 @@ class ComparePageTests(unittest.TestCase):
             self.snapshot("FIGURE:a", FIGURE_A),
         ]
         response = self.post(["FIGURE:a", "FIGURE:gone", "FIGURE:b", "FIGURE:a"])
-        html = response.get_data(as_text=True)
+        page = BeautifulSoup(response.get_data(as_text=True), "html.parser")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(self.db.get_all.call_args.args[0]), 3)  # the repeated id is read once
-        self.assertIn("1. 넨도로이드 프리렌\n   헤로타임 · 예약중 · 62,000원 · 굿스마일\n2. 넨도로이드 프리렌", html)
-        self.assertIn("1. 넨도로이드 프리렌\nhttps://shop.example.com/a\n\n2. 넨도로이드 프리렌\nhttps://store.example.com/b", html)
-        self.assertIn('data-copy-target="post-body"', html)
-        self.assertIn('data-copy-target="post-reply"', html)
-        self.assertIn('data-x-post-target="post-body"', html)
-        self.assertIn('href="/inbox?days=7"', html)
-        self.assertNotIn("<form", html)  # nothing to save
+        self.assertIn("1. 넨도로이드 프리렌\n   헤로타임 · 예약중 · 62,000원 · 굿스마일\n2. 넨도로이드 프리렌",
+                      page.select_one("textarea#post-body").get_text())
+        self.assertIn(
+                         "1. 넨도로이드 프리렌\nhttps://shop.example.com/a\n\n2. 넨도로이드 프리렌\nhttps://store.example.com/b",
+                         page.select_one("textarea#post-reply").get_text())
+        self.assertIsNotNone(page.select_one('a[href="/inbox?days=7"]'))
         for call in self.db.mock_calls:
             self.assertNotIn(call[0].split(".")[-1], ("set", "update", "add", "delete", "batch"), call)
 

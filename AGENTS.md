@@ -44,5 +44,6 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 ## Verification
 
+- Test levels, writing guidelines, commands, and E2E coverage limits: [Testing guide](docs/testing.md). Follow it when adding, changing, or cleaning up tests. Remove vacuous, duplicate, and unnecessary source-text assertions; verify behavior. Report browser skips as unverified.
 - Behavior changes need offline regression tests. Do not run real collection or a real site build just to verify.
 - Run `python -m unittest discover -s tests -v` before delivery. Use `.\.venv\Scripts\python.exe` on Windows when the venv is not activated.

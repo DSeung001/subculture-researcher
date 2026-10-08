@@ -1,11 +1,12 @@
 """The item card: one view model for the inbox and the static site, and the inbox markup."""
 
 import json
-import re
 import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import patch
+
+from bs4 import BeautifulSoup
 
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.firestore import Client
@@ -31,15 +32,8 @@ def snapshot(source_id="FIGURE:abc", **fields):
     return SimpleNamespace(id=ref.id, reference=ref, exists=True, to_dict=lambda: {**DOC, **fields})
 
 
-def classes(html):
-    """Class names of the card's building blocks, in document order, as a structure fingerprint."""
-    return re.findall(r'class="(card item-card|card-row|card-thumb-col|card-thumb(?: card-thumb-empty)?|'
-                      r'card-detail-thumbs|card-main|card-title|'
-                      r'card-meta-row|card-meta|card-summary)"', html)
-
-
 def first_card(html):
-    return re.search(r'<article class="card item-card">.*?</article>', html, re.S).group(0)
+    return BeautifulSoup(html, "html.parser").select_one("article.item-card")
 
 
 class CardViewTests(unittest.TestCase):
@@ -92,59 +86,52 @@ class InboxCardRenderingTests(unittest.TestCase):
                 patch.object(review, "fetch_recommended_items", return_value=[]):
             return self.client.get("/inbox").get_data(as_text=True)
 
-    def test_card_markup(self):
+    def test_card_renders_product_data_and_photo(self):
         card = first_card(self.inbox(snapshot()))
-        self.assertEqual(classes(card), [
-            "card item-card", "card-row", "card-thumb-col", "card-thumb", "card-main", "card-title",
-            "card-meta-row", "card-meta", "card-summary", "card-summary",
-        ])
-        self.assertIn('<img class="card-thumb-img" src="https://cdn.example.com/p/1.jpg"', card)
-        self.assertIn('referrerpolicy="no-referrer"', card)
-        self.assertIn("붕괴 스타레일 스파키 1/7 피규어", card)
-        self.assertIn("자세히보기", card)
-        self.assertIn("따빼몰 · 예약중 · 269,000원", card)
-        self.assertIn("예약 접수 중", card)
-        self.assertNotIn("(마감 지남)", card)
+        image = card.select_one("img")
+        self.assertEqual(image["src"], DOC["imageUrl"])
+        self.assertEqual(image["referrerpolicy"], "no-referrer")
+        text = card.get_text(" ", strip=True)
+        for value in (DOC["title"], "따빼몰 · 예약중 · 269,000원", DOC["summary"]):
+            self.assertIn(value, text)
+        self.assertNotIn("(마감 지남)", text)
 
-    def test_card_has_status_buttons_and_a_compare_checkbox(self):
-        html = self.inbox(snapshot())
-        card = first_card(html)
-        self.assertIn("/items/FIGURE/abc/status", card)
-        # The checkbox carries the storage id and posts through the compare bar's form.
-        self.assertIn('name="source_ids" value="FIGURE:abc" form="compare-form"', card)
-        self.assertIn('<form id="compare-form" method="post" action="/compare"', html)
+    def test_card_forms_preserve_storage_id_after_category_edit(self):
+        html = self.inbox(snapshot(category="GOODS"))
+        page = BeautifulSoup(html, "html.parser")
+        card = page.select_one("article.item-card")
+        for action in ("status", "note"):
+            self.assertIsNotNone(page.select_one(f'form[action="/items/FIGURE/abc/{action}"]'))
+        checkbox = card.select_one('input[name="source_ids"]')
+        self.assertEqual(checkbox["value"], "FIGURE:abc")
+        form = page.find("form", id=checkbox["form"])
+        self.assertEqual((form["method"].lower(), form["action"]), ("post", "/compare"))
 
-    def test_detail_images_show_next_to_the_main_thumbnail(self):
-        card = first_card(self.inbox(snapshot(detailImageUrls=[
-            "https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg",
-        ])))
-        self.assertIn('class="card-detail-thumbs"', card)
-        self.assertIn('src="https://cdn.example.com/p/1-detail-1.jpg"', card)
-        self.assertIn('src="https://cdn.example.com/p/1-detail-2.jpg"', card)
+    def test_detail_images_are_rendered(self):
+        urls = ["https://cdn.example.com/p/1-detail-1.jpg", "https://cdn.example.com/p/1-detail-2.jpg"]
+        card = first_card(self.inbox(snapshot(detailImageUrls=urls)))
+        self.assertEqual([image["src"] for image in card.select("img")], [DOC["imageUrl"], *urls])
 
-    def test_item_without_detail_images_shows_no_detail_strip(self):
-        self.assertNotIn("card-detail-thumbs", first_card(self.inbox(snapshot())))
+    def test_item_without_detail_images_only_renders_main_photo(self):
+        card = first_card(self.inbox(snapshot()))
+        self.assertEqual([image["src"] for image in card.select("img")], [DOC["imageUrl"]])
 
     def test_item_without_a_photo_shows_the_category_placeholder(self):
         card = first_card(self.inbox(snapshot(imageUrl=None)))
-        self.assertIn("card-thumb card-thumb-empty", card)
-        self.assertNotIn("<img", card)
-        self.assertIn("피규어", card)
+        self.assertEqual(card.select("img"), [])
+        self.assertIn("피규어", card.get_text())
 
     def test_unsafe_image_and_link_are_not_rendered(self):
-        html = self.inbox(snapshot(imageUrl="javascript:alert(1)", url="javascript:alert(1)"))
-        self.assertNotIn('src="javascript:', html)
-        self.assertNotIn('href="javascript:', html)
+        card = first_card(self.inbox(snapshot(imageUrl="javascript:alert(1)", url="javascript:alert(1)")))
+        self.assertEqual(card.select("img"), [])
+        self.assertFalse(any(node.get(attr, "").startswith("javascript:")
+                             for node in card.find_all(True) for attr in ("href", "src")))
 
     def test_elapsed_preorder_deadline_is_flagged(self):
         old = snapshot(preorderEndAt=(NOW - timedelta(days=30)).date().isoformat())
-        self.assertIn("(마감 지남)", first_card(self.inbox(old)))
+        self.assertIn("(마감 지남)", first_card(self.inbox(old)).get_text())
 
-    def test_nav_links_only_to_the_remaining_screens(self):
-        html = self.inbox(snapshot())
-        self.assertIn('href="/sources"', html)
-        for gone in ("/library", "/drafts", "/erd"):
-            self.assertNotIn(f'href="{gone}', html)
+    def test_root_redirect_and_removed_routes(self):
         self.assertEqual(self.client.get("/").headers["Location"], "/inbox")
         for gone in ("/library", "/drafts", "/erd", "/sources/samples?name=x"):
             self.assertEqual(self.client.get(gone).status_code, 404, gone)

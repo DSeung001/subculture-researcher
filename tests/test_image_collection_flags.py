@@ -1,6 +1,9 @@
 """Offline checks for sources.yaml → main/detail image collection flags."""
 
 import unittest
+from unittest.mock import patch
+
+from bs4 import BeautifulSoup
 
 from subculture.collection.domain.image_collection import image_collection_flags
 from subculture.collection.infrastructure.sources_config import load_sources
@@ -60,16 +63,22 @@ class ImageCollectionFlagsTests(unittest.TestCase):
 
 
 class SourcesPageImageColumnTests(unittest.TestCase):
-    def setUp(self):
-        from subculture.web.app import app
-        app.config["TESTING"] = True
-        self.client = app.test_client()
-
-    def test_page_shows_image_column_and_badges(self):
-        html = self.client.get("/sources").get_data(as_text=True)
-        self.assertIn(">이미지<", html)
-        self.assertIn("대표", html)
-        self.assertIn("상세", html)
+    def test_each_source_shows_its_own_image_capabilities(self):
+        from subculture.web import app as review
+        sources = [
+            {"name": "목록", "url": "https://example.com/list", "list_image_selector": "img"},
+            {"name": "갤러리", "url": "https://example.com/gallery", "detail_images_selector": "img", "product_mode": True},
+            {"name": "이미지 없음", "url": "https://example.com/plain", "type": "rss"},
+        ]
+        with patch.object(review, "load_sources", return_value=sources):
+            response = review.app.test_client().get("/sources")
+        self.assertEqual(response.status_code, 200)
+        page = BeautifulSoup(response.get_data(as_text=True), "html.parser")
+        rows = page.select("tbody tr")
+        self.assertEqual([row.select_one("td").get_text(strip=True) for row in rows],
+                         ["목록", "갤러리", "이미지 없음"])
+        self.assertEqual([row.select_one("td.image-flags").get_text(" ", strip=True) for row in rows],
+                         ["대표", "대표 상세", "없음"])
 
 
 if __name__ == "__main__":
