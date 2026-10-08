@@ -8,7 +8,7 @@
 </head>
 <body>
   <nav class="topnav">
-    <a href="{{ url_for('index') }}" class="topnav-link {% if request.endpoint == 'index' %}active{% endif %}">인박스</a>
+    <a href="{{ url_for('index') }}" class="topnav-link {% if request.endpoint == 'index' %}active{% endif %}">검토</a>
     <a href="{{ url_for('sources_page') }}" class="topnav-link {% if request.endpoint == 'sources_page' %}active{% endif %}">수집 목록</a>
   </nav>
   {% block body %}{% endblock %}

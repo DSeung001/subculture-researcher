@@ -27,14 +27,14 @@ Setup and commands: [README.md](README.md). Sources and collection policy: [sour
 
 - Publishing path: `Firestore → build_site.py (subculture/web/site_builder.py) → site/ → GitHub Pages` (`.github/workflows/pages.yml`, after every `Collect sources` run and on manual dispatch).
 - The page is read-only and never talks to Firestore. No credential, Firebase web config or write path may reach the built files; the service account key exists only as the `FIREBASE_KEY` Actions secret and the local `firebase-key.json`.
-- Card fields are computed in Python by `shared/presentation.card_view` (shared with the inbox) and shipped in `data.json`; `web/site/site.js` only filters, sorts and renders. Do not re-implement scoring or labels in JavaScript, and keep its card markup in step with `templates/_item_card.html`.
+- Card fields are computed in Python by `shared/presentation.card_view` (shared with the review screen) and shipped in `data.json`; `web/site/site.js` only filters, sorts and renders. Do not re-implement scoring or labels in JavaScript, and keep its card markup in step with `templates/_item_card.html`.
 - Items with status `IGNORE` are left out of the build. Asset paths stay relative (the site is served under `/<repo>/`).
 - A build reads every document once; there is no shared modified-time field for an incremental read.
 
 ## Scope and operations
 
 - Collect metadata and links only, never full copyrighted articles. HTML collection checks robots.txt and is skipped if the check fails. The only exception is `local_only` `local_browser` sources (Naver stores) run by hand through `collect_manual.py`: headed, private Playwright context, list pages only, no bypass of challenges; `collect.py` never runs them. Do not add X scraping or community/VOC sources, or YouTube channels that upload the anime episodes themselves. Anime sources AniList and PR TIMES 만화·애니, the `anilist`/`youtube_feed` collectors and AniList-metric scoring were removed; existing `ANIME` documents stay. 애니플러스 뉴스 is collected again as the only `ANIME` source (list links, dates and photos, no metrics).
-- The Flask UI (inbox: status, publish mark, note, manual add; source list) is local-only on `127.0.0.1:5001` and is never deployed. Do not add auth, extra backends, vector DBs or new schedulers unless asked.
+- The Flask UI (검토 화면 at `/inbox`: status, publish mark, note, manual add; plus the source list) is local-only on `127.0.0.1:5001` and is never deployed. Do not add auth, extra backends, vector DBs or new schedulers unless asked.
 - No LLM is used. Discuss with the user before adding one (drafts, LLM translation, auto-classification).
 - Never commit credentials, `.env`, `firebase-key.json`, browser profiles, the built `site/` or test dependencies. The repository and the deployed site are public.
 
