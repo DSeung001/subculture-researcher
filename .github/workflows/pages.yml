@@ -1,0 +1,58 @@
+name: Deploy site
+
+on:
+  # 수집이 끝날 때마다 다시 만든다. 로컬에서 수집한 뒤에는 수동 실행.
+  workflow_run:
+    workflows: ["Collect sources"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write Firebase credentials
+        env:
+          FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
+        run: |
+          if [ -z "$FIREBASE_KEY" ]; then
+            echo "FIREBASE_KEY secret is not set" >&2
+            exit 1
+          fi
+          printf '%s\n' "$FIREBASE_KEY" > firebase-key.json
+
+      - name: Build site
+        run: python build_site.py --out site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
