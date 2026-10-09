@@ -25,9 +25,12 @@
   background: var(--bg); color: var(--text); font: inherit;
 }
 .public-site .load-more { margin-top: 16px; }
+.public-site .draft-bar { left: 276px; }
+.public-site .card-select { padding-top: 2px; }
 @media (max-width: 860px) {
   .public-site .layout { grid-template-columns: minmax(0, 1fr); }
   .public-site .sidebar { position: static; height: auto; max-height: none; }
+  .public-site .draft-bar { left: 16px; }
   .public-site .stacked-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .public-site .search-options { max-height: 140px; }
   .public-site main { padding: 18px; }

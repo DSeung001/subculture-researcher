@@ -57,19 +57,28 @@ def _facts(item: dict) -> str:
     return product_caption(item) or str(item.get("source") or "").strip()
 
 
+def post_piece(item: dict) -> dict:
+    """Name, facts and link for one item. The static site ships this and only numbers the lines."""
+    return {
+        "name": short_product_name(item),
+        "facts": _facts(item),
+        "url": http_url(item.get("url")) or "",
+        "product": item.get("entityType") == "PRODUCT",
+    }
+
+
 def build_compare_posts(items: list[dict]) -> ComparePosts:
     """Numbered names with their facts (no links), and the same numbers with links for the reply."""
     body = []
     links = []
-    for number, item in enumerate(items, start=1):
-        name = short_product_name(item)
+    pieces = [post_piece(item) for item in items]
+    for number, piece in enumerate(pieces, start=1):
+        name = piece["name"]
         body.append(f"{number}. {name}")
-        facts = _facts(item)
-        if facts:
-            body.append(f"   {facts}")
-        url = http_url(item.get("url"))
-        if url:
-            links.append(f"{number}. {name}\n{url}")
-    header = PRODUCT_LINKS_HEADER if any(item.get("entityType") == "PRODUCT" for item in items) else PLAIN_LINKS_HEADER
+        if piece["facts"]:
+            body.append(f"   {piece['facts']}")
+        if piece["url"]:
+            links.append(f"{number}. {name}\n{piece['url']}")
+    header = PRODUCT_LINKS_HEADER if any(piece["product"] for piece in pieces) else PLAIN_LINKS_HEADER
     reply = "\n\n".join([header, *links]) + "\n" if links else ""
     return ComparePosts("\n".join(body) + "\n" if body else "", reply)

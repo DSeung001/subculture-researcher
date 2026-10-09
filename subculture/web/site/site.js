@@ -1,9 +1,12 @@
-// Read-only list for the static site: data.json already holds every card field
-// (presentation.card_view runs at build time), so this only filters, sorts and renders.
+// Read-only list for the static site. Card text and comparison pieces are computed at
+// build time (presentation.card_view, compare_post.post_piece). This file filters, sorts,
+// renders, and numbers a comparison post in the browser. Nothing is stored or sent back.
 const PAGE_SIZE = 60;
 const UNCLASSIFIED = "__NONE__";
 const state = { q: "", work: "ALL", category: "ALL", days: "ALL", sort: "RECOMMENDED", source: "ALL" };
 let allItems = [];
+let compareConfig = { maxSources: 20, bodyTarget: 260, productHeader: "상품 페이지 참고 ↓", plainHeader: "링크 ↓" };
+const selected = [];
 const normalizeSearch = (value) => String(value).normalize("NFKC").toLowerCase().replace(/:/g, " ").replace(/\s+/g, " ").trim();
 let categoryLabels = {};
 let matched = [];
@@ -17,9 +20,10 @@ const datePrefix = (date) => (
   date ? `<span class="card-date">게시 ${escapeHtml(date)}</span><span class="card-date-sep" aria-hidden="true">|</span>` : ""
 );
 
-// Same markup as templates/_item_card.html (no select/actions slots on the read-only site).
+// Same markup as templates/_item_card.html. The select slot is the comparison checkbox.
 function cardHtml(item) {
   const v = item.view;
+  const checked = selected.includes(item.id) ? " checked" : "";
   const thumb = v.image_url
     ? `<a class="card-thumb" href="${escapeHtml(v.url || v.image_url)}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true"><img class="card-thumb-img" src="${escapeHtml(v.image_url)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`
     : `<div class="card-thumb card-thumb-empty" aria-hidden="true"><span>${escapeHtml(v.category_label)}</span></div>`;
@@ -39,6 +43,7 @@ function cardHtml(item) {
     : "";
   return `<article class="card item-card">
   <div class="card-row">
+    <div class="card-select"><label class="card-select-label"><input type="checkbox" class="draft-source" value="${escapeHtml(item.id)}"${checked} aria-label="비교글에 포함"></label></div>
     <div class="card-thumb-col">${thumb}${details}</div>
     <div class="card-main">
       <p class="card-title">${v.is_new_today ? '<span class="new-badge" title="오늘 수집">N</span>' : ""}<span class="title-variant title-translated">${datePrefix(v.title_date)}${v.lang_tag ? `<span class="lang-tag">[${escapeHtml(v.lang_tag)}]</span>` : ""}<strong>${escapeHtml(v.title_text)}</strong></span>${original}${v.url ? `<a class="original-toggle" href="${escapeHtml(v.url)}" target="_blank" rel="noopener">자세히보기</a>` : ""}</p>
@@ -76,14 +81,93 @@ function applyFilters() {
 
 function renderMore() {
   const next = matched.slice(shown, shown + PAGE_SIZE);
-  document.getElementById("item-list").insertAdjacentHTML("beforeend", next.map(cardHtml).join(""));
-  shown += next.length;
-  const remaining = matched.length - shown;
-  document.getElementById("more").hidden = remaining <= 0;
-  document.getElementById("more-button").textContent = `더 보기 (+${Math.min(PAGE_SIZE, remaining)}개)`;
-  document.getElementById("site-count").textContent = matched.length
-    ? `${matched.length}개 중 ${shown}개 표시`
-    : "조건에 맞는 항목이 없습니다.";
+  if (next.length) {
+    document.getElementById("item-list").insertAdjacentHTML("beforeend", next.map(cardHtml).join(""));
+    shown += next.length;
+  }
+  document.getElementById("more").hidden = shown >= matched.length;
+  const count = document.getElementById("site-count");
+  if (count) {
+    count.textContent = matched.length
+      ? `${matched.length}개 중 ${shown}개 표시`
+      : "조건에 맞는 항목이 없습니다.";
+  }
+}
+
+function comparePosts(items) {
+  const body = [];
+  const links = [];
+  items.forEach((item, index) => {
+    const number = index + 1;
+    const piece = item.post;
+    body.push(`${number}. ${piece.name}`);
+    if (piece.facts) body.push(`   ${piece.facts}`);
+    if (piece.url) links.push(`${number}. ${piece.name}\n${piece.url}`);
+  });
+  const header = items.some((item) => item.post.product) ? compareConfig.productHeader : compareConfig.plainHeader;
+  const reply = links.length ? `${[header, ...links].join("\n\n")}\n` : "";
+  return { body: body.length ? `${body.join("\n")}\n` : "", reply };
+}
+
+function setupCompare() {
+  const form = document.getElementById("compare-form");
+  const panel = document.getElementById("compare-panel");
+  const message = document.getElementById("compare-message");
+  const error = document.getElementById("compare-error");
+  const countEl = form.querySelector(".draft-bar-count");
+  const maximum = compareConfig.maxSources;
+  let revision = 0;
+  const sync = () => {
+    document.querySelectorAll(".draft-source").forEach((box) => { box.checked = selected.includes(box.value); });
+    countEl.textContent = `${selected.length}개 선택`;
+    form.hidden = selected.length === 0;
+    document.body.classList.toggle("has-draft-bar", selected.length > 0);
+  };
+  const changed = () => {
+    revision += 1;
+    error.textContent = "";
+    if (!panel.hidden) message.textContent = "선택이 변경되었습니다. 비교글을 다시 생성해주세요. 편집 내용은 유지됩니다.";
+    sync();
+  };
+  document.addEventListener("change", (event) => {
+    if (!event.target.matches(".draft-source")) return;
+    const id = event.target.value;
+    const index = selected.indexOf(id);
+    if (event.target.checked) {
+      if (index === -1 && selected.length >= maximum) {
+        event.target.checked = false;
+        error.textContent = `비교글 재료는 ${maximum}개까지입니다.`;
+        sync();
+        return;
+      }
+      if (index === -1) selected.push(id);
+    } else if (index !== -1) {
+      selected.splice(index, 1);
+    }
+    changed();
+  });
+  document.getElementById("compare-clear").addEventListener("click", () => { selected.splice(0, selected.length); changed(); });
+  document.getElementById("compare-close").addEventListener("click", () => { panel.hidden = true; });
+  new MutationObserver(sync).observe(document.getElementById("item-list"), { childList: true });
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!selected.length) return;
+    const items = selected.map((id) => allItems.find((item) => item.id === id)).filter(Boolean);
+    const posts = comparePosts(items);
+    const body = document.getElementById("post-body");
+    const reply = document.getElementById("post-reply");
+    body.value = posts.body;
+    reply.value = posts.reply;
+    panel.querySelector('[data-count-for="post-body"]').dataset.limit = compareConfig.bodyTarget;
+    body.dispatchEvent(new Event("input", { bubbles: true }));
+    reply.dispatchEvent(new Event("input", { bubbles: true }));
+    message.textContent = `${items.length}개 항목 · 이 화면에서만 표시됩니다. 새로고침하면 초기화됩니다.`;
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    body.focus({ preventScroll: true });
+    error.textContent = "";
+  });
+  sync();
 }
 
 function bindChips(id, key) {
@@ -149,6 +233,7 @@ async function start() {
     return;
   }
   categoryLabels = data.categoryLabels;
+  compareConfig = data.compare;
   allItems = data.items;
   const aliases = new Map((data.works || []).map((work) => [work.name, work.aliases]));
   allItems.forEach((item) => {
@@ -158,7 +243,7 @@ async function start() {
   });
 
   const built = data.builtAt ? new Date(data.builtAt).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" }) : "";
-  status.innerHTML = `보기 전용 · ${escapeHtml(built)} 기준 · <span id="site-count"></span>`;
+  status.innerHTML = `${escapeHtml(built)} 기준 · <span id="site-count"></span>`;
 
   const workCounts = [...countBy(allItems.flatMap((item) => item.works))].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko"));
   const unclassified = allItems.filter((item) => !item.works.length).length;
@@ -181,10 +266,11 @@ async function start() {
     state.q = event.target.value;
     applyFilters();
   });
-  document.getElementById("more-button").addEventListener("click", (event) => {
-    event.preventDefault();
-    renderMore();
-  });
+  const moreEl = document.getElementById("more");
+  new IntersectionObserver((entries) => {
+    if (shown < matched.length && entries.some((entry) => entry.isIntersecting)) renderMore();
+  }, { rootMargin: "600px 0px" }).observe(moreEl);
+  setupCompare();
   applyFilters();
 }
 

@@ -12,6 +12,7 @@ import yaml
 
 from subculture.library.application.catalog import load_catalog
 from subculture.library.domain.keywords import compile_works, match_works
+from subculture.shared.compare_post import BODY_TARGET, MAX_SOURCES, post_piece
 from subculture.web import site_builder
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -84,6 +85,12 @@ class SiteBuildTests(unittest.TestCase):
         self.assertNotIn("posted", first)
         # Unmatched items stay, unclassified.
         self.assertEqual((second["works"], second["collected"]), ([], ""))
+        self.assertEqual(first["post"], post_piece({
+            "title": "ワンピース", "titleKo": "원피스 루피 피규어", "category": "GOODS", "source": "샵",
+            "url": "https://example.com/a", "status": "NEW", "collectedAt": NOW, "postedAt": NOW,
+        }))
+        self.assertEqual(data["compare"]["maxSources"], MAX_SOURCES)
+        self.assertEqual(data["compare"]["bodyTarget"], BODY_TARGET)
 
     def test_search_catalog_merges_aliases_and_only_includes_visible_works(self):
         _, _, data = self.build([

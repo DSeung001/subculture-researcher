@@ -48,14 +48,44 @@
     </aside>
 
     <main>
+      <section id="compare-panel" class="card draft-card" hidden aria-labelledby="compare-title">
+        <div class="post-head">
+          <h2 id="compare-title">비교글</h2>
+          <button type="button" class="btn" id="compare-close">닫기</button>
+        </div>
+        <p id="compare-message" role="status"></p>
+        <div class="draft-posts">
+          <section class="post-block">
+            <div class="post-head">
+              <label for="post-body">① 본문 · 비교 정보</label>
+              <span class="post-count" data-count-for="post-body"></span>
+              <button type="button" class="btn btn-small" data-copy-target="post-body">복사</button>
+              <button type="button" class="btn btn-small btn-primary" data-x-post-target="post-body">X에서 열기</button>
+            </div>
+            <textarea id="post-body" rows="8" autocomplete="off"></textarea>
+          </section>
+          <section class="post-block">
+            <div class="post-head">
+              <label for="post-reply">② 댓글 · 링크</label>
+              <span class="post-count" data-count-for="post-reply"></span>
+              <button type="button" class="btn btn-small" data-copy-target="post-reply">복사</button>
+            </div>
+            <textarea id="post-reply" rows="6" autocomplete="off"></textarea>
+          </section>
+        </div>
+      </section>
       <h1>서브컬처 리서처</h1>
       <p class="subtitle" id="site-status">불러오는 중…</p>
       <div id="item-list" class="items"></div>
-      <div id="more" class="load-more" hidden>
-        <a class="btn full" href="#" id="more-button">더 보기</a>
-      </div>
+      <div id="more" class="load-more" hidden></div>
     </main>
   </div>
+  <form id="compare-form" class="draft-bar" data-local="1" hidden>
+    <span class="draft-bar-count">0개 선택</span>
+    <button type="button" class="btn" id="compare-clear">선택 해제</button>
+    <span id="compare-error" role="status"></span>
+    <button type="submit" class="btn btn-primary">비교글 만들기</button>
+  </form>
   <script src="app.js" defer></script>
   <script src="site.js" defer></script>
 </body>

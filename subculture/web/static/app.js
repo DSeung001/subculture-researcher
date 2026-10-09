@@ -116,7 +116,8 @@ if (loadMoreEl) {
 
 // 검토 화면: ticking cards shows the bar that turns them into a comparison post.
 const compareForm = document.getElementById("compare-form");
-if (compareForm) {
+// The public site assembles the post in the browser (site.js). This path calls the local app.
+if (compareForm && compareForm.dataset.local !== "1") {
   const selected = new Set();
   const countEl = compareForm.querySelector(".draft-bar-count");
   const submit = compareForm.querySelector('[type="submit"]');

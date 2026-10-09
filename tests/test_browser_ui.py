@@ -87,14 +87,59 @@ class BrowserUITests(unittest.TestCase):
             second = self.page.locator(".item-card").nth(1).bounding_box()
             self.assertAlmostEqual(first["y"], second["y"], delta=1)
             self.assertGreater(second["x"], first["x"])
-            self.page.locator("#more-button").click()
-            self.assertEqual(self.page.locator(".item-card").count(), 65)
+            self.page.locator("#more").scroll_into_view_if_needed()
+            self.page.wait_for_function("document.querySelectorAll('.item-card').length === 65")
             self.assertTrue(self.page.locator("#more").is_hidden())
             self.page.set_viewport_size({"width": 390, "height": 844})
             self.assertTrue(self.page.evaluate(
                 "document.documentElement.scrollWidth <= window.innerWidth"))
             self.page.locator("#filter-q").fill("상품 64 ")
             self.assertEqual(self.page.locator(".item-card").count(), 1)
+            self.assertFalse(self.errors, self.errors)
+
+    def test_public_checked_cards_become_a_comparison_post(self):
+        from subculture.shared.compare_post import build_compare_posts
+        from tests.test_compare_post import FIGURE_A, FIGURE_B, NEWS
+
+        with tempfile.TemporaryDirectory() as tmp:
+            site_builder.build([
+                ("FIGURE:a", FIGURE_A),
+                ("FIGURE:b", FIGURE_B),
+                ("ANIME:n", NEWS),
+            ], [], tmp)
+
+            def route(request):
+                name = request.request.url.rsplit("/", 1)[-1] or "index.html"
+                file = Path(tmp) / name
+                request.fulfill(path=str(file)) if file.is_file() else request.abort()
+
+            self.page.route("**/*", route)
+            self.page.set_viewport_size({"width": 1440, "height": 900})
+            self.page.goto("http://offline.test/index.html")
+            self.page.wait_for_selector(".draft-source")
+            boxes = self.page.locator(".draft-source")
+            boxes.nth(1).check()
+            boxes.nth(0).check()
+            self.assertIn("2개 선택", self.page.locator(".draft-bar-count").inner_text())
+            self.page.locator('#compare-form [type="submit"]').click()
+            self.page.wait_for_selector("#compare-panel", state="visible")
+            expected = build_compare_posts([FIGURE_B, FIGURE_A])
+            self.assertEqual(self.page.locator("#post-body").input_value(), expected.body)
+            self.assertEqual(self.page.locator("#post-reply").input_value(), expected.reply)
+            self.page.locator("#post-body").fill("직접 편집")
+            boxes.nth(2).check()
+            self.assertIn("선택이 변경", self.page.locator("#compare-message").inner_text())
+            self.assertEqual(self.page.locator("#post-body").input_value(), "직접 편집")
+            self.page.locator('#compare-form [type="submit"]').click()
+            news = build_compare_posts([FIGURE_B, FIGURE_A, NEWS])
+            self.assertEqual(self.page.locator("#post-body").input_value(), news.body)
+            self.assertTrue(self.page.locator("#post-reply").input_value().startswith("상품 페이지 참고"))
+            self.page.evaluate("""() => {
+              window.copied = '';
+              Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text) => { window.copied = text; } } });
+            }""")
+            self.page.locator('[data-copy-target="post-reply"]').click()
+            self.page.wait_for_function("window.copied.startsWith('상품 페이지 참고')")
             self.assertFalse(self.errors, self.errors)
 
     def test_inbox_cards_share_a_row_and_keep_review_actions(self):

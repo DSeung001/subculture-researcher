@@ -12,6 +12,9 @@ from pathlib import Path
 
 from subculture.library.application.catalog import load_catalog
 from subculture.library.domain.keywords import compile_works, match_works, normalized, work_keywords
+from subculture.shared.compare_post import (
+    BODY_TARGET, MAX_SOURCES, PLAIN_LINKS_HEADER, PRODUCT_LINKS_HEADER, post_piece,
+)
 from subculture.shared.content_model import content_id
 from subculture.shared.firebase_client import get_db
 from subculture.shared.paths import PROJECT_ROOT
@@ -42,6 +45,7 @@ def site_item(source_id: str, data: dict, compiled_works) -> dict:
         "works": match_works(data, compiled_works),
         "date": _iso(effective_date(data)),
         "collected": _iso(data.get("collectedAt")),
+        "post": post_piece(data),
     }
 
 
@@ -70,6 +74,12 @@ def build(docs, works, out_dir, *, now: datetime | None = None) -> int:
         "categoryLabels": CATEGORY_LABELS,
         "items": items,
         "works": [{"name": name, "aliases": aliases} for name, aliases in search_works.items()],
+        "compare": {
+            "maxSources": MAX_SOURCES,
+            "bodyTarget": BODY_TARGET,
+            "productHeader": PRODUCT_LINKS_HEADER,
+            "plainHeader": PLAIN_LINKS_HEADER,
+        },
     }
     (out_dir / "data.json").write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8",
