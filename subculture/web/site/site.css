@@ -1,4 +1,4 @@
-/* Dense public gallery; local review cards keep their shared layout. */
+/* Dense public gallery. The inbox uses the same column grid in static/style.css. */
 .public-site .layout { grid-template-columns: 260px minmax(0, 1fr); }
 .public-site .sidebar { padding: 18px; }
 .public-site main { width: 100%; max-width: none; min-width: 0; padding: 24px; }

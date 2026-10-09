@@ -1274,6 +1274,31 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
   .item-card .card-actions { width: 100%; margin-top: 4px; }
 }
 
+/* Inbox gallery: same column grid as the public site. Actions stay on their own row. */
+.review-layout { grid-template-columns: 260px minmax(0, 1fr); }
+.review-layout .sidebar { padding: 18px; }
+.review-layout main { width: 100%; max-width: none; min-width: 0; padding: 24px; }
+.review-layout .items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.review-layout .item-card { min-width: 0; padding: 12px; }
+.review-layout .item-card .card-row { gap: 10px; flex-wrap: wrap; }
+.review-layout .item-card .card-main { flex: 1 1 0; min-width: 0; }
+.review-layout .card-thumb-col { width: 64px; }
+.review-layout .card-thumb { width: 64px; height: 80px; }
+.review-layout .card-thumb-img { object-fit: contain; }
+.review-layout .card-title { font-size: 14px; line-height: 1.45; }
+.review-layout .card-meta, .review-layout .card-summary { font-size: 12px; }
+.review-layout .card-summary + .card-summary { margin-top: 4px; }
+.review-layout .item-card .card-actions { width: 100%; margin-top: 4px; flex-wrap: wrap; }
+@media (max-width: 860px) {
+  .review-layout { grid-template-columns: minmax(0, 1fr); }
+  .review-layout main { padding: 18px; }
+}
+
 .export-fields {
   border: 0;
   margin: 0;

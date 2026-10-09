@@ -97,6 +97,46 @@ class BrowserUITests(unittest.TestCase):
             self.assertEqual(self.page.locator(".item-card").count(), 1)
             self.assertFalse(self.errors, self.errors)
 
+    def test_inbox_cards_share_a_row_and_keep_review_actions(self):
+        from tests.test_item_card import snapshot
+
+        with patch.object(review, "fetch_contents_page", return_value=(
+                [snapshot("FIGURE:a"), snapshot("FIGURE:b", title="다른 상품")], False, "")), \
+                patch.object(review, "fetch_recommended_items", return_value=[]):
+            html = review.app.test_client().get("/inbox").get_data(as_text=True)
+
+        def route(request):
+            url = request.request.url
+            if "/static/" in url:
+                request.fulfill(path=str(ROOT / "subculture/web/static" / url.rsplit("/", 1)[-1]))
+            else:
+                request.fulfill(content_type="text/html", body=html)
+
+        self.page.route("**/*", route)
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        self.page.goto("http://offline.test/inbox")
+        self.page.wait_for_selector("#item-list .item-card")
+        cards = self.page.locator("#item-list .item-card")
+        self.assertEqual(cards.count(), 2)
+        first = cards.nth(0).bounding_box()
+        second = cards.nth(1).bounding_box()
+        self.assertAlmostEqual(first["y"], second["y"], delta=1)
+        self.assertGreater(second["x"], first["x"])
+        adopt = cards.nth(0).locator('[aria-label="채택"]')
+        self.assertTrue(adopt.is_visible())
+        card_box = cards.nth(0).bounding_box()
+        action_box = adopt.bounding_box()
+        self.assertLessEqual(action_box["x"] + action_box["width"], card_box["x"] + card_box["width"] + 1)
+        cards.nth(0).locator(".more-trigger").click()
+        self.assertTrue(self.page.locator("dialog[open]").is_visible())
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.assertEqual(cards.count(), 2)
+        narrow_first = cards.nth(0).bounding_box()
+        narrow_second = cards.nth(1).bounding_box()
+        self.assertGreater(narrow_second["y"], narrow_first["y"])
+        self.assertTrue(self.page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"))
+        self.assertFalse(self.errors, self.errors)
+
     def test_local_panel_duplicate_selection_edit_error_and_reload(self):
         with patch.object(review, "fetch_contents_page", return_value=([], False, "")), patch.object(review, "fetch_recommended_items", return_value=[]):
             html = review.app.test_client().get("/inbox").get_data(as_text=True)
