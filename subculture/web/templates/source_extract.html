@@ -52,10 +52,23 @@
       </div>
 
       <div class="extract-fields-scroll">
-        <label class="field-group">상품 카드 (item)
-          <input type="text" id="field-item" placeholder="li.item">
-        </label>
-        <h2>목록 필드</h2>
+        <div class="field-group">
+          <span class="field-map-label">상품 카드 (item)
+            <button type="button" class="help-tip" data-help-for="help-item" aria-expanded="false" aria-label="상품 카드 설명"
+              title="목록에서 상품 하나를 감싸는 반복 요소">?</button>
+          </span>
+          <p class="field-help" id="help-item" hidden>목록에서 상품 하나를 통째로 감싸는 반복 요소(li, div 카드 등)입니다. 아래 목록 필드는 모두 이 카드 안에서 찾습니다. 카드의 빈 여백을 클릭해 "상품 카드로 지정"을 누르고, 셀렉터 끝의 :nth-of-type(…)을 지워 모든 카드에 걸리게 하세요.</p>
+          <input type="text" id="field-item" aria-label="상품 카드 셀렉터" placeholder="li.item">
+        </div>
+        <h2>목록 필드
+          <button type="button" class="help-tip" data-help-for="help-parse" aria-expanded="false" aria-label="parse와 attr 설명"
+            title="parse와 attr 설명">?</button>
+        </h2>
+        <div class="field-help" id="help-parse" hidden>
+          <p><strong>parse</strong>: 읽은 값을 어떻게 바꿀지 정합니다. text는 그대로, krw는 원화 숫자, sale_status는 예약·품절·판매중, date는 날짜.</p>
+          <p><strong>attr</strong>: 화면 글자 대신 읽을 속성입니다. 링크는 href, 사진은 src(지연 로딩이면 data-src), 이미지 배지는 alt. 비워 두면 화면에 보이는 글자를 읽습니다.</p>
+          <p><strong>넣기</strong>: 미리보기에서 클릭한 요소를 이 필드에 넣습니다. 상품 카드를 먼저 지정해 두면 클릭한 요소가 속한 카드 기준의 짧은 셀렉터가 들어갑니다.</p>
+        </div>
         <div id="list-fields" class="field-map"></div>
         <details class="detail-fields" open>
           <summary>상세 필드 (선택)</summary>

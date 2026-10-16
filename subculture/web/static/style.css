@@ -1486,6 +1486,42 @@ main#extract-root {
 .field-map-opts select,
 .field-map-opts input { flex: 1; min-width: 0; padding: 4px 6px; font-size: 12px; }
 .field-pick:disabled { opacity: 0.45; cursor: not-allowed; }
+.help-tip {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  vertical-align: middle;
+  cursor: help;
+}
+.help-tip:hover,
+.help-tip[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.field-help {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.field-help[hidden] { display: none; }
+.field-help p { margin: 0 0 4px; }
+.field-help p:last-child { margin-bottom: 0; }
+.extract-fields-scroll > .field-group { gap: 6px; }
 .detail-fields summary { cursor: pointer; font-size: 15px; font-weight: 600; margin: 4px 0; }
 .sample-table-wrap { margin-top: 12px; overflow-x: auto; }
 .sample-table { min-width: 0; font-size: 12px; }

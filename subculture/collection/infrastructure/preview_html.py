@@ -119,9 +119,16 @@ def sanitize_preview_html(html: str, base_url: str) -> str:
     var t = ev.target;
     if (!t || t.nodeType !== 1) return;
     var text = (t.innerText || t.textContent || "").trim().slice(0, 200);
+    var card = null;
+    try {
+      card = window.__extractItemRootSelector && t.closest ? t.closest(window.__extractItemRootSelector) : null;
+    } catch (_err) {
+      card = null;
+    }
     var payload = {
       type: "extract-pick",
       selector: cssPath(t),
+      relative: card && card !== t ? relativePath(t, card) : "",
       tag: t.tagName.toLowerCase(),
       text: text,
       href: t.getAttribute("href") || (t.closest && t.closest("a") && t.closest("a").getAttribute("href")) || "",
@@ -134,12 +141,6 @@ def sanitize_preview_html(html: str, base_url: str) -> str:
     if (ev.source !== parent || !ev.data || ev.data.type !== "extract-set-item") return;
     window.__extractItemRootSelector = ev.data.selector || "";
   });
-  window.__extractRelative = function (el) {
-    var root = window.__extractItemRootSelector
-      ? document.querySelector(window.__extractItemRootSelector)
-      : null;
-    return relativePath(el, root);
-  };
 })();
 """
     if soup.body:

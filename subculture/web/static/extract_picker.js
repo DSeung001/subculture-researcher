@@ -21,21 +21,34 @@
   const saveStatus = document.getElementById("save-status");
 
   const LIST_FIELDS = [
-    { key: "link", label: "링크", parse: "text", attrHint: "href" },
-    { key: "title", label: "제목", parse: "text" },
-    { key: "price", label: "가격", parse: "krw" },
-    { key: "image", label: "대표 사진", parse: "text", attrHint: "src" },
-    { key: "status", label: "판매 상태", parse: "sale_status" },
-    { key: "deadline", label: "예약 마감", parse: "date" },
-    { key: "published", label: "게시일", parse: "date" },
+    { key: "link", label: "링크", parse: "text", attrHint: "href",
+      help: "필수. 카드 안에서 상품 상세 페이지로 가는 <a>. 상품 이미지나 이름을 감싼 링크를 고르세요. attr은 href." },
+    { key: "title", label: "제목", parse: "text",
+      help: "필수. 상품명 글자가 들어 있는 요소. 브랜드·카테고리 라벨이 아닌 상품 이름 자체를 고르세요." },
+    { key: "price", label: "가격", parse: "krw",
+      help: "판매가가 적힌 요소. krw가 \"12,000원\"에서 숫자만 뽑습니다. 정가와 할인가가 함께 있으면 실제 판매가 쪽만 고르세요." },
+    { key: "image", label: "대표 사진", parse: "text", attrHint: "src",
+      help: "카드의 썸네일 <img>. attr은 src. 지연 로딩이라 src가 빈 그림이면 data-src나 data-original을 넣으세요." },
+    { key: "status", label: "판매 상태", parse: "sale_status",
+      help: "\"예약\", \"품절\" 같은 배지나 글자. 품절 → SOLD_OUT, 예약 → PREORDER, 그 외 → IN_STOCK. 배지가 이미지면 attr을 alt로." },
+    { key: "deadline", label: "예약 마감", parse: "date",
+      help: "예약 주문 마감일이 적힌 요소. date가 날짜를 읽습니다. 목록에 없으면 비워 두고 상세에서 채우세요." },
+    { key: "published", label: "게시일", parse: "date",
+      help: "상품 등록일이나 글 게시일. 최신순 정렬과 신규 판별에 씁니다. 없으면 비워 두세요." },
   ];
   const DETAIL_FIELDS = [
-    { key: "gallery", label: "상세 갤러리", parse: "text", attrHint: "src", many: true },
-    { key: "price", label: "가격", parse: "krw" },
-    { key: "status", label: "판매 상태", parse: "sale_status" },
-    { key: "deadline", label: "예약 마감", parse: "date" },
-    { key: "image", label: "대표 사진", parse: "text", attrHint: "src" },
-    { key: "title", label: "제목", parse: "text" },
+    { key: "gallery", label: "상세 갤러리", parse: "text", attrHint: "src", many: true,
+      help: "상세 페이지의 상품 사진들. 셀렉터에 걸리는 이미지를 모두 모읍니다. 사진 하나를 고른 뒤 nth-of-type 부분을 지워 여러 장이 걸리게 하세요." },
+    { key: "price", label: "가격", parse: "krw",
+      help: "상세 페이지의 판매가. 값이 있으면 목록에서 읽은 가격보다 우선합니다." },
+    { key: "status", label: "판매 상태", parse: "sale_status",
+      help: "상세 페이지의 예약/품절 표시. 값이 있으면 목록 값보다 우선합니다." },
+    { key: "deadline", label: "예약 마감", parse: "date",
+      help: "상세 페이지에만 있는 예약 마감일. 값이 있으면 목록 값보다 우선합니다." },
+    { key: "image", label: "대표 사진", parse: "text", attrHint: "src",
+      help: "상세 페이지의 큰 대표 사진. 찾으면 목록 썸네일 대신 이 사진을 씁니다." },
+    { key: "title", label: "제목", parse: "text",
+      help: "목록에서 제목을 못 읽었을 때만 상세 페이지 제목으로 채웁니다." },
   ];
 
   let state = {
@@ -83,12 +96,16 @@
     wrap.dataset.key = def.key;
     wrap.innerHTML = `
       <div class="field-map-head">
-        <span class="field-map-label">${def.label}</span>
+        <span class="field-map-label">${def.label}
+          <button type="button" class="help-tip" data-help-for="help-${section}-${def.key}"
+            aria-expanded="false" aria-label="${def.label} 설명" title="${escapeAttr(def.help)}">?</button>
+        </span>
         <button type="button" class="btn btn-sm field-pick" data-section="${section}" data-key="${def.key}"
           ${lastPick ? "" : "disabled"} title="선택한 요소를 이 필드에 넣기">넣기</button>
       </div>
       <input type="text" aria-label="${def.label} 셀렉터" data-section="${section}" data-key="${def.key}" data-role="selector"
         value="${escapeAttr(current.selector || "")}" placeholder="${def.attrHint ? def.attrHint + " 속성 셀렉터" : "CSS 셀렉터"}">
+      <p class="field-help" id="help-${section}-${def.key}" hidden>${escapeAttr(def.help)}</p>
       <div class="field-map-opts">
         <label>parse
           <select data-section="${section}" data-key="${def.key}" data-role="parse">
@@ -212,7 +229,7 @@
     lastPick = event.data;
     let selector = event.data.selector || "";
     if (previewKind === "list" && itemInput.value.trim()) {
-      selector = relativeToItem(selector);
+      selector = event.data.relative || relativeToItem(selector);
     }
     lastPick.relativeSelector = selector;
     pickBanner.hidden = false;
@@ -240,7 +257,7 @@
     if (!bag[key]) return;
     let selector = lastPick.selector || "";
     if (section === "list") {
-      selector = relativeToItem(selector);
+      selector = lastPick.relative || relativeToItem(selector);
     }
     bag[key].selector = selector;
     if (lastPick.tag === "img" && (key === "image" || key === "gallery" || key === "status")) {
@@ -260,7 +277,19 @@
     saveStatus.textContent = `${label ? label.label : key} 필드에 넣었습니다.`;
   }
 
+  // Hand-edited card selectors (e.g. after dropping :nth-of-type) apply to the next pick.
+  itemInput.addEventListener("change", () => sendItemRoot(itemInput.value.trim()));
+
   root.addEventListener("click", (event) => {
+    const tip = event.target.closest(".help-tip");
+    if (tip) {
+      const help = document.getElementById(tip.dataset.helpFor);
+      if (help) {
+        help.hidden = !help.hidden;
+        tip.setAttribute("aria-expanded", String(!help.hidden));
+      }
+      return;
+    }
     const btn = event.target.closest(".field-pick");
     if (btn) assignPick(btn.dataset.section, btn.dataset.key);
   });
