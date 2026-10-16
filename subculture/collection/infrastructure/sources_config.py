@@ -4,14 +4,22 @@ from pathlib import Path
 
 import yaml
 
+from subculture.collection.infrastructure.extractors_config import merge_sources_with_extractors
+
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "sources.yaml"
 
 
-def load_sources() -> list[dict]:
+def load_sources_yaml() -> list[dict]:
+    """Sources from sources.yaml only (no extractors/ overlays)."""
     if not CONFIG_PATH.exists():
         raise SystemExit("sources.yaml 파일이 없습니다.")
     config = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")) or {}
     return config.get("sources", [])
+
+
+def load_sources() -> list[dict]:
+    """sources.yaml plus extractors/*.yaml overlays and standalone sources."""
+    return merge_sources_with_extractors(load_sources_yaml())
 
 
 def is_manual_source(source: dict) -> bool:

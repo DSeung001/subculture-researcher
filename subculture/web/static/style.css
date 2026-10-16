@@ -1328,3 +1328,172 @@ svg.erd.has-focus .erd-table.on { opacity: 1; }
 
 #compare-panel .post-head { flex-wrap: wrap; }
 #compare-panel .post-head label { flex: 1 1 160px; }
+
+/* Local extract picker (review server only). */
+.sources-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.sources-header h1 { margin-bottom: 4px; }
+.extract-cell .btn { white-space: nowrap; }
+.muted-hint { color: var(--muted); font-size: 12px; }
+.breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.breadcrumb a { color: var(--info); }
+.panel-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.extract-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+/* The picker needs the whole window: preview left, field editor right. */
+main#extract-root {
+  max-width: none;
+  padding: 16px 24px 24px;
+}
+#extract-root .btn { width: auto; }
+.extract-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.extract-header h1 { font-size: 22px; margin: 0; }
+.extract-header .breadcrumb { margin-bottom: 2px; }
+.extract-header .subtitle { margin: 0; font-size: 13px; }
+.extract-layout {
+  --extract-height: calc(100vh - 150px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 16px;
+  align-items: start;
+}
+.extract-preview-panel,
+.extract-fields-panel {
+  position: sticky;
+  top: 12px;
+  height: var(--extract-height);
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+.extract-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.extract-toolbar .muted-hint { flex: 1; margin: 0; min-width: 0; }
+.extract-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+.pick-slot {
+  flex: none;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.pick-slot .muted-hint { margin: 0; }
+.pick-banner {
+  padding: 10px 12px;
+  background: var(--accent-soft);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.pick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+.pick-banner code {
+  display: block;
+  max-height: 3.6em;
+  overflow: auto;
+  word-break: break-all;
+  font-size: 12px;
+}
+.pick-text { color: var(--muted); margin: 4px 0 0; max-height: 3em; overflow: hidden; }
+.extract-fields-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.extract-actions {
+  flex: none;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+}
+.extract-actions .muted-hint { margin: 0 0 6px; min-height: 1.5em; }
+.extract-actions .form-actions .btn { flex: 1; }
+.field-map { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 14px; }
+.field-map-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+.field-map-row.is-set { border-color: var(--accent); }
+.field-map-row.just-assigned { background: var(--accent-soft); }
+.field-map-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field-map-label { font-size: 13px; font-weight: 600; }
+.field-map-row input[data-role="selector"] { width: 100%; box-sizing: border-box; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.field-map-opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.field-map-opts label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.field-map-opts select,
+.field-map-opts input { flex: 1; min-width: 0; padding: 4px 6px; font-size: 12px; }
+.field-pick:disabled { opacity: 0.45; cursor: not-allowed; }
+.detail-fields summary { cursor: pointer; font-size: 15px; font-weight: 600; margin: 4px 0; }
+.sample-table-wrap { margin-top: 12px; overflow-x: auto; }
+.sample-table { min-width: 0; font-size: 12px; }
+.extract-fields-panel h2,
+.extract-fields-panel h3 { margin: 8px 0; font-size: 15px; }
+@media (max-width: 960px) {
+  .extract-layout { grid-template-columns: 1fr; }
+  .extract-preview-panel,
+  .extract-fields-panel { position: static; height: auto; }
+  .extract-frame { height: 70vh; flex: none; }
+}

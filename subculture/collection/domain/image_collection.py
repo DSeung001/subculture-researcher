@@ -4,6 +4,12 @@
 _BUILTIN_MAIN_TYPES = frozenset({"figurefarm"})
 
 
+def _extract_has_field(source: dict, section: str, field: str) -> bool:
+    extract = source.get("extract") or {}
+    fields = ((extract.get(section) or {}).get("fields")) or {}
+    return field in fields
+
+
 def image_collection_flags(source: dict) -> dict[str, bool]:
     """Return `main` (imageUrl) and `detail` (detailImageUrls) collection capability."""
     source = source or {}
@@ -15,6 +21,11 @@ def image_collection_flags(source: dict) -> dict[str, bool]:
         or source.get("image_html_field")
         or source.get("product_mode")
         or source.get("type") in _BUILTIN_MAIN_TYPES
+        or _extract_has_field(source, "list", "image")
+        or _extract_has_field(source, "detail", "image")
     )
-    detail = bool(source.get("detail_images_selector"))
+    detail = bool(
+        source.get("detail_images_selector")
+        or _extract_has_field(source, "detail", "gallery")
+    )
     return {"main": main, "detail": detail}

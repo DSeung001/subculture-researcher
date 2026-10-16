@@ -250,3 +250,85 @@ class BrowserUITests(unittest.TestCase):
         self.page.reload()
         self.assertEqual(self.page.locator("#post-body").input_value(), "")
         self.assertFalse(self.errors, self.errors)
+
+    def test_extract_picker_click_assign_sample_and_save(self):
+        from subculture.collection.infrastructure.preview_html import sanitize_preview_html
+        from tests.test_extract_profiles import EXTRACT, LIST_HTML
+
+        source = {
+            "name": "픽커샵",
+            "url": "https://shop.example/list",
+            "type": "html",
+            "category": "GOODS",
+            "region": "KR",
+            "source_tier": "MEDIA",
+            "enabled": True,
+            "extract": {
+                "list": {
+                    "item": "li.item",
+                    "fields": {
+                        "link": {"selector": "a.link", "attr": "href", "parse": "text"},
+                        "title": {"selector": ".name", "parse": "text"},
+                    },
+                },
+            },
+        }
+        with patch.object(review, "load_sources", return_value=[source]):
+            html = review.app.test_client().get("/sources/픽커샵/extract").get_data(as_text=True)
+        preview = sanitize_preview_html(LIST_HTML, source["url"])
+        saved = []
+
+        def route(request):
+            url = request.request.url
+            method = request.request.method
+            if "/static/" in url:
+                request.fulfill(path=str(ROOT / "subculture/web/static" / url.rsplit("/", 1)[-1]))
+            elif "/extract/preview" in url:
+                request.fulfill(content_type="text/html; charset=utf-8", body=preview)
+            elif "/extract/sample" in url and method == "POST":
+                request.fulfill(
+                    content_type="application/json",
+                    body=json.dumps({
+                        "count": 2,
+                        "items": [
+                            {"title": "테스트 피규어 A", "url": "https://shop.example/product/1",
+                             "price": 12000, "saleStatus": "PREORDER"},
+                            {"title": "테스트 피규어 B", "url": "https://shop.example/product/2",
+                             "price": 8500, "saleStatus": "SOLD_OUT"},
+                        ],
+                        "base_url": source["url"],
+                    }),
+                )
+            elif url.rstrip("/").endswith("/extract") and method == "POST":
+                saved.append(json.loads(request.request.post_data))
+                request.fulfill(content_type="application/json", body=json.dumps({"ok": True, "path": "extractors/picker.yaml"}))
+            else:
+                request.fulfill(content_type="text/html; charset=utf-8", body=html)
+
+        self.page.route("**/*", route)
+        self.page.set_viewport_size({"width": 1440, "height": 900})
+        self.page.goto("http://offline.test/sources/%ED%94%BD%EC%BB%A4%EC%83%B5/extract")
+        self.page.wait_for_selector("#extract-frame")
+        frame = self.page.frame_locator("#extract-frame")
+        frame.locator("li.item").first.click()
+        self.page.wait_for_selector("#pick-banner:not([hidden])")
+        self.page.locator("#btn-set-item").click()
+        self.assertTrue(self.page.locator("#field-item").input_value())
+        self.assertIn("상품 카드", self.page.locator("#save-status").inner_text())
+        price_input = self.page.locator('#list-fields [data-key="price"][data-role="selector"]')
+        price_input.fill(".price")
+        frame.locator("li.item .name").first.click()
+        self.page.locator('.field-pick[data-section="list"][data-key="title"]').click()
+        title_input = self.page.locator('#list-fields [data-key="title"][data-role="selector"]')
+        self.assertTrue(title_input.input_value())
+        # Picking into one field keeps what was typed into another.
+        self.assertEqual(price_input.input_value(), ".price")
+        title_input.fill(".name")
+        self.page.locator("#btn-sample").click()
+        self.page.wait_for_selector("#sample-wrap:not([hidden])")
+        self.assertIn("테스트 피규어 A", self.page.locator("#sample-table").inner_text())
+        self.page.locator("#btn-save").click()
+        self.page.wait_for_function("document.querySelector('#save-status').textContent.includes('저장')")
+        self.assertTrue(saved)
+        self.assertIn("extract", saved[0])
+        self.assertFalse(self.errors, self.errors)

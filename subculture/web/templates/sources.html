@@ -1,8 +1,23 @@
 {% extends "base.html" %}
 {% block body %}
 <main class="sources-page">
-  <h1>수집 목록</h1>
-  <p class="subtitle">sources.yaml에 등록된 자동/수동 수집 소스 목록입니다 (읽기 전용).</p>
+  <div class="page-actions sources-header">
+    <div>
+      <h1>수집 목록</h1>
+      <p class="subtitle">sources.yaml과 extractors/에 등록된 수집 소스입니다.</p>
+    </div>
+    <a href="{{ url_for('source_new_page') }}" class="btn btn-primary">사이트 추가</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-list">
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
 
   <div class="chip-row page-chips">
     <a href="{{ url_for('sources_page', status='ALL') }}" class="chip {% if status == 'ALL' %}active{% endif %}">전체</a>
@@ -21,6 +36,7 @@
           <th>지역</th>
           <th>소스 티어</th>
           <th>이미지</th>
+          <th>추출</th>
           <th>상태</th>
         </tr>
       </thead>
@@ -43,6 +59,15 @@
             <span class="status-badge status-disabled">없음</span>
             {% endif %}
           </td>
+          <td class="extract-cell">
+            {% if s._visual_extract %}
+            <a href="{{ url_for('source_extract_page', name=s.name) }}" class="btn btn-sm">
+              {% if s._has_extract %}추출 설정{% else %}추출 만들기{% endif %}
+            </a>
+            {% else %}
+            <span class="muted-hint" title="html 소스만 클릭 추출을 지원합니다">—</span>
+            {% endif %}
+          </td>
           <td>
             {% if not s.get('enabled', True) %}
             <span class="status-badge status-disabled">비활성</span>
@@ -54,7 +79,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="empty-row">표시할 소스가 없습니다.</td></tr>
+        <tr><td colspan="8" class="empty-row">표시할 소스가 없습니다.</td></tr>
         {% endfor %}
       </tbody>
     </table>

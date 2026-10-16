@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}사이트 추가 · 서브컬처 리서처{% endblock %}
+{% block body %}
+<main class="sources-page extract-page">
+  <p class="breadcrumb"><a href="{{ url_for('sources_page') }}">수집 목록</a> · 사이트 추가</p>
+  <h1>사이트 추가</h1>
+  <p class="subtitle">목록 URL과 분류만 먼저 저장합니다. 저장 후 미리보기에서 추출 위치를 고릅니다. 기본은 비활성입니다.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-list">
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <form method="post" class="extract-form panel-card">
+    <label class="field-group">이름
+      <input type="text" name="name" required placeholder="예: 예시샵 신상품">
+    </label>
+    <label class="field-group">목록 URL
+      <input type="url" name="url" required placeholder="https://…">
+    </label>
+    <div class="form-grid">
+      <label class="field-group">카테고리
+        <select name="category">
+          {% for c in categories %}<option value="{{ c }}" {% if c == 'GOODS' %}selected{% endif %}>{{ category_labels[c] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field-group">지역
+        <select name="region">
+          {% for r in regions %}<option value="{{ r }}" {% if r == 'KR' %}selected{% endif %}>{{ region_labels.get(r, r) }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field-group">콘텐츠 각도
+        <select name="content_angle">
+          {% for a in angles %}<option value="{{ a }}" {% if a == 'PRICE' %}selected{% endif %}>{{ angle_labels[a] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field-group">소스 티어
+        <select name="source_tier">
+          {% for t in source_tiers %}<option value="{{ t }}">{{ tier_labels[t] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field-group">최대 건수
+        <input type="number" name="max_items" value="40" min="1" max="200">
+      </label>
+    </div>
+    <label class="check-row">
+      <input type="checkbox" name="render_js" value="1">
+      목록이 JavaScript로 그려짐 (Playwright 렌더)
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">추가하고 추출 설정</button>
+      <a href="{{ url_for('sources_page') }}" class="btn">취소</a>
+    </div>
+  </form>
+</main>
+{% endblock %}

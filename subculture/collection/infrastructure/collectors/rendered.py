@@ -6,6 +6,26 @@ from subculture.collection.infrastructure.collectors.common import extract_produ
 from subculture.collection.infrastructure.collectors.html_links import extract_links
 from subculture.collection.infrastructure.collectors.http import USER_AGENT, pause_between_requests
 from subculture.collection.infrastructure.collectors.images import detail_image, detail_images
+from subculture.collection.infrastructure.mapped_extract import apply_detail_extract
+
+
+def _list_wait_selector(source: dict) -> str:
+    if source.get("wait_selector"):
+        return source["wait_selector"]
+    extract_item = ((source.get("extract") or {}).get("list") or {}).get("item")
+    if extract_item:
+        return extract_item
+    return source.get("link_selector", "a[href]")
+
+
+def _pagination_link_selector(source: dict) -> str:
+    if source.get("link_selector"):
+        return source["link_selector"]
+    link_field = (((source.get("extract") or {}).get("list") or {}).get("fields") or {}).get("link") or {}
+    item = ((source.get("extract") or {}).get("list") or {}).get("item")
+    if item and link_field.get("selector"):
+        return f"{item} {link_field['selector']}"
+    return "a[href]"
 
 
 def rendered_items(source: dict, policy):
@@ -14,13 +34,14 @@ def rendered_items(source: dict, policy):
     except ImportError as exc:
         raise RuntimeError("동적 수집에는 pip install -r requirements.txt 및 python -m playwright install chromium이 필요합니다.") from exc
 
-    selector = source.get("link_selector", "a[href]")
-    wait_selector = source.get("wait_selector", selector)
+    selector = _pagination_link_selector(source)
+    wait_selector = _list_wait_selector(source)
     timeout = int(source.get("render_timeout_seconds", 30)) * 1000
     limit = int(source.get("max_items", 50))
     max_pages = int(source.get("max_pages", 1))
     if timeout <= 0 or max_pages <= 0:
         raise ValueError("render_timeout_seconds와 max_pages는 양수여야 합니다.")
+    extract_detail = ((source.get("extract") or {}).get("detail") or {}).get("fields") or {}
     seen = set()
     blocked = []
 
@@ -52,7 +73,7 @@ def rendered_items(source: dict, policy):
             listing = context.new_page()
             detail = (
                 context.new_page()
-                if source.get("product_mode") or source.get("fetch_detail_image")
+                if source.get("product_mode") or source.get("fetch_detail_image") or extract_detail
                 else None
             )
 
@@ -74,37 +95,40 @@ def rendered_items(source: dict, policy):
             for page_index in range(max_pages):
                 items = list(extract_links(listing.content(), listing.url, source))
                 if not items:
-                    raise RuntimeError(f"기사 목록이 비어 있습니다. link_selector를 확인하세요: {selector}")
+                    raise RuntimeError(f"기사 목록이 비어 있습니다. 목록 셀렉터를 확인하세요: {wait_selector}")
                 for item in items:
                     if item["url"] in seen:
                         continue
                     seen.add(item["url"])
                     product_mode = source.get("product_mode", False)
                     detail_image_mode = source.get("fetch_detail_image", False)
-                    if product_mode or detail_image_mode:
+                    if product_mode or detail_image_mode or extract_detail:
                         try:
                             pause_between_requests(source)
                             navigate(detail, item["url"], source.get("detail_wait_selector", "h1"))
                             detail_soup = BeautifulSoup(detail.content(), "html.parser")
-                            image_url = (
-                                detail_image(detail_soup, detail.url, source)
-                                if (product_mode or detail_image_mode) else None
-                            )
-                            if image_url:
-                                item["imageUrl"] = image_url
-                            if product_mode:
-                                # A rendered browser's own innerText already excludes
-                                # CSS-hidden stock-state toggles; no need for the
-                                # class/style heuristic the static-HTML path uses.
-                                # product_text_selector still helps exclude nav/footer
-                                # boilerplate that is visible but unrelated to the item.
-                                text_selector = source.get("product_text_selector")
-                                full_text = detail.locator(text_selector or "body").inner_text()
-                                item.update(extract_product_fields(source, full_text, image_url))
-                                if source.get("detail_images_selector"):
-                                    item["detailImageUrls"] = detail_images(
-                                        detail_soup, detail.url, source, exclude=image_url,
-                                    )
+                            if extract_detail:
+                                apply_detail_extract(detail_soup, detail.url, source, item)
+                            else:
+                                image_url = (
+                                    detail_image(detail_soup, detail.url, source)
+                                    if (product_mode or detail_image_mode) else None
+                                )
+                                if image_url:
+                                    item["imageUrl"] = image_url
+                                if product_mode:
+                                    # A rendered browser's own innerText already excludes
+                                    # CSS-hidden stock-state toggles; no need for the
+                                    # class/style heuristic the static-HTML path uses.
+                                    # product_text_selector still helps exclude nav/footer
+                                    # boilerplate that is visible but unrelated to the item.
+                                    text_selector = source.get("product_text_selector")
+                                    full_text = detail.locator(text_selector or "body").inner_text()
+                                    item.update(extract_product_fields(source, full_text, image_url))
+                                    if source.get("detail_images_selector"):
+                                        item["detailImageUrls"] = detail_images(
+                                            detail_soup, detail.url, source, exclude=image_url,
+                                        )
                         except Exception as exc:
                             item["_errors"].append(f"상세 페이지 실패: {exc}")
                     yield item

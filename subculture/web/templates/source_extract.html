@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}추출 설정 · {{ source.name }}{% endblock %}
+{% block body %}
+<main class="sources-page extract-page" id="extract-root"
+  data-source-name="{{ source.name }}"
+  data-preview-url="{{ url_for('source_extract_preview', name=source.name) }}"
+  data-sample-url="{{ url_for('source_extract_sample', name=source.name) }}"
+  data-save-url="{{ url_for('source_extract_save', name=source.name) }}"
+  data-list-url="{{ source.url }}"
+  data-initial-extract='{{ extract | tojson }}'>
+  <header class="extract-header">
+    <div>
+      <p class="breadcrumb"><a href="{{ url_for('sources_page') }}">수집 목록</a> · {{ source.name }}</p>
+      <h1>추출 설정</h1>
+    </div>
+    <p class="subtitle">미리보기에서 요소를 클릭하고 오른쪽 필드의 <strong>넣기</strong>를 누르세요. 저장하면 <code>extractors/</code> YAML에 기록됩니다.</p>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-list">
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="extract-layout">
+    <section class="extract-preview-panel panel-card">
+      <div class="extract-toolbar">
+        <div class="chip-row">
+          <button type="button" class="chip active" data-preview-kind="list" id="btn-preview-list">목록</button>
+          <button type="button" class="chip" data-preview-kind="detail" id="btn-preview-detail">상세</button>
+        </div>
+        <p class="muted-hint" id="preview-status">목록 페이지를 불러오는 중…</p>
+        <button type="button" class="btn btn-sm" id="btn-reload-preview">다시 불러오기</button>
+      </div>
+      <iframe id="extract-frame" class="extract-frame" title="추출 미리보기" sandbox="allow-scripts"></iframe>
+    </section>
+
+    <section class="extract-fields-panel panel-card">
+      <div class="pick-slot">
+        <p class="muted-hint" id="pick-empty">미리보기에서 요소를 클릭하면 여기에 표시됩니다.</p>
+        <div class="pick-banner" id="pick-banner" hidden>
+          <p class="pick-head"><strong>선택됨</strong>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-set-item">상품 카드로 지정</button>
+          </p>
+          <code id="pick-selector"></code>
+          <p class="pick-text" id="pick-text"></p>
+        </div>
+      </div>
+
+      <div class="extract-fields-scroll">
+        <label class="field-group">상품 카드 (item)
+          <input type="text" id="field-item" placeholder="li.item">
+        </label>
+        <h2>목록 필드</h2>
+        <div id="list-fields" class="field-map"></div>
+        <details class="detail-fields" open>
+          <summary>상세 필드 (선택)</summary>
+          <div id="detail-fields" class="field-map"></div>
+        </details>
+        <div class="sample-table-wrap" id="sample-wrap" hidden>
+          <h3>샘플</h3>
+          <table class="sources-table sample-table" id="sample-table">
+            <thead>
+              <tr><th>제목</th><th>가격</th><th>상태</th><th>URL</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="extract-actions">
+        <p class="muted-hint" id="save-status" role="status"></p>
+        <div class="form-actions">
+          <button type="button" class="btn" id="btn-sample">샘플 추출</button>
+          <button type="button" class="btn btn-primary" id="btn-save">저장</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<script src="{{ url_for('static', filename='extract_picker.js') }}" defer></script>
+{% endblock %}

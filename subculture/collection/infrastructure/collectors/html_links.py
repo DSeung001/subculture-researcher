@@ -7,6 +7,7 @@ from subculture.collection.domain.content_rules import DEFAULT_DETAIL_REFRESH_HO
 from subculture.collection.infrastructure.collectors.common import RobotsDenied, extract_product_fields, save_records
 from subculture.collection.infrastructure.collectors.http import RobotsPolicy, get_html, page_url
 from subculture.collection.infrastructure.collectors.images import card_of, detail_image, detail_images, list_image
+from subculture.collection.infrastructure.mapped_extract import apply_detail_extract, extract_list_items
 
 
 RELATIVE_KOREAN_PATTERN = re.compile(r"^(\d+)\s*(초|분|시간|일|주|개월|년)\s*전$")
@@ -81,6 +82,9 @@ def list_product_fields(anchor, source: dict, base_url: str, image_url: str | No
 
 
 def extract_links(html: str, base_url: str, source: dict):
+    if source.get("extract"):
+        yield from extract_list_items(html, base_url, source)
+        return
     soup = BeautifulSoup(html, "html.parser")
     for anchor in soup.select(source.get("link_selector", "a[href]")):
         href = anchor.get("href")
@@ -175,6 +179,7 @@ def html_items(source: dict, store=None):
 
 def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> None:
     """Add detail-page fields (photo, product info) to a listed item in place."""
+    extract_detail = ((source.get("extract") or {}).get("detail") or {}).get("fields") or {}
     product_mode = source.get("product_mode", False)
     detail_image_mode = source.get("fetch_detail_image", False)
     # List-only shops fetch the detail page just for its gallery; the card keeps
@@ -182,11 +187,12 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
     want_gallery = bool(
         source.get("detail_images_selector")
         and (product_mode or source.get("list_product_mode"))
-    )
-    if not (product_mode or detail_image_mode or want_gallery):
+    ) or bool(extract_detail.get("gallery"))
+    want_extract_detail = bool(extract_detail)
+    if not (product_mode or detail_image_mode or want_gallery or want_extract_detail):
         return
     if store is not None and not store.needs_detail(
-        item["url"], product_mode=product_mode,
+        item["url"], product_mode=product_mode or want_extract_detail,
         refresh_hours=float(source.get("detail_refresh_hours", DEFAULT_DETAIL_REFRESH_HOURS)),
         want_detail_images=want_gallery,
     ):
@@ -196,6 +202,10 @@ def fetch_detail(item: dict, source: dict, policy: RobotsPolicy, store=None) -> 
             item["url"], policy, source.get("timeout_seconds", 15), source,
         )
         detail_soup = BeautifulSoup(detail_html, "html.parser")
+        if want_extract_detail:
+            apply_detail_extract(detail_soup, detail_url, source, item)
+            item["detailCheckedAt"] = datetime.now(timezone.utc)
+            return
         # The detail page's own photo wins over the list thumbnail.
         image_url = detail_image(detail_soup, detail_url, source) if (product_mode or detail_image_mode) else None
         if product_mode:
