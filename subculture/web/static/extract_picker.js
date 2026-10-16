@@ -98,7 +98,7 @@
       <div class="field-map-head">
         <span class="field-map-label">${def.label}
           <button type="button" class="help-tip" data-help-for="help-${section}-${def.key}"
-            aria-expanded="false" aria-label="${def.label} 설명" title="${escapeAttr(def.help)}">?</button>
+            aria-label="${def.label} 설명" aria-describedby="help-${section}-${def.key}">?</button>
         </span>
         <button type="button" class="btn btn-sm field-pick" data-section="${section}" data-key="${def.key}"
           ${lastPick ? "" : "disabled"} title="선택한 요소를 이 필드에 넣기">넣기</button>
@@ -277,19 +277,53 @@
     saveStatus.textContent = `${label ? label.label : key} 필드에 넣었습니다.`;
   }
 
+  // One floating tooltip outside the scrolling panel, so long help is never clipped.
+  const tooltip = document.createElement("div");
+  tooltip.className = "help-tooltip";
+  tooltip.setAttribute("role", "tooltip");
+  tooltip.hidden = true;
+  document.body.appendChild(tooltip);
+
+  function showHelp(tip) {
+    const help = document.getElementById(tip.dataset.helpFor);
+    if (!help) return;
+    tooltip.innerHTML = help.innerHTML;
+    tooltip.hidden = false;
+    const rect = tip.getBoundingClientRect();
+    const box = tooltip.getBoundingClientRect();
+    const left = Math.max(8, Math.min(rect.left - 8, window.innerWidth - box.width - 8));
+    let top = rect.bottom + 6;
+    if (top + box.height > window.innerHeight - 8) top = Math.max(8, rect.top - box.height - 6);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function hideHelp() {
+    tooltip.hidden = true;
+  }
+
+  root.addEventListener("mouseover", (event) => {
+    const tip = event.target.closest(".help-tip");
+    if (tip) showHelp(tip);
+  });
+  root.addEventListener("mouseout", (event) => {
+    const tip = event.target.closest(".help-tip");
+    if (tip && !tip.contains(event.relatedTarget)) hideHelp();
+  });
+  root.addEventListener("focusin", (event) => {
+    const tip = event.target.closest(".help-tip");
+    if (tip) showHelp(tip);
+  });
+  root.addEventListener("focusout", (event) => {
+    if (event.target.closest(".help-tip")) hideHelp();
+  });
+  window.addEventListener("scroll", hideHelp, true);
+
   // Hand-edited card selectors (e.g. after dropping :nth-of-type) apply to the next pick.
   itemInput.addEventListener("change", () => sendItemRoot(itemInput.value.trim()));
 
   root.addEventListener("click", (event) => {
-    const tip = event.target.closest(".help-tip");
-    if (tip) {
-      const help = document.getElementById(tip.dataset.helpFor);
-      if (help) {
-        help.hidden = !help.hidden;
-        tip.setAttribute("aria-expanded", String(!help.hidden));
-      }
-      return;
-    }
+    if (event.target.closest(".help-tip")) return;
     const btn = event.target.closest(".field-pick");
     if (btn) assignPick(btn.dataset.section, btn.dataset.key);
   });
