@@ -57,10 +57,56 @@ class CatalogGapTests(unittest.TestCase):
         self.assertEqual(match_works({'title': 'New goods', 'titleKo': '별의 커비 굿즈'},
                                      self.compiled), ['별의 커비'])
 
+    def test_firestore_titles_from_2026_10_16(self):
+        cases = [
+            ('애니메이션 『푸른 상자』 2기 첫 화', ['푸른 상자']),
+            ('[입고완료] 젠레스존제로 빌리키드', ['젠레스 존 제로']),
+            ('CS.FRONT 나혼자만 레벨업 마루토', ['나 혼자만 레벨업']),
+            ('FULL SCALE WORKS 코드기아스 반역의 를르슈', ['코드 기아스']),
+            ('풀스케일웍스 코드기어스 제로의가면', ['코드 기아스']),
+            ('넨도로이드모어 걸즈앤판처 티거I', ['걸즈 앤 판처']),
+            ('팝업퍼레이드 니어시리즈15주년 애니버서리 2B', ['니어 오토마타']),
+            ('신세기GPX 사이버포뮬러 아스라다', ['신세기 GPX 사이버 포뮬러']),
+            ('붕괴3 키아나 종언의 율자', ['붕괴3rd']),
+            ('쁘띠라마DX 신고지라(2016)', ['고질라']),
+            ('PV237 사사키와피짱 엘자', ['사사키와 피짱']),
+            ('은하특급 밀키서브웨이 후와코로린', ['은하특급 밀키 서브웨이']),
+            ('아주르 프로밀리아 2차 창작', ['어쥬르 프로밀리아']),
+            ('세나 리버스 귀칼 2차 컬래버', ['귀멸의 칼날', '세븐나이츠 리버스']),
+            ('ヘラグ Gala Night Ver.', ['명일방주']),
+            ('河原木 桃香', ['학원 아이돌마스터']),
+            ('インプラカブル Special Ver.', ['벽람항로']),
+            ('마징엠페러G 스카이X스튜디오', ['마징가 Z']),
+            ('30MP 鹿目まどか ワルプルギス', ['마법소녀 마도카☆마기카']),
+            ('イーヴィルティガ 限定版', ['울트라맨']),
+            ('S14の「ドロンジョ」', ['야터맨']),
+            ('VF-11B サンダーボルト', ['마크로스']),
+            ('SEED FREEDOM ZEROのフェア', ['기동전사 건담']),
+            ('프린세스커넥트 ReDive 페코린느 프리코네', ['프린세스 커넥트! Re:Dive']),
+            ('페르소나 P30th 주인공 키홀더 P3', ['페르소나 3']),
+            ('페르소나 P30th 주인공 키홀더 P5', ['페르소나 5']),
+            ('『FFVII』 티파 코스프레', ['FINAL FANTASY']),
+            ('儒烏風亭らでん商品発売', ['홀로라이브']),
+            ('『〈物語〉シリーズ』くじメイト', ['모노가타리 시리즈']),
+            ('데이브 더 다이버x서브노티카 2 컬래버', ['데이브 더 다이버', '서브노티카']),
+            ('스카디 더 커럽팅 하트', ['명일방주']),
+            ('명일방주 엔드필드 큐티시리즈', ['명일방주', '명일방주: 엔드필드']),
+        ]
+        for title, expected in cases:
+            with self.subTest(title=title):
+                self.assertEqual(match_works({'title': title}, self.compiled), expected)
+
+    def test_title_ko_supplies_dragon_quest(self):
+        self.assertEqual(match_works(
+            {'title': 'タイトー、10月展開予定の関連プライズ',
+             'titleKo': '타이토가 10월 드래곤 퀘스트 관련 상품 5개를 공개합니다!'},
+            self.compiled), ['드래곤 퀘스트'])
+
     def test_ambiguous_names_and_notices_remain_unclassified(self):
         for title in ('AGF KOREA 2025 스폰서 공개', '태그검색',
-                      '마키나', '카이', '티아', '블랙 스완',
+                      '마키나', '카이', '티아', '블랙 스완', 'ブラックスワン',
                       '네이티브 사랑과 번영의 천사 프리엘 by 마타로',
+                      '여름의소녀 by 네코미', 'SWC2026 유럽 컵',
                       'HAKUBAのレンズフィルター', 'DTFTX 대회'):
             with self.subTest(title=title):
                 self.assertEqual(match_works({'title': title}, self.compiled), [])

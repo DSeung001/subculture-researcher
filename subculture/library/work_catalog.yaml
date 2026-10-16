@@ -169,6 +169,7 @@ works:
       - ゼンゼロ
       - 젠제로
       - Zen Zero
+      - 젠레스존제로
   - name: 동방 프로젝트
     aliases:
       - 동방프로젝트
@@ -263,6 +264,8 @@ works:
       - 파이널판타지
       - Final Fantasy
       - ファイナルファンタジー
+      - FFVII
+      - FF7
   - name: 학원 아이돌마스터
     aliases:
       - 学園アイドルマスター
@@ -270,6 +273,8 @@ works:
       - 藤田ことね
       - 학원 아이돌 마스터
       - 학원아이돌마스터
+      - 河原木 桃香
+      - 河原木桃香
   # Gaps from unclassified product / Laftel titles
   - name: 지박소년 하나코 군
     aliases:
@@ -318,6 +323,7 @@ works:
       - 귀멸의칼날
       - 鬼滅の刃
       - Demon Slayer
+      - 귀칼
   - name: 나의 히어로 아카데미아
     aliases:
       - 나의히어로아카데미아
@@ -335,6 +341,7 @@ works:
       - 崩壊3rd
       - Honkai Impact 3rd
       - 붕괴 3rd
+      - 붕괴3
   - name: 유희왕
     aliases:
       - 遊戯王
@@ -351,6 +358,7 @@ works:
       - Mazinger Z
       - 마징카이저
       - Mazinkaiser
+      - 마징엠페러
   - name: 아카메가 벤다
     aliases:
       - アカメが斬る
@@ -378,6 +386,7 @@ works:
       - 猫物語
       - 오와리모노가타리
       - 終物語
+      - 〈物語〉シリーズ
       - 츠키모노가타리
       - 憑物語
       - 키즈모노가타리
@@ -407,10 +416,22 @@ works:
       - 세인트루이스
       - 雅夢の白浜
       - エーギル
+      - インプラカブル
+      - 인플라카블
+      - シリアス
+      - 시리우스
   - name: 명일방주
     aliases:
       - Arknights
       - アークナイツ
+      - ヘラグ
+      - 헤라그
+      - ユーネクテス
+      - 유넥테스
+      - イネス
+      - 이네스
+      - 스카디
+      - 커럽팅 하트
   - name: "퍼니싱: 그레이 레이븐"
     aliases:
       - 퍼니싱 그레이 레이븐
@@ -432,6 +453,7 @@ works:
       - 페르소나3
       - Persona 3
       - ペルソナ3
+      - P3
   - name: 킹 오브 파이터즈
     aliases:
       - 킹오브파이터즈
@@ -451,6 +473,7 @@ works:
       - ハサウェイ
       - 쿠샤트리야
       - クシャトリヤ
+      - SEED FREEDOM
   - name: Fate 시리즈
     aliases:
       - 페이트
@@ -485,6 +508,7 @@ works:
     aliases:
       - Hololive
       - ホロライブ
+      - 儒烏風亭らでん
   - name: HALO
     aliases:
       - 헤일로
@@ -556,6 +580,7 @@ works:
   - name: 나 혼자만 레벨업
     aliases:
       - 나혼자만레벨업
+      - 나혼자만 레벨업
       - Solo Leveling
       - 俺だけレベルアップな件
   - name: 라스트 오리진
@@ -594,11 +619,14 @@ works:
   - name: "프린세스 커넥트! Re:Dive"
     aliases:
       - 프린세스 커넥트
+      - 프린세스커넥트
+      - 프리코네
       - Princess Connect
       - プリンセスコネクト
   - name: 마법소녀 마도카☆마기카
     aliases:
       - 마도카
+      - まどか
       - Madoka Magica
       - 魔法少女まどか☆マギカ
   - name: 제로의 사역마
@@ -667,6 +695,7 @@ works:
     aliases:
       - Gushing over Magical Girls
       - 魔法少女にあこがれて
+      - 마법소녀를동경해서
   - name: 거짓말쟁이 게임
     aliases:
       - LIAR GAME
@@ -880,6 +909,8 @@ works:
       - ウルトラマン
       - Ultraman
       - 고모라
+      - イーヴィルティガ
+      - 이블 티가
   - name: 에픽세븐
     aliases:
       - Epic Seven
@@ -965,6 +996,7 @@ works:
     aliases:
       - マクロス
       - Macross
+      - VF-11B
   - name: 세인트 세이야
     aliases:
       - 세인트세이야
@@ -1282,6 +1314,8 @@ works:
       - 佐々木とピーちゃん
       - ささピー
       - 사사피
+      - 사사키와피짱
+      - 사사카와피짱
   - name: 아름다운 그대에게
     aliases:
       - 花ざかりの君たちへ
@@ -1497,6 +1531,8 @@ works:
     aliases:
       - コードギアス
       - Code Geass
+      - 코드기아스
+      - 코드기어스
   - name: 유미아의 아틀리에
     aliases:
       - ユミア
@@ -1514,6 +1550,8 @@ works:
     aliases:
       - ゴジラ
       - Godzilla
+      - 고지라
+      - 신고지라
   - name: 메탈 슬러그
     aliases:
       - メタルスラッグ
@@ -1529,6 +1567,8 @@ works:
     aliases:
       - サイバーフォーミュラ
       - 사이버 포뮬러
+      - 사이버포뮬러
+      - 신세기GPX
   - name: 젤다의 전설
     aliases:
       - ゼルダの伝説
@@ -1815,6 +1855,7 @@ works:
       - "NieR:Automata"
       - "NieR: Automata"
       - NieR
+      - 니어시리즈
   - name: 신비한 바다의 나디아
     aliases:
       - 신비한바다의나디아
@@ -1906,6 +1947,8 @@ works:
       - ヤッターマン
       - Yatterman
       - 도로롱
+      - ドロンジョ
+      - 드롱조
   - name: 닌자 슬레이어
     aliases:
       - Ninja Slayer
@@ -2142,6 +2185,7 @@ works:
   - name: "은하특급 밀키 서브웨이"
     aliases:
       - "은하특급밀키서브웨이"
+      - "밀키서브웨이"
       - "銀河特急 ミルキー☆サブウェイ"
   - name: "Chill with You: Lo-Fi Story"
     aliases:
@@ -2161,6 +2205,292 @@ works:
     aliases:
       - "アズールプロミリア"
       - "Azur Promilia"
+      - "아주르 프로밀리아"
+      - "아주르프로밀리아"
   - name: "BUGCAT CAPOO"
     aliases:
       - "Bugcat Capoo"
+  - name: 걸즈 앤 판처
+    aliases:
+      - 걸즈앤판처
+      - "ガールズ&パンツァー"
+  - name: 도검난무
+    aliases:
+      - 刀剣乱舞
+  - name: 록맨
+    aliases:
+      - ロックマン
+      - Mega Man
+      - 메가맨
+  - name: 제노기어스
+    aliases:
+      - ゼノギアス
+      - Xenogears
+  - name: 퍼시픽 림
+    aliases:
+      - 퍼시픽림
+      - パシフィック・リム
+      - Pacific Rim
+  - name: 알드노아 제로
+    aliases:
+      - 알드노아제로
+      - アルドノア・ゼロ
+  - name: 사랑은 세계정복 후에
+    aliases:
+      - 사랑은세계정복후에
+  - name: 킬라킬
+    aliases:
+      - キルラキル
+      - Kill la Kill
+  - name: 토라도라!
+    aliases:
+      - 토라도라
+      - とらドラ
+  - name: 공각기동대
+    aliases:
+      - 攻殻機動隊
+      - Ghost in the Shell
+  - name: 폴아웃
+    aliases:
+      - Fallout
+      - フォールアウト
+  - name: 아스트로 봇
+    aliases:
+      - 아스트로봇
+      - アストロボット
+      - ASTRO BOT
+  - name: 판타지 스타 온라인
+    aliases:
+      - 판타시스타온라인
+  - name: 우주전함 야마토
+    aliases:
+      - 우주전함야마토
+      - 宇宙戦艦ヤマト
+  - name: 베이블레이드
+    aliases:
+      - ベイブレード
+      - BEYBLADE
+  - name: 드래곤 퀘스트
+    aliases:
+      - 드래곤퀘스트
+      - ドラゴンクエスト
+      - ドラクエ
+  - name: 캡틴 하록
+    aliases:
+      - キャプテンハーロック
+      - 캡틴하록
+  - name: 듀얼 마스터즈
+    aliases:
+      - デュエル・マスターズ
+      - デュエルマスターズ
+  - name: 디즈니
+    aliases:
+      - ディズニー
+  - name: 곰돌이 푸
+    aliases:
+      - プーさん
+      - くまのプーさん
+  - name: 쥬라기 공원
+    aliases:
+      - 쥬라기공원
+      - ジュラシック
+      - 쥬라식
+  - name: 베이맥스
+    aliases:
+      - ベイマックス
+  - name: 우타의 프린스사마
+    aliases:
+      - うたの☆プリンスさまっ
+  - name: 카우보이 비밥
+    aliases:
+      - COWBOY BEBOP
+      - カウボーイビバップ
+  - name: 오소마츠상
+    aliases:
+      - おそ松さん
+  - name: 닌타마 란타로
+    aliases:
+      - 忍たま乱太郎
+  - name: 사사키와 미야노
+    aliases:
+      - 佐々木と宮野
+  - name: 슬로우 데미지
+    aliases:
+      - スロウ・ダメージ
+      - Slow Damage
+  - name: "메타포: 리판타지오"
+    aliases:
+      - Metaphor
+  - name: OMORI
+  - name: PLAVE
+  - name: 블랙 록 슈터
+    aliases:
+      - 블랙록슈터
+  - name: 리틀 아머리
+    aliases:
+      - 리틀아모리
+      - リトルアーモリー
+  - name: 로도스도 전기
+    aliases:
+      - 로도스도전기
+      - ロードス島戦記
+  - name: 사일런트 힐
+    aliases:
+      - 사일런트힐
+      - サイレントヒル
+  - name: 월드 오브 워크래프트
+    aliases:
+      - 월드오브워크래프트
+      - World of Warcraft
+  - name: 다크 나이트
+    aliases:
+      - 다크나이트라이즈
+  - name: 메카브레이크
+    aliases:
+      - Mecha BREAK
+  - name: 유루캠
+    aliases:
+      - ゆるキャン
+  - name: 여친, 빌려드립니다
+    aliases:
+      - 여친빌리겠습니다
+      - 彼女、お借りします
+  - name: 마녀의 여행
+    aliases:
+      - 마녀의여행
+      - 魔女の旅々
+  - name: 로보캅
+    aliases:
+      - ロボコップ
+      - RoboCop
+  - name: 발로란트
+    aliases:
+      - VALORANT
+  - name: 코바야시네 메이드래곤
+    aliases:
+      - 코바야시네메이드래곤
+      - 小林さんちのメイドラゴン
+  - name: 푸른 상자
+    aliases:
+      - アオのハコ
+      - Blue Box
+  - name: 성별 모나리자인 너에게
+    aliases:
+      - 性別「モナリザ」の君へ。
+  - name: 캡틴 츠바사
+    aliases:
+      - 캡틴츠바사
+      - キャプテン翼
+  - name: 데드 어카운트
+    aliases:
+      - デッドアカウント
+      - Dead Account
+  - name: 어떤 암부의 소녀공서
+    aliases:
+      - とある暗部の少女共棲
+  - name: 수왕무신 댄디바인
+    aliases:
+      - ダンデヴァイン
+      - 댄디바인
+  - name: 프래그마타
+    aliases:
+      - PRAGMATA
+  - name: 브롤스타즈
+    aliases:
+      - Brawl Stars
+  - name: 내 옆에 은하
+    aliases:
+      - おとなりに銀河
+  - name: 일곱 개의 대죄
+    aliases:
+      - 칠대죄
+      - 七つの大罪
+  - name: 데이브 더 다이버
+    aliases:
+      - Dave the Diver
+  - name: 서브노티카
+    aliases:
+      - Subnautica
+  - name: 섀도우버스
+    aliases:
+      - シャドウバース
+      - Shadowverse
+  - name: 소울 스트라이크
+  - name: 라그나로크
+    aliases:
+      - ラグナロク
+      - Ragnarok
+  - name: 메이플스토리
+    aliases:
+      - 메이플 키우기
+      - メイプルストーリー
+  - name: 귀혼
+    aliases:
+      - 귀혼키우기
+  - name: 스타세이비어
+  - name: 토치라이트
+    aliases:
+      - Torchlight
+  - name: 미르4
+    aliases:
+      - MIR4
+  - name: "히간: 이루실"
+  - name: 연운
+    aliases:
+      - Where Winds Meet
+  - name: 카트라이더
+    aliases:
+      - 카러플
+      - カートライダー
+  - name: 세븐나이츠 리버스
+    aliases:
+      - 세나 리버스
+      - 세븐나이츠
+  - name: 컴투스 프로야구
+    aliases:
+      - 컴프야
+      - 컴프매
+      - 컴투스프로야구
+  - name: 프로야구 GO
+    aliases:
+      - 프로야구GO
+  - name: 노 맨즈 스카이
+    aliases:
+      - "No Man's Sky"
+  - name: "명일방주: 엔드필드"
+    aliases:
+      - 엔드필드
+  - name: FC 모바일
+  - name: 캣아크
+  - name: 이마이즈미네 집은 아무래도 갸루의 집합소가 된 것 같습니다
+  - name: 범죄학 교실의 카나에 선생님
+    aliases:
+      - 犯罪学教室のかなえ先生
+  - name: 링
+    aliases:
+      - 사다코
+      - 貞子
+  - name: 어벤져스
+    aliases:
+      - アベンジャーズ
+      - Avengers
+  - name: 페르소나 5
+    aliases:
+      - 페르소나5
+      - ペルソナ5
+      - Persona 5
+      - P5
+  - name: 비다맨
+    aliases:
+      - 구슬동자
+      - ビーダマン
+  - name: 가이킹
+    aliases:
+      - ガイキング
+  - name: 비로보 카부타크
+    aliases:
+      - ビーロボカブタック
+      - 카부타크
+  - name: 마작 파이트 걸
+    aliases:
+      - 麻雀ファイトガール
